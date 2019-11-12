@@ -1,0 +1,9 @@
+src\muon\1stg.asm
+src\muon\2stg.asm
+src\quark\quark.asm --no-append
+.fs
+build\quark.bin>quark
+#gfx\neutral.nfnt>neutral.nfnt
+#build\hw_main.bin>hw.nexe
+#fs\testdoc.txt>testdoc.txt
+#fs\testdoc2.txt>testdoc2.txt
