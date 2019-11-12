@@ -1,5 +1,5 @@
 # Welcome!
-![logo](https://github.com/portasynthinca3/neutron/blob/master/logo.png "logo")\
+![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
 *Neutron logo*\
 **So, you somehow got to this page.** I really appreciate it, thank you!
 # What's the purpose?
@@ -39,9 +39,8 @@ Symbols:\
 4. The custom builder, called NeutronBuilder. In fact, the only thing written not in assembly language in this project. It's written in C#.
 
 These names were chosen because real neutrons are made of quarks and muons
-# Can I download and/or test the system?
-Of course! It would be very nice if you tell me about the problems with the system you found out!\
-Keep in mind that i'm not responsible for any damages caused by the system, although the system isn't just capable of damaging
-something, at least at this stage.
+# Okay, what do I need to be aware of?
+Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
+However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
 # Can I join the team?
 Sorry, I don't think so. I want to do this project entirely on my own, at least yet.
