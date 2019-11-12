@@ -1,5 +1,5 @@
 # Welcome!
-![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
+![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo_cut.png "logo")\
 *Neutron logo*\
 **So, you somehow got to this page.** I really appreciate it, thank you!
 # What's the purpose?
