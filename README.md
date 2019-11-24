@@ -20,6 +20,7 @@ Symbols:\
 * ✔️ running in 32-bit protected mode
 * ✔️ 640x480 256c VESA video mode
 * ✔️ graphical font rendering
+* ✔️ C and Assembly build mix
 * ❌ keyboard input
 * ✔️ mouse input
 * ✔️ memory allocation
