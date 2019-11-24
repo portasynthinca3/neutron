@@ -1,0 +1,7 @@
+SECTIONS {
+.text 0x00000D00 :
+{
+build/obj/quark.c.o (.text)
+build/obj/test.c.o (.text)
+}
+}
