@@ -3,7 +3,7 @@
 
 ;standard VGA/VESA 256-color palette: https://upload.wikimedia.org/wikipedia/commons/6/66/VGA_palette_with_black_borders.svg
 
-%include "fonts\\neutral.nfnt.asm"							;include the standard "Neutral" font
+%include "fonts/neutral.nfnt.asm"							;include the standard "Neutral" font
 
 %define gqv_ptr_gfx_dbuf 0									;GQV-pointer: double buffer selector
 %define gqv_siz_gfx_dbuf 2									;GQV-size:    >>
