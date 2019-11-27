@@ -1,7 +1,12 @@
 SECTIONS {
-.text 0x00000D00 :
-{
+.text 0x00000D00 : {
 build/obj/quark.c.o (.text)
-build/obj/test.c.o (.text)
+build/obj/stdlib.c.o (.text)
+build/obj/gfx.c.o (.text)
+}
+.data : {
+build/obj/quark.c.o (.data)
+build/obj/stdlib.c.o (.data)
+build/obj/gfx.c.o (.data)
 }
 }
