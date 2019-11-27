@@ -3,6 +3,7 @@ src/muon/1stg.asm
 src/muon/2stg.asm
 .c
 src/quark-c/c/quark.c
+src/quark-c/c/isr_wrapper.s
 src/quark-c/c/stdlib.c
 src/quark-c/c/gfx.c
 .crawout
