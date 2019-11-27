@@ -1,7 +1,7 @@
 ;Neutron project
 ;Graphics driver
 
-gfx_go_800x600x256c:				;switches the video mode to 800x600x256c graphical
+gfx_go_640x480x256c:				;switches the video mode to 640x480x256c graphical
 	push bx							;save the registers
 	push es							;
 	push ax							;
@@ -16,6 +16,7 @@ gfx_go_800x600x256c:				;switches the video mode to 800x600x256c graphical
 	xor di, di						;
 	int 10h							;call BIOS function
 	mov dword ecx, [es:0x28]		;move the buffer linear address into ECX
+	mov edx, (640 << 16) | 480		;load the mode resolutrion into EDX
 	pop ax							;restore the registers
 	pop es							;
 	pop bx							;

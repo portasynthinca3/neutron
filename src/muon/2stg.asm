@@ -296,7 +296,7 @@ cli_krnl:
 	call krnl_load			;load the kernel
 	cmp ax, 0				;check if the load was successful
 	jne cli_krnl_ret		;return if not
-	push 0x8FC0				;segment 0x8FC0 - this is where the map is stored
+	push 0x93C0				;segment 0x93C0 - this is where the map is stored
 	pop es					;
 	xor di, di				;clear DI
 	call map_memory			;map the memory while we didn't overwrite the IVT
@@ -381,12 +381,16 @@ krnl_run:
 	xor dx, dx				;set DS to 0
 	mov ds, dx				;
 	lgdt [0]				;Load Global Descriptor Table
-	call gfx_go_800x600x256c;just befrore we switch, exit the text mode, as the kernel can't do it on its own
+	call gfx_go_640x480x256c;exit the text mode, as the kernel can't do it on its own
+	push 0x8FC0				;load 0x8C0
+	pop es					;into ES
+	mov [es:0], ecx			;save ECX (gfx buf linear address) in RAM
+	mov [es:4], edx			;save EDX (gfx resolution) in RAM
 	mov eax, cr0			;load the control register 0 into EAX
 	or eax, 1				;set its last bit
-	mov cr0, eax			;load the EAX into the control register 0
+	mov cr0, eax			;load the EAX the control register 0
 	;YAAY! we're in Protected Mode now!
-	jmp 8:0xD00				;far jump into the (presumably) beforehand-loaded kernel
+	jmp 8:0xD00				;far jump into the beforehand-loaded kernel
 	
 stg2_func_intr:				;is executed whenever there was a software IRQ from the running application
 	cmp ah, 0				;AH = 0
