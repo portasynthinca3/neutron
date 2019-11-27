@@ -8,7 +8,7 @@
 //The address that dynamic memory allocation starts from
 #define STDLIB_DRAM_START 0x500000
 //The total size of the memory available to the dynamic memory allocator
-#define STDLIB_DRAM_SIZE (512 * 0x100000)
+#define STDLIB_DRAM_SIZE (128 * 0x100000)
 
 //The quark version displayed on startup
 #define QUARK_VERSION_STR "  Quark version is 0.0.2"
@@ -26,16 +26,36 @@ struct _mem_block{
     unsigned int size;
 };
 
+/*
+ * Structure describing the Interrupt Descripotor Table Descriptor
+ */
+struct idt_desc{
+    unsigned short limit;
+    void* base;
+} __attribute__((packed));
+
+/*
+ * Structure describing an IDT entry
+ */
+struct idt_entry {
+   unsigned short offset_lower;
+   unsigned short code_selector;
+   unsigned char zero;
+   unsigned char type_attr;
+   unsigned short offset_higher;
+} __attribute__ ((packed));
+
 //Debug functions
 
 volatile void breakpoint();
 void abort();
 
-//A20 enabling functions
+//Low-level functions
 
 volatile void a20_enable(void);
 void _a20_enable_wait(void);
 void _a20_enable_wait_2(void);
+void load_idt(struct idt_desc* idt);
 
 //Dynamic memory allocation functions
 
