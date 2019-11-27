@@ -2,7 +2,9 @@
 src/muon/1stg.asm
 src/muon/2stg.asm
 .c
-src/quark-c/quark.c
+src/quark-c/c/quark.c
+src/quark-c/c/stdlib.c
+src/quark-c/c/gfx.c
 .crawout
 build/quark.bin
 .fs
