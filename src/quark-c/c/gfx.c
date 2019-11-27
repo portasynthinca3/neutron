@@ -26,7 +26,7 @@ void gfx_init(void){
     res_y = res & 0xFFFF;
     res_x = (res >> 16) & 0xFFFF;
     //Allocate the second buffer based on the screen size
-    //sec_buffer = (unsigned char*)malloc(res_x * res_y);
+    sec_buffer = (unsigned char*)malloc(res_x * res_y);
 }
 
 /*

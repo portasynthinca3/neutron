@@ -126,3 +126,10 @@ void* memset(void* dst, int ch, unsigned int size){
     //Return dst
     return dst;
 }
+
+/*
+ * Load Interrupt Descriptor Table
+ */
+void load_idt(struct idt_desc* idt){
+    __asm__("lidt %0" : : "m" (*idt));
+}
