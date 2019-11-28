@@ -71,12 +71,13 @@ for path in c_files:
 	path_obj = 'build/obj/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path + ' -> ' + path_obj)
-	os.system('cc -o ' + path_obj + ' ' + path + ' -m32 -c -nostdlib -nodefaultlibs')
+	os.system('cc -o ' + path_obj + ' ' + path + ' -m32 -c -nostdlib -nodefaultlibs -Og -ffunction-sections')
 
 print('Linking C object files')
 print('  Generating liker script')
 ld_script = open('build/lds', 'w')
-ld_script.write('SECTIONS {\n.text 0x00000D00 : {\n' + ' (.text)\n'.join(c_obj) + ' (.text)\n}\n.data : {\n' + ' (.data)\n'.join(c_obj) + ' (.data)\n}\n}')
+#ld_script.write('SECTIONS {\n.text 0x00000D00 : {\n' + ' (.text)\n'.join(c_obj) + ' (.text)\n}\n.data : {\n' + ' (.data)\n'.join(c_obj) + ' (.data)\n}\n}')
+ld_script.write('ENTRY(main)\nSECTIONS\n{\n\t.text 0x00000D00 :\n\t{\n\t\t*(.text.main);\n\t\t*(.text*);\n\t}\n\t.data :\n\t{\n\t\t*(.data*);\n\t}\n}')
 ld_script.close()
 print('  Invoking linker')
 os.system('ld -o build/obj/cbuild.o ' + ' '.join(c_obj) + ' --entry=main -melf_i386 -nostdlib -n -T build/lds')
@@ -107,42 +108,44 @@ if len(fs_files) > 0:
 	file_sects = list()
 	next_f_sect = 7
 	for path in fs_files:
-		path_src = path.split('>')[0]
-		path_dst = path.split('>')[1]
-		f_size = os.path.getsize(path_src)
-		f_size_sect = f_size // 512
-		if f_size_sect % 512 > 0:
-			f_size_sect = f_size_sect + 1
-		file_sects.append(next_f_sect)
+		if path != "":
+			path_src = path.split('>')[0]
+			path_dst = path.split('>')[1]
+			f_size = os.path.getsize(path_src)
+			f_size_sect = f_size // 512
+			if f_size_sect % 512 > 0:
+				f_size_sect = f_size_sect + 1
+				file_sects.append(next_f_sect)
 		
-		print('   Writing entry for: ' + path_dst)
-		for i in range(len(path_dst)):
-			c = path_dst[i]
-			image[3072 + (fs_files.index(path) * 32) + i] = ord(c)
+			print('   Writing entry for: ' + path_dst)
+			for i in range(len(path_dst)):
+				c = path_dst[i]
+				image[3072 + (fs_files.index(path) * 32) + i] = ord(c)
 			
-		image[3072 + (fs_files.index(path) * 32) + 24] = f_size & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 25] = (f_size >> 8) & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 26] = (f_size >> 16) & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 27] = (f_size >> 24) & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 28] = next_f_sect & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 29] = (next_f_sect >> 8) & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 30] = (next_f_sect >> 16) & 0xFF
-		image[3072 + (fs_files.index(path) * 32) + 31] = (next_f_sect >> 24) & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 24] = f_size & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 25] = (f_size >> 8) & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 26] = (f_size >> 16) & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 27] = (f_size >> 24) & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 28] = next_f_sect & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 29] = (next_f_sect >> 8) & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 30] = (next_f_sect >> 16) & 0xFF
+			image[3072 + (fs_files.index(path) * 32) + 31] = (next_f_sect >> 24) & 0xFF
 
-		next_f_sect = next_f_sect + f_size_sect
+			next_f_sect = next_f_sect + f_size_sect
 
 	print('  Writing files')
 	for path in fs_files:
-		path_src = path.split('>')[0]
-		path_dst = path.split('>')[1]
-		print('   Writing file: ' + path_dst)
-		bin_file = open(path_src, 'rb')
-		bin_file_cont = bin_file.read()
-		bin_file.close()
-		stack_pos = 0
-		for byte in bin_file_cont:
-			image[(file_sects[fs_files.index(path)] * 512) + stack_pos] = byte
-			stack_pos = stack_pos + 1
+		if path != "":
+			path_src = path.split('>')[0]
+			path_dst = path.split('>')[1]
+			print('   Writing file: ' + path_dst)
+			bin_file = open(path_src, 'rb')
+			bin_file_cont = bin_file.read()
+			bin_file.close()
+			stack_pos = 0
+			for byte in bin_file_cont:
+				image[(file_sects[fs_files.index(path)] * 512) + stack_pos] = byte
+				stack_pos = stack_pos + 1
 
 print('Writing image to: ' + image_file)
 image_file_file = open(image_file, 'wb')
