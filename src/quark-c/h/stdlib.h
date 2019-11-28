@@ -52,9 +52,6 @@ void abort();
 
 //Low-level functions
 
-volatile void a20_enable(void);
-void _a20_enable_wait(void);
-void _a20_enable_wait_2(void);
 void load_idt(struct idt_desc* idt);
 
 //Dynamic memory allocation functions
