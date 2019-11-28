@@ -8,6 +8,7 @@
 
 struct idt_desc idt_d;
 
+void enable_a20(void);
 void isr_wrapper(void);
 void isr_wrapper_code(void);
 
@@ -15,8 +16,10 @@ void isr_wrapper_code(void);
  * The entry point for the kernel
  */
 void main(void){
+	//Disable interrupts
+	__asm__ volatile("cli");
     //Do some initialization stuff
-    a20_enable();
+    enable_a20();
     dram_init();
 
     gfx_init();

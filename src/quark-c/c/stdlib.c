@@ -20,53 +20,6 @@ void abort(){
 }
 
 /*
- * Enables the A20 line, allowing us to use more than a megabyte of RAM
- */
-volatile void a20_enable(void){
-    //Set DS to data selector
-    __asm__("movw $0x10, %ax; movw %ax, %ds");
-    //Write 0xAD to port 0x64
-    _a20_enable_wait();
-    __asm__("outb %%al, $0x64;" : : "a" (0xAD));
-    //Write 0xD0 to port 0x64
-    _a20_enable_wait();
-    __asm__("outb %%al, $0x64;" : : "a" (0xD0));
-    //Read from port 0x60
-    _a20_enable_wait_2();
-    unsigned char a;
-    __asm__("inb $0x60, %%al;" : "=a" (a));
-    //Write 0xD1 to port 0x64
-    _a20_enable_wait();
-    __asm__("outb %%al, $0x64;" : : "a" (0xD1));
-    //Write (a | 0b10) to port 0x64
-    _a20_enable_wait();
-    __asm__("outb %%al, $0x60;" : : "a" (a | 2));
-    //Write 0xAE to port 0x64
-    _a20_enable_wait();
-    __asm__("outb %%al, $0x64;" : : "a" (0xAE));
-}
-
-/*
- * for internal a20_enable() use only
- */
-void _a20_enable_wait(void){
-    //Constantly check if bit 2 in port 0x64 is cleared, return if so
-    unsigned char in = 0b100;
-    while(in & 0b100 != 0)
-        __asm__("inb $0x64, %%al;" : "=a" (in));
-}
-
-/*
- * for internal a20_enable() use only
- */
-void _a20_enable_wait_2(void){
-    //Constantly check if bit 1 in port 0x64 is cleared, return if so
-    unsigned char in = 0b10;
-    while(in & 0b10 != 0)
-        __asm__("inb $0x64, %%al;" : "=a" (in));
-}
-
-/*
  * Initialize the dynamic memory allocation
  */
 void dram_init(void){
@@ -88,11 +41,10 @@ void* malloc(unsigned int size){
     //The best block is a one with the minimal size satisfying the requirement that's also free
     int best_blk_id = -1;
     unsigned int best_blk_size = 0xFFFFFFFF;
-    unsigned int walk = STDLIB_DRAM_MEMBLOCKS;
-    while(walk--){
-        if(!_mem_blocks[walk].used && _mem_blocks[walk].size >= size && _mem_blocks[walk].size < best_blk_size){
-            best_blk_id = walk;
-            best_blk_size = _mem_blocks[walk].size;
+    for(unsigned int i = 0; i < STDLIB_DRAM_MEMBLOCKS; i++){
+        if(!_mem_blocks[i].used && _mem_blocks[i].size >= size && _mem_blocks[i].size < best_blk_size){
+            best_blk_id = i;
+            best_blk_size = _mem_blocks[i].size;
         }
     }
     //If no such blocks were found, return NULL

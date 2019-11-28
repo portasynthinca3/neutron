@@ -14,6 +14,8 @@ unsigned short res_y;
 const unsigned char* font;
 //The buffer for operations
 unsigned char buf_sel;
+//Virtual text mode position
+unsigned short vterm_y = 0;
 
 /*
  * Initialize the graphics driver
@@ -27,6 +29,8 @@ void gfx_init(void){
     res_x = (res >> 16) & 0xFFFF;
     //Allocate the second buffer based on the screen size
     sec_buffer = (unsigned char*)malloc(res_x * res_y);
+    //Clear the virtual text mode position
+    vterm_y = 0;
 }
 
 /*
@@ -136,9 +140,6 @@ void gfx_puts_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color
         gfx_putch_bg(pos_x += 6, pos_y, color, bcolor, c);
 }
 
-//Virtual text mode position
-unsigned short vterm_y = 0;
-
 /*
  * Put a string in virtual text mode
  */
@@ -148,6 +149,7 @@ void gfx_vterm_println(char* s, unsigned char color){
     //Increment the position
     vterm_y += 8;
     //If the end of the screen has been reached
+    /*
     if(vterm_y >= res_y){
         unsigned char* buf = ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer);
         //Scroll up
@@ -163,6 +165,7 @@ void gfx_vterm_println(char* s, unsigned char color){
             }
         }
     }
+    */
 }
 
 //4-bit value to its hexadecimal symbol conversion table
