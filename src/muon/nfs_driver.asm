@@ -33,13 +33,22 @@ nfs_read_drive_sector:				;reads a sector from the drive
 	je nfs_read_sector_return		;return if it is
 	push ds							;set the load segment to the data segment
 	pop es							;>>
-	mov bx, nfs_buffer				;set the target location: a buffer
 									;
+	mov cl, 18						;load sectors per track into CL
+	div cl							;divide AX by CL, storing the quotient in AL and the remainder in AH
+	mov cl, ah						;store the remainder in CL
+	inc cl							;add 1 to CL
+	xor ah, ah						;clear AH
+	mov dl, 2						;load heads into DL
+	div dl							;divide AX (AL) by DL, storing the quotient in AL and the remainder in AH
+	mov dh, ah						;store the remainder in DH
+	shr al, 3						;AL >>= 3
+	and al, 0xC0					;AL &= 0xC0
+	or cl, al						;CL |= AL
+	xor ch, ch						;clear CH
+									;
+	mov bx, nfs_buffer				;set the target location: a buffer
 	mov dl, [ds:nfs_drive_no]		;set the drive number to load from
-	xor dh, dh						;TODO:
-	xor ch, ch						;LBA to CHS conversion
-	mov cl, al						;set the number of the sector to read from
-	inc cl							;numbering starts from 1...
 	mov al, 1						;set the amount of sectors to be read: 1
 	mov ah, 2						;BIOS routine no.: disk read
 	int 0x13						;execute the BIOS routine

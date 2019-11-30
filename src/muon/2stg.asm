@@ -386,11 +386,64 @@ krnl_run:
 	pop es					;into ES
 	mov [es:0], ecx			;save ECX (gfx buf linear address) in RAM
 	mov [es:4], edx			;save EDX (gfx resolution) in RAM
+	mov dl, [ds:nfs_drive_no] ;get the drive number
+	mov byte [es:8], dl		;save boot drive in RAM
 	mov eax, cr0			;load the control register 0 into EAX
 	or eax, 1				;set its last bit
 	mov cr0, eax			;load the EAX the control register 0
 	;YAAY! we're in Protected Mode now!
+	cli						;disable interrupts
+	mov ax, 0x10			;load 0x10
+	mov ds, ax				;into DS
+	mov ss, ax				;and SS
+	mov es, ax				;and ES
+	mov fs, ax				;and FS
+	mov gs, ax				;and GS
+	mov esp, 0x4FFFFF		;set the top-of-stack pointer
+	pushf					;set IOPL to 3
+	pop ax					;
+	or ax, 3 << 12			;
+	push ax					;
+	popf					;
 	jmp 8:0xD00				;far jump into the beforehand-loaded kernel
+	
+enable_a20:													;enables the A20 line, allowing us to use more than a megabyte of RAM
+															;input: none
+															;output: none
+															;
+	push ax													;save AX
+	call a20_wait											;wait for the keyboard controller to be ready
+	mov al, 0xAD											;write 0xAD
+	out 0x64, al											;to port 0x64 (keyboard controller)
+	call a20_wait											;
+	mov al, 0xD0											;
+	out 0x64, al											;
+	call a20_wait_2											;
+	in al, 0x60												;input from port 0x60
+	push ax													;save AX
+	call a20_wait											;
+	mov al, 0xD1											;
+	out 0x64, al											;
+	call a20_wait											;
+	pop ax													;restore AX
+	or al, 2												;set bit 1 of AL
+	out 0x60, al											;
+	call a20_wait											;
+	mov al, 0xAE											;
+	out 0x64, al											;
+	call a20_wait											;
+	pop ax													;restore AX
+	ret														;return from subroutine
+a20_wait:
+	in al, 0x64												;
+	test al, 2												;
+	jnz a20_wait											;
+	ret														;
+a20_wait_2:
+	in al, 0x64												;
+	test al, 1												;
+	jz a20_wait_2											;
+	ret														;
 	
 stg2_func_intr:				;is executed whenever there was a software IRQ from the running application
 	cmp ah, 0				;AH = 0
