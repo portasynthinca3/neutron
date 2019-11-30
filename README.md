@@ -9,37 +9,31 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 # Who is involved?
 * Me, Andrey Antonenko, the creator, maintainer and programmer
 * Sasha Kulichkov, booted this on his PC several times
-# List of features
-Symbols:\
-✔️ means that the feature is implemented.\
-❌ means that the feature is going to be implemented.\
-❌❌ means that the feature was going to be implemented, but was crossed out for some reason (it was too difficult for me to do, etc.)
-* ✔️ bootloader
-* ✔️ bootloader commandline on kernel load fail
-* ✔️ bootloader disk I/O and FS
-* ✔️ running in 32-bit protected mode
-* ✔️ 640x480 256c VESA video mode
-* ✔️ graphical font rendering
-* ✔️ C and Assembly build mix
-* ❌ keyboard input
-* ✔️ mouse input
-* ✔️ memory allocation
-* ❌ memory freeing
-* ❌ disk I/O in kernel
-* ❌ multitasking
-* ✔️ error screen
-* ❌ not crashing on a real PC
-* ❌ running apllications
-* ❌ window manager
-* ❌❌ writing everything completely in assembly
+# List of things that are done
+* Booting
+* Loading second stage loader
+* Second stage loader command line
+* Loading kernel
+* Kernel graphics
+# List of things that are in development right now
+* USB (EHCI) support
 # What parts does this consist of?
 1. First stage loader, called Muon-1
 2. Second stage loader, called Muon-2
 3. The monolithic kernel. So monolithic in fact, that all the system processes, even the graphics, are integrated. It's called Quark.
 4. The font converter. Written in C#
 5. The custom builder. Written in Python.
-
-These names were chosen because real neutrons are made of quarks and muons
+# Where does it work?
+In theory, it should work on any modern system. Here are the funny minimal requirements:
+* CPU: Pentium I or later
+* RAM: 8 MB
+* Buses: PCI, USB
+* An USB stick of at least 2 MB in size to boot from
+* Legacy BIOS system or an UEFI system with legacy emulation mode
+* A video card supporting VESA 1.0 standard (integrated CPU graphics should also work)
+Also, there are some detected problems:
+* Colors are weird in VirtualBox
+* Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
 # Okay, what do I need to be aware of?
 Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
 However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
