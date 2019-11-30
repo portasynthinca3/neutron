@@ -4,7 +4,6 @@
 #include "../h/usb.h"
 #include "../h/pci.h"
 
-//Array of BUS,SLT values of EHCI controllers
 //Array of EHCI controller parameters
 ehci_cont_t ehci_conts[4];
 //EHCI controller count
