@@ -31,6 +31,7 @@ In theory, it should work on any modern system. Here are the funny minimal requi
 * An USB stick of at least 2 MB in size to boot from
 * Legacy BIOS system or an UEFI system with legacy emulation mode
 * A video card supporting VESA 1.0 standard (integrated CPU graphics should also work)\
+\
 Also, there are some detected problems:
 * Colors are weird in VirtualBox
 * Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
