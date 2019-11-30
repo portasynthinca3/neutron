@@ -148,8 +148,8 @@ void gfx_vterm_println(char* s, unsigned char color){
     gfx_puts_bg(0, vterm_y, color, 0, s);
     //Increment the position
     vterm_y += 8;
-    //If the end of the screen has been reached
     /*
+    //If the end of the screen has been reached
     if(vterm_y >= res_y){
         unsigned char* buf = ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer);
         //Scroll up
@@ -164,6 +164,8 @@ void gfx_vterm_println(char* s, unsigned char color){
                 buf[(y * res_x) + x] = 0;
             }
         }
+        //Set cursor position
+        vterm_y = res_y - 8;
     }
     */
 }
