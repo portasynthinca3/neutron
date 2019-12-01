@@ -12,10 +12,31 @@ unsigned short res_x;
 unsigned short res_y;
 //The font
 const unsigned char* font;
-//The buffer for operations
+//The buffer selected for operations
 unsigned char buf_sel;
 //Virtual text mode position
 unsigned short vterm_y = 0;
+
+/*
+ * Retrieve the horizontal resolution
+ */
+unsigned short gfx_res_x(void){
+    return res_x;
+}
+
+/*
+ * Retrieve the vertical resolution
+ */
+unsigned short gfx_res_y(void){
+    return res_y;
+}
+
+/*
+ * Retrieve the currently used buffer pointer
+ */
+unsigned char* gfx_buffer(void){
+    return (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
+}
 
 /*
  * Initialize the graphics driver
@@ -31,6 +52,22 @@ void gfx_init(void){
     sec_buffer = (unsigned char*)malloc(res_x * res_y);
     //Clear the virtual text mode position
     vterm_y = 0;
+}
+
+/*
+ * Transfer the data from the current buffer to the opposing buffer
+ */
+void gfx_flip(void){
+    //Choose the source and destination buffers
+    unsigned char* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
+    unsigned char* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+    //Calculate the number of doublewords to be transferred
+    unsigned int size_dw = res_x * res_y / 4;
+    //Use the very clever assembly REP MOVSD opcode to transfer a large amount of data quickly
+    __asm__ volatile("mov %%eax, %%esi;"
+                     "mov %%ebx, %%edi;"
+                     "rep movsd;" : :
+                     "c" (size_dw), "a" (buf_src), "b" (buf_dst));
 }
 
 /*
@@ -57,6 +94,18 @@ void gfx_set_buf(unsigned char buf){
 void gfx_fill(unsigned char color){
     //We can use memset for that
     memset((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer, (int)color, res_x * res_y);
+}
+
+/*
+ * Draw a filled rectangle
+ */
+void gfx_draw_filled_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c){
+    //For each horizontal line in the rectangle
+    for(unsigned short y = sy; y < sy + h; y++){
+        //We can use memset to draw a horizontal line
+        unsigned int offset = (y * res_x) + sx;
+        memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
+    }
 }
 
 /*
@@ -148,26 +197,6 @@ void gfx_vterm_println(char* s, unsigned char color){
     gfx_puts_bg(0, vterm_y, color, 0, s);
     //Increment the position
     vterm_y += 8;
-    /*
-    //If the end of the screen has been reached
-    if(vterm_y >= res_y){
-        unsigned char* buf = ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer);
-        //Scroll up
-        for(int x = 0; x < res_x; x++){
-            for(int y = 0; y < res_y - 8; y++){
-                buf[(y * res_x) + x] = buf[((y + 8) * res_x) + x];
-            }
-        }
-        //Insert a blank space in the bottom
-        for(int x = 0; x < res_x; x++){
-            for(int y = res_y - 8; y < res_y; y++){
-                buf[(y * res_x) + x] = 0;
-            }
-        }
-        //Set cursor position
-        vterm_y = res_y - 8;
-    }
-    */
 }
 
 //4-bit value to its hexadecimal symbol conversion table
@@ -195,6 +224,9 @@ void gfx_vterm_println_hex(int value, unsigned char color){
  * Draw a panic screen
  */
 void gfx_panic(int ip, int code){
+    //Do not print the panic message outside of the screen bounds
+    if(vterm_y > res_y - (8 * 4))
+        vterm_y = res_y - (8 * 4);
     //Draw directly onto VBE memory
     gfx_set_buf(GFX_BUF_VBE);
     //Print the header message
@@ -202,6 +234,36 @@ void gfx_panic(int ip, int code){
     //Print error IP
     gfx_vterm_println_hex(ip, 0x28);
     //Print error code
-    gfx_vterm_println("Error code", 0x28);
+    gfx_vterm_println("Error code:", 0x28);
     gfx_vterm_println_hex(code, 0x28);
+}
+
+/*
+ * Dump memory on screen
+ */
+void gfx_memdump(unsigned int addr, int amount){
+    //Print the header
+    gfx_vterm_println("Dumping memory at", 0x0F);
+    gfx_vterm_println_hex(addr, 0x0F);
+    gfx_vterm_println("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", 0x0D);
+    //Calculate some stuff
+    unsigned int ad = addr - (addr % 16);
+    unsigned int am = amount + 16 - (addr % 16);
+    for(unsigned int pos = 0; pos < am; pos += 16){
+        //Construct one line as a string
+        unsigned int ptr = ad + pos;
+        char msg[57];
+        for(int i = 0; i < 8; i++)
+            msg[i] = hex_conv_const[(ptr >> ((7 - i) * 4)) & 0xF];
+        msg[8] = ' ';
+        for(int o = 0; o < 16; o++){
+            unsigned char val = *(unsigned char*)(ptr + o);
+            msg[9 + (o * 3)] = hex_conv_const[(val >> 4) & 0x0F];
+            msg[9 + (o * 3) + 1] = hex_conv_const[val & 0x0F];
+            msg[9 + (o * 3) + 2] = ' ';
+        }
+        msg[56] = 0;
+        //Print it
+        gfx_vterm_println(msg, 0x0F);
+    }
 }
