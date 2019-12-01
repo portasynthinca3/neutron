@@ -8,7 +8,7 @@ experience for me as the lowest i've ever got was writing code in C++ for the AV
 This project is **not** intended to do some crazy stuff like replacing the giants like Windows, Linux and macOS. No-no, that's just not possible. However, it doesn't mean i don't have an end goal. **The end goal is to write a simple OS that can run in 32-bit protected mode, complete with GUI and 3rd party applications, while requiring as little disk space, RAM and processor resources as possible**
 # Who is involved?
 * Me, Andrey Antonenko, the creator, maintainer and programmer
-* Sasha Kulichkov, booted this on his PC several times
+* Sasha Kulichkov, booted this on his PC several times; created the logo
 # List of things that are done
 * Booting
 * Loading second stage loader
