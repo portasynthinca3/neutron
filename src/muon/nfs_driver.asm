@@ -1,17 +1,45 @@
 ;Neutron project
 ;nFS driver
 
-nfs_loaded_sector_no: dd 0xFFFFFFFF
 nfs_drive_no: db 0xFF
 nfs_partition_no: db 0xFF
 nfs_status: db 0xFF
+
+nfs_spt: db 18
+nfs_hds: db 2
 
 nfs_part_name: db '               ', 0
 nfs_cluster_size: db 0xFF
 nfs_mft_size: db 0xFF
 
+nfs_init:							;reads drive geometry
+									;input: none
+									;output: none
+									;
+	test byte [ds:nfs_drive_no], 0x80 ;check if it's a hard drive
+	jz nfs_init_ret					;return immediately if not
+									;
+	push ax							;save the registers
+	push dx							;
+	push cx							;
+									;
+	mov ah, 8						;int 13h function 8
+	mov dl, [ds:nfs_drive_no]		;select drive
+	int 13h							;
+	add dh, 1						;value in DH is one less than it should be, number of heads
+	and cl, 0x3F					;sectors per track
+	mov [ds:nfs_hds], dh			;store number of heads
+	mov [ds:nfs_spt], cl			;store sectors per track
+									;
+	pop cx							;restore the registers
+	pop dx							;
+	pop ax							;
+									;
+	nfs_init_ret:					;
+	ret								;return from subroutine
+
 nfs_read_drive_sector:				;reads a sector from the drive
-									;input: EAX = LBA of the sector
+									;input: AX = LBA of the sector
 									;       BL = 1 to force read
 									;              otherwise caching is used
 									;output: nfs_status = 0 on success
@@ -19,27 +47,26 @@ nfs_read_drive_sector:				;reads a sector from the drive
 									;        nfs_buffer contains valid data only if 
 									;                     nfs_status is 0
 									;
-	nop
-	nop
-	nop
-	nop
+	nop								;
+	nop								;
+	nop								;
+	nop								;
 	push ax							;save all registers
 	push bx							;
 	push cx							;
 	push dx							;
 	push es							;
 									;
-	cmp eax, [ds:nfs_loaded_sector_no] ;check if this sector is already in cache
-	je nfs_read_sector_return		;return if it is
 	push ds							;set the load segment to the data segment
 	pop es							;>>
+	mov bx, nfs_buffer				;set the target location: a buffer
 									;
-	mov cl, 18						;load sectors per track into CL
+	mov cl, [ds:nfs_spt]			;load sectors per track into CL
 	div cl							;divide AX by CL, storing the quotient in AL and the remainder in AH
 	mov cl, ah						;store the remainder in CL
 	inc cl							;add 1 to CL
 	xor ah, ah						;clear AH
-	mov dl, 2						;load heads into DL
+	mov dl, [ds:nfs_hds]			;load heads into DL
 	div dl							;divide AX (AL) by DL, storing the quotient in AL and the remainder in AH
 	mov dh, ah						;store the remainder in DH
 	shr al, 3						;AL >>= 3
@@ -47,9 +74,8 @@ nfs_read_drive_sector:				;reads a sector from the drive
 	or cl, al						;CL |= AL
 	xor ch, ch						;clear CH
 									;
-	mov bx, nfs_buffer				;set the target location: a buffer
 	mov dl, [ds:nfs_drive_no]		;set the drive number to load from
-	mov al, 1						;set the amount of sectors to be read: 1
+	mov al, 1						;set the amount of sectors to read: 1
 	mov ah, 2						;BIOS routine no.: disk read
 	int 0x13						;execute the BIOS routine
 	cmp ah, 0						;check if the operation was successful
@@ -58,9 +84,7 @@ nfs_read_drive_sector:				;reads a sector from the drive
 	jmp nfs_read_sector_return		;jump straight to the return handler if the operation was successful
 nfs_rs_io_err:
 	mov byte [ds:nfs_status], 1		;set the disk I/O err flag
-	jmp nfs_read_sector_return		;jump to the return handler
 nfs_read_sector_return:
-	mov [ds:nfs_loaded_sector_no], eax ;save the number of the sector that is loaded
 	pop es							;restore all registers
 	pop dx							;
 	pop cx							;

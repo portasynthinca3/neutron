@@ -1,7 +1,7 @@
 ;Neutron project
 ;Muon - second stage loader
 
-%define nfs_buffer   0x2000
+%define nfs_buffer   0x4000
 %define kbd_buf      0x105
 %define app_segment  0x175
 
@@ -23,6 +23,7 @@ entry:
 	mov byte [ds:nfs_drive_no], al ;tell it to the nFS driver
 	mov bx, 320				;set the screen position: 2nd line counting from 0
 	mov ch, 0x0F			;set the colors: white on black
+	call nfs_init			;read boot drive geometry
 	call nfs_load_master_sector ;load the nFS data
 	mov ch, 0x0F			;set the colors: white on black
 	jmp cli_krnl			;try yo load the kernel
