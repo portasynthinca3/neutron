@@ -11,7 +11,7 @@
 #define STDLIB_DRAM_SIZE (128 * 0x100000)
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "  Quark version is 0.0.2"
+#define QUARK_VERSION_STR "Quark version is 0.0.2"
 //Quark panic code for reaching the end
 #define QUARK_PANIC_CODE_END 0xABADBABE
 
@@ -53,6 +53,7 @@ void abort();
 //Low-level functions
 
 void load_idt(struct idt_desc* idt);
+void bswap_dw(int* value);
 
 //Dynamic memory allocation functions
 
@@ -62,5 +63,20 @@ void* malloc(unsigned int size);
 //Memory operation functions
 
 void* memset(void* dst, int ch, unsigned int size);
+
+//I/O port operation functions
+
+void outl(unsigned short port, unsigned int value);
+unsigned int inl(unsigned short port);
+void outw(unsigned short port, unsigned short value);
+unsigned short inw(unsigned short port);
+void outb(unsigned short port, unsigned char value);
+unsigned char inb(unsigned short port);
+
+//FIFO buffer operations
+
+void fifo_pushb(unsigned char* buffer, unsigned short* head, unsigned char value);
+unsigned char fifo_popb(unsigned char* buffer, unsigned short* head, unsigned short* tail);
+unsigned char fifo_av(unsigned short* head, unsigned short* tail);
 
 #endif
