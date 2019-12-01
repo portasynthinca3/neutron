@@ -17,6 +17,7 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 * Kernel graphics
 # List of things that are in development right now
 * USB (EHCI) support
+* GUI
 # What parts does this consist of?
 1. First stage loader, called Muon-1
 2. Second stage loader, called Muon-2
@@ -24,7 +25,7 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 4. The font converter. Written in C#
 5. The custom builder. Written in Python.
 # Where does it work?
-In theory, it should work on any modern system. Here are the funny minimal requirements:
+In theory, it should work on any modern system. Here are the minimal requirements:
 * CPU: Pentium I or later
 * RAM: 8 MB
 * Buses: PCI, USB
