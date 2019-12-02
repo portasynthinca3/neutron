@@ -15,22 +15,35 @@
 //Quark panic code for reaching the end
 #define QUARK_PANIC_CODE_END 0xABADBABE
 
+//Standard type definitions
+
+typedef unsigned int size_t;
+typedef unsigned char uint8_t;
+typedef signed char int8_t;
+typedef unsigned short uint16_t;
+typedef signed char int16_t;
+typedef unsigned int uint32_t;
+typedef signed int int32_t;
+typedef unsigned long uint64_t;
+typedef signed long int64_t;
+typedef unsigned int size_t;
+
 /*
  * Structure defining a memory block
  * A lot of them are stored in a specific location in memory
  *   for malloc(), free(), realloc() and others to use
  */
-struct _mem_block{
-    unsigned char used;
+struct _mem_block {
+    uint8_t used;
     void* ptr;
-    unsigned int size;
+    uint32_t size;
 };
 
 /*
  * Structure describing the Interrupt Descripotor Table Descriptor
  */
-struct idt_desc{
-    unsigned short limit;
+struct idt_desc {
+    uint16_t limit;
     void* base;
 } __attribute__((packed));
 
@@ -38,11 +51,11 @@ struct idt_desc{
  * Structure describing an IDT entry
  */
 struct idt_entry {
-   unsigned short offset_lower;
-   unsigned short code_selector;
-   unsigned char zero;
-   unsigned char type_attr;
-   unsigned short offset_higher;
+   uint16_t offset_lower;
+   uint16_t code_selector;
+   uint8_t zero;
+   uint8_t type_attr;
+   uint16_t offset_higher;
 } __attribute__ ((packed));
 
 //Debug functions
@@ -58,25 +71,28 @@ void bswap_dw(int* value);
 //Dynamic memory allocation functions
 
 void dram_init(void);
-void* malloc(unsigned int size);
+void* malloc(size_t size);
+void free(void* ptr);
+void* calloc(uint32_t num, size_t size);
 
 //Memory operation functions
 
-void* memset(void* dst, int ch, unsigned int size);
+void* memset(void* dst, int ch, uint32_t size);
+void* memcpy(void* destination, const void* source, uint32_t num);
 
 //I/O port operation functions
 
-void outl(unsigned short port, unsigned int value);
-unsigned int inl(unsigned short port);
-void outw(unsigned short port, unsigned short value);
-unsigned short inw(unsigned short port);
-void outb(unsigned short port, unsigned char value);
-unsigned char inb(unsigned short port);
+void outl(uint16_t port, uint32_t value);
+uint32_t inl(uint16_t port);
+void outw(uint16_t port, uint16_t value);
+uint16_t inw(uint16_t port);
+void outb(uint16_t port, uint8_t value);
+uint8_t inb(uint16_t port);
 
 //FIFO buffer operations
 
-void fifo_pushb(unsigned char* buffer, unsigned short* head, unsigned char value);
-unsigned char fifo_popb(unsigned char* buffer, unsigned short* head, unsigned short* tail);
-unsigned char fifo_av(unsigned short* head, unsigned short* tail);
+void fifo_pushb(uint8_t* buffer, uint16_t* head, uint8_t value);
+uint8_t fifo_popb(uint8_t* buffer, uint16_t* head, uint16_t* tail);
+uint8_t fifo_av(uint16_t* head, uint16_t* tail);
 
 #endif
