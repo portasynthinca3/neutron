@@ -102,9 +102,29 @@ void gfx_fill(unsigned char color){
 void gfx_draw_filled_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c){
     //For each horizontal line in the rectangle
     for(unsigned short y = sy; y < sy + h; y++){
-        //We can use memset to draw a horizontal line
+        //Use memset to draw a horizontal line
         unsigned int offset = (y * res_x) + sx;
         memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
+    }
+}
+
+/*
+ * Draw a rectangle
+ */
+void gfx_draw_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c){
+    //Draw two horizontal lines
+    unsigned int offset = (sy * res_x) + sx;
+    memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
+    offset = ((sy + h) * res_x) + sx;
+    memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
+    //Draw two vertical lines
+    for(uint16_t y = sy; y < sy + h; y++){
+        offset = (y * res_x) + sx;
+        *((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer + offset) = c;
+    }
+    for(uint16_t y = sy; y < sy + h; y++){
+        offset = (y * res_x) + sx + w;
+        *((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer + offset) = c;
     }
 }
 

@@ -8,6 +8,8 @@
 
 //Mouse position on the screen
 signed short mx, my;
+//Mouse buttons state
+uint8_t ml, mr;
 //Keyboard buffer
 unsigned char* kbd_buffer;
 unsigned short kbd_buffer_head, kbd_buffer_tail;
@@ -17,20 +19,36 @@ unsigned short ms_buffer_head, ms_buffer_tail;
 //Current color scheme
 color_scheme_t color_scheme;
 
+//The list of windows
+window_t* windows;
+//The window that is being dragged currently
+window_t* window_dragging;
+//The point of the dragging window that is pinned to the cursor
+p2d_t window_dragging_cpos;
+
 /*
  * Performs some GUI initialization
  */
 void gui_init(void){
     //Initialize the PS/2 controller
     gui_init_ps2();
-    //Reset cursor coordinates
-    mx = 0;
-    my = 0;
+    //Reset mouse state
+    mx = my = ml = mr = 0;
+    //Reset some variables
+    window_dragging = NULL;
     //Set the default color scheme
+    //The palette for reference is here: https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fwww.fountainware.com%2FEXPL%2Fvgapalette.png&f=1&nofb=1
     color_scheme.desktop = 0x12; //Very dark grey
-    color_scheme.top_bar = 0x2C; //Yellow
-    color_scheme.cursor = 0x20; //Deep blue
+    color_scheme.top_bar = 0x14; //Dark grey
+    color_scheme.cursor = 0x0F; //White
     color_scheme.selection = 0x35; //Light blue
+    color_scheme.win_bg = 0x17; //Grey
+    color_scheme.win_border = 0x32; //Green-blue-ish
+    color_scheme.win_title = 0x0F; //White
+    color_scheme.win_exit_btn = 0x28; //Red
+    color_scheme.win_state_btn = 0x2C; //Yellow
+    color_scheme.win_minimize_btn = 0x2F; //Lime
+    color_scheme.win_unavailable_btn = 0x12; //Very dark grey
 }
 
 /*
@@ -54,6 +72,18 @@ void gui_init_ps2(){
     outb(0x60, 0xF4); //Issue mouse command 0xF4 (enable packet streaming)
     while(!(inb(0x64) & 1)); //Wait for the mouse to send an ACK byte
     inb(0x60); //Read and discard the ACK byte
+
+    //Allocate a chunk of memory for windows
+    windows = (window_t*)malloc(64 * sizeof(window_t));
+    //Set up an example window
+    windows[0].title = "This is a window!";
+    windows[0].position = (p2d_t){.x = 100, .y = 100};
+    windows[0].size = (p2d_t){.x = 300, .y = 200};
+    windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
+                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
+    windows[0].controls = NULL;
+    //Mark the end of a window list
+    windows[1].size.x = 0;
 }
 
 /*
@@ -66,10 +96,78 @@ void gui_update(void){
     gfx_fill(color_scheme.desktop);
     //Draw the top bar
     gfx_draw_filled_rect(0, 0, gfx_res_x(), 16, color_scheme.top_bar);
+    //Render the windows
+    gui_render_windows();
     //Draw the cursor
     gui_draw_cursor(mx, my);
     //Flip the buffers
     gfx_flip();
+}
+
+/*
+ * Calls gui_render_window() according to the window order
+ */
+void gui_render_windows(void){
+    uint32_t i = 0;
+    window_t* current_window;
+    //Fetch the next windows, x-size=0 means it's the end of the list
+    while((current_window = &windows[i++])->size.x != 0){
+        gui_render_window(current_window);
+    }
+}
+
+/*
+ * Renders a window
+ */
+void gui_render_window(window_t* ptr){
+    //Only draw the window if it has the visibility flag set
+    if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
+        //Fill a rectangle with a window background color
+        gfx_draw_filled_rect(ptr->position.x, ptr->position.y, ptr->size.x, ptr->size.y, color_scheme.win_bg);
+        //Draw a border around it
+        gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, ptr->size.y, color_scheme.win_border);
+        //Print its title if window has the title visibility flag set
+        if(ptr->flags & GUI_WIN_FLAG_TITLE_VISIBLE)
+            gfx_puts(ptr->position.x + 2, ptr->position.y + 2, color_scheme.win_title, ptr->title);
+        //Draw a border arount the title
+        gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, 11, color_scheme.win_border);
+        //Draw the close button 
+        if(ptr->flags & GUI_WIN_FLAG_CLOSABLE)
+            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_exit_btn);
+        else
+            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+        //Draw the maximize (state change) button 
+        if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
+            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 19, ptr->position.y + 2, 8, 8, color_scheme.win_state_btn);
+        else
+            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+        //Draw the minimize button 
+        if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
+            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 28, ptr->position.y + 2, 8, 8, color_scheme.win_minimize_btn);
+        else
+            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+
+        //Process window dragging
+        //If there's no such window that's being dragged right now, the cursor is in bounds of the title
+        //  and the left button is being pressed, assume the window we're dragging is this one
+        if(window_dragging == NULL &&
+            ml &&
+            mx >= ptr->position.x + 1 &&
+            my >= ptr->position.y + 1 &&
+            mx <= ptr->position.x + ptr->size.x - 1 &&
+            my <= ptr->position.y + 10){
+                window_dragging = ptr;
+                window_dragging_cpos = (p2d_t){.x = ptr->position.x - mx, .y = ptr->position.y - my};
+            }
+        //If the window we're dragging is this one, drag it
+        if(window_dragging == ptr){
+            //If the left mouse button is still being pressed, drag the window
+            if(ml)
+                ptr->position = (p2d_t){.x = mx + window_dragging_cpos.x, .y = my + window_dragging_cpos.y};
+            else //Else, reset the pointer
+                window_dragging = NULL;
+        }
+    }
 }
 
 /*
@@ -113,6 +211,9 @@ void gui_poll_ps2(){
             my = 0;
         else if(my >= gfx_res_y())
             my = gfx_res_y() - 1;
+        //Set mouse button state variables
+        ml = ms_flags & 1;
+        mr = ms_flags & 2;
     }
 }
 

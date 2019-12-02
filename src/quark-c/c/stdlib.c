@@ -44,7 +44,7 @@ void* malloc(unsigned int size){
     int best_blk_id = -1;
     unsigned int best_blk_size = 0xFFFFFFFF;
     for(unsigned int i = 0; i < STDLIB_DRAM_MEMBLOCKS; i++){
-        if(!_mem_blocks[i].used && _mem_blocks[i].size >= size && _mem_blocks[i].size < best_blk_size){
+        if(!_mem_blocks[i].used && _mem_blocks[i].size >= size && _mem_blocks[i].size < best_blk_size && _mem_blocks[i].ptr != NULL){
             best_blk_id = i;
             best_blk_size = _mem_blocks[i].size;
         }
@@ -69,6 +69,61 @@ void* malloc(unsigned int size){
 }
 
 /*
+ * Free a memory block allocated by malloc(), calloc() and others
+ */
+void free(void* ptr){
+    //Find a used block with a pointer equal to the provided one
+    int32_t blk = -1;
+    for(uint32_t i = 0; i < STDLIB_DRAM_MEMBLOCKS; i++){
+        if(_mem_blocks[i].used && _mem_blocks[i].ptr == ptr){
+            blk = i;
+            break;
+        }
+    }
+    //If no such blocks were found, the callee is a LIAR!
+    if(blk == -1)
+        return;
+    //Mark the found block as unused
+    _mem_blocks[blk].used = 0;
+    //If this isn't the first block, merge it with the previous one if it's unused too
+    if(blk > 0){
+        if(!_mem_blocks[blk - 1].used){
+            struct _mem_block blk_new;
+            blk_new.ptr = _mem_blocks[blk - 1].ptr;
+            blk_new.size = _mem_blocks[blk - 1].size + _mem_blocks[blk].size;
+            blk_new.used = 0;
+            _mem_blocks[blk] = blk_new;
+            //Mark the previous block as invalid
+            _mem_blocks[blk -1 ].ptr = NULL;
+        }
+    }
+    //If this isn't the last block, merge it with the next one if it's unused too
+    if(blk < STDLIB_DRAM_MEMBLOCKS - 1){
+        if(!_mem_blocks[blk + 1].used){
+            struct _mem_block blk_new;
+            blk_new.ptr = _mem_blocks[blk].ptr;
+            blk_new.size = _mem_blocks[blk + 1].size + _mem_blocks[blk].size;
+            blk_new.used = 0;
+            _mem_blocks[blk] = blk_new;
+            //Mark the next block as invalid
+            _mem_blocks[blk + 1].ptr = NULL;
+        }
+    }
+}
+
+/*
+ * Allocate a block of memory and fill it with zeroes
+ */
+void* calloc(uint32_t num, size_t size){
+    //Allocate the memory using malloc()
+    void* malloc_res = malloc(num * size);
+    if(malloc_res != NULL) //If the returned pointer isn't null, memset() with zeroes and return it
+        return memset(malloc_res, 0, num * size);
+    else //Else, return null too
+        return NULL;
+}
+
+/*
  * Fill a chunk of memory with certain values
  */
 void* memset(void* dst, int ch, unsigned int size){
@@ -79,6 +134,25 @@ void* memset(void* dst, int ch, unsigned int size){
         *(unsigned char*)(dst + size) = c;
     //Return dst
     return dst;
+}
+
+/*
+ * Copy a block of memory
+ */
+void* memcpy(void* destination, const void* source, uint32_t num){
+    //Use a very clever REP MOVx command to perform a blazing-fast memory-to-memory data transfer
+    //x = size of the operands (B, W, D)
+    if(num % 4 == 0){
+        //We can transfer data in doublewords, which is faster than transferring four bytes
+        __asm__ volatile("mov %0, %%esi; mov %1, %%edi; rep movsd;" : : "r" (source), "r" (destination), "c" (num / 4));
+    } else if(num % 2 == 0){
+        //We can transfer data in words, which is faster than transferring two bytes
+        __asm__ volatile("mov %0, %%esi; mov %1, %%edi; rep movsw;" : : "r" (source), "r" (destination), "c" (num / 2));
+    } else {
+        //Or take the traditional method...
+        __asm__ volatile("mov %0, %%esi; mov %1, %%edi; rep movsb;" : : "r" (source), "r" (destination), "c" (num));
+    }
+    return destination;
 }
 
 /*
