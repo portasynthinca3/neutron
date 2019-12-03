@@ -1,6 +1,14 @@
 #ifndef GFX_H
 #define GFX_H
 
+#include "../h/stdlib.h"
+
+//Structure defining a 2D point
+typedef struct {
+    signed short x;
+    signed short y;
+} p2d_t;
+
 typedef unsigned char color8_t;
 
 #define GFX_BUF_VBE 1
@@ -29,5 +37,7 @@ void gfx_vterm_println(char* s, unsigned char color);
 void gfx_vterm_println_hex(int value, unsigned char color);
 void gfx_panic(int ip, int code);
 void gfx_memdump(unsigned int addr, int amount);
+
+uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz);
 
 #endif

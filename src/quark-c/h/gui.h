@@ -3,12 +3,6 @@
 
 #include "../h/gfx.h"
 
-//Structure defining a 2D point
-typedef struct {
-    signed short x;
-    signed short y;
-} p2d_t;
-
 //Structure defining the GUI color scheme
 typedef struct {
     color8_t top_bar;
@@ -59,6 +53,7 @@ void gui_init(void);
 void gui_update(void);
 
 void gui_render_windows(void);
+void gui_process_window(window_t* ptr);
 void gui_render_window(window_t* ptr);
 
 void gui_init_ps2(void);
