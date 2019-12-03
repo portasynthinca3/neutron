@@ -25,6 +25,10 @@ window_t* windows;
 window_t* window_dragging;
 //The point of the dragging window that is pinned to the cursor
 p2d_t window_dragging_cpos;
+///The window that is in focus
+window_t* window_focused;
+//Flag indicating that focusing was already processed this frame
+uint8_t focus_processed;
 
 /*
  * Performs some GUI initialization
@@ -49,6 +53,34 @@ void gui_init(void){
     color_scheme.win_state_btn = 0x2C; //Yellow
     color_scheme.win_minimize_btn = 0x2F; //Lime
     color_scheme.win_unavailable_btn = 0x12; //Very dark grey
+
+    //Allocate a chunk of memory for windows
+    windows = (window_t*)malloc(64 * sizeof(window_t));
+    //Set up an example window
+    windows[0].title = "Window #0";
+    windows[0].position = (p2d_t){.x = 100, .y = 100};
+    windows[0].size = (p2d_t){.x = 150, .y = 100};
+    windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
+                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
+    windows[0].controls = NULL;
+    //And another one...
+    windows[1].title = "Window #1";
+    windows[1].position = (p2d_t){.x = 120, .y = 120};
+    windows[1].size = (p2d_t){.x = 150, .y = 100};
+    windows[1].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
+                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
+    windows[1].controls = NULL;
+    //The third one...
+    windows[2].title = "Window #2";
+    windows[2].position = (p2d_t){.x = 140, .y = 140};
+    windows[2].size = (p2d_t){.x = 150, .y = 100};
+    windows[2].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
+                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
+    windows[2].controls = NULL;
+    //Mark the end of a window list
+    windows[3].size.x = 0;
+    //Set the window in focus
+    window_focused = &windows[0];
 }
 
 /*
@@ -72,18 +104,6 @@ void gui_init_ps2(){
     outb(0x60, 0xF4); //Issue mouse command 0xF4 (enable packet streaming)
     while(!(inb(0x64) & 1)); //Wait for the mouse to send an ACK byte
     inb(0x60); //Read and discard the ACK byte
-
-    //Allocate a chunk of memory for windows
-    windows = (window_t*)malloc(64 * sizeof(window_t));
-    //Set up an example window
-    windows[0].title = "This is a window!";
-    windows[0].position = (p2d_t){.x = 100, .y = 100};
-    windows[0].size = (p2d_t){.x = 300, .y = 200};
-    windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
-                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
-    windows[0].controls = NULL;
-    //Mark the end of a window list
-    windows[1].size.x = 0;
 }
 
 /*
@@ -108,12 +128,32 @@ void gui_update(void){
  * Calls gui_render_window() according to the window order
  */
 void gui_render_windows(void){
+    //Some local variables
     uint32_t i = 0;
     window_t* current_window;
-    //Fetch the next windows, x-size=0 means it's the end of the list
+    //Clear the focus processed flag
+    focus_processed = 0;
+
+    //If the window in focus is valid
+    if(window_focused != NULL) //Process the window in focus first
+        gui_process_window(window_focused);
+    //Fetch the next window, size.x=0 means it's the end of the list
     while((current_window = &windows[i++])->size.x != 0){
-        gui_render_window(current_window);
+        //Process the current window
+        gui_process_window(current_window);
     }
+
+    //Reset the counter
+    i = 0;
+    //Fetch the next window, size.x=0 means it's the end of the list
+    while((current_window = &windows[i++])->size.x != 0){
+        //Render the current window if it isn't in focus
+        if(current_window != window_focused)
+            gui_render_window(current_window);
+    }
+    //If the window in focus is valid
+    if(window_focused != NULL) //Render the window in focus first
+        gui_render_window(window_focused);
 }
 
 /*
@@ -146,19 +186,25 @@ void gui_render_window(window_t* ptr){
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 28, ptr->position.y + 2, 8, 8, color_scheme.win_minimize_btn);
         else
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+    }
+}
 
+/*
+ * Process window's interaction with the cursor
+ */
+void gui_process_window(window_t* ptr){
+    //Only process the window if it has the visibility flag set
+    if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Process window dragging
         //If there's no such window that's being dragged right now, the cursor is in bounds of the title
         //  and the left button is being pressed, assume the window we're dragging is this one
         if(window_dragging == NULL &&
-            ml &&
-            mx >= ptr->position.x + 1 &&
-            my >= ptr->position.y + 1 &&
-            mx <= ptr->position.x + ptr->size.x - 1 &&
-            my <= ptr->position.y + 10){
+            ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                                    (p2d_t){.x = ptr->position.x + 1, .y = ptr->position.y + 1},
+                                    (p2d_t){.x = ptr->size.x - 2, .y = 9})){
                 window_dragging = ptr;
                 window_dragging_cpos = (p2d_t){.x = ptr->position.x - mx, .y = ptr->position.y - my};
-            }
+        }
         //If the window we're dragging is this one, drag it
         if(window_dragging == ptr){
             //If the left mouse button is still being pressed, drag the window
@@ -166,6 +212,18 @@ void gui_render_window(window_t* ptr){
                 ptr->position = (p2d_t){.x = mx + window_dragging_cpos.x, .y = my + window_dragging_cpos.y};
             else //Else, reset the pointer
                 window_dragging = NULL;
+        }
+
+        //Process window focusing
+        //If the cursor is inside the current window, the focusing hadn't been done in the current frame,
+        //  and the left button is held down, set the window in focus and set the "focus processed" flag
+        if(ml &&
+           !focus_processed &&
+           gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                             (p2d_t){.x = ptr->position.x + 1, .y = ptr->position.y + 1},
+                             (p2d_t){.x = ptr->size.x - 2, .y = ptr->size.y - 2})){
+            focus_processed = 1;
+            window_focused = ptr;
         }
     }
 }

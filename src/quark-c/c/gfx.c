@@ -287,3 +287,13 @@ void gfx_memdump(unsigned int addr, int amount){
         gfx_vterm_println(msg, 0x0F);
     }
 }
+
+/*
+ * Checks if certain point is inside a rectangle
+ */
+uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz){
+    return p.x >= pos.x &&
+           p.y >= pos.y &&
+           p.x <= pos.x + sz.x &&
+           p.y <= pos.y + sz.y;
+}
