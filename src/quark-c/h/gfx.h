@@ -25,6 +25,7 @@ void gfx_set_buf(unsigned char buf);
 
 void gfx_fill(unsigned char color);
 void gfx_draw_filled_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c);
+void gfx_draw_hor_line(uint16_t sx, uint16_t sy, uint16_t w, color8_t c);
 void gfx_draw_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c);
 void gfx_draw_checker(unsigned char c1, unsigned char c2);
 

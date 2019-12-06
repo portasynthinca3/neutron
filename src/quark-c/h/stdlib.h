@@ -11,7 +11,7 @@
 #define STDLIB_DRAM_SIZE (128 * 0x100000)
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "Quark version is 0.0.2"
+#define QUARK_VERSION_STR "Quark v0.0.6"
 //Quark panic code for reaching the end
 #define QUARK_PANIC_CODE_END 0xABADBABE
 
@@ -24,8 +24,8 @@ typedef unsigned short uint16_t;
 typedef signed char int16_t;
 typedef unsigned int uint32_t;
 typedef signed int int32_t;
-typedef unsigned long uint64_t;
-typedef signed long int64_t;
+typedef unsigned long long uint64_t;
+typedef signed long long int64_t;
 typedef unsigned int size_t;
 
 /*
@@ -67,6 +67,8 @@ void abort();
 
 void load_idt(struct idt_desc* idt);
 void bswap_dw(int* value);
+uint64_t rdtsc();
+int read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s);
 
 //Dynamic memory allocation functions
 
@@ -94,5 +96,11 @@ uint8_t inb(uint16_t port);
 void fifo_pushb(uint8_t* buffer, uint16_t* head, uint8_t value);
 uint8_t fifo_popb(uint8_t* buffer, uint16_t* head, uint16_t* tail);
 uint8_t fifo_av(uint16_t* head, uint16_t* tail);
+
+//String functions
+
+size_t strlen(const char* str);
+char* sprintu(char* str, uint32_t i, uint8_t min);
+char* strcat(char* dest, char* src);
 
 #endif

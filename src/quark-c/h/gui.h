@@ -6,6 +6,7 @@
 //Structure defining the GUI color scheme
 typedef struct {
     color8_t top_bar;
+    color8_t time;
     color8_t desktop;
     color8_t cursor;
     color8_t selection;
@@ -33,6 +34,7 @@ typedef struct {
     char* title;
     p2d_t position;
     p2d_t size;
+    p2d_t size_real;
 } window_t;
 
 //Keyboard buffer size in bytes
@@ -48,6 +50,9 @@ typedef struct {
 #define GUI_WIN_FLAG_VISIBLE                        (1 << 4)
 #define GUI_WIN_FLAG_TITLE_VISIBLE                  (1 << 5)
 #define GUI_WIN_FLAG_DRAGGABLE                      (1 << 6)
+#define GUI_WIN_FLAG_CLOSED                         (1 << 7)
+#define GUI_WIN_FLAG_MAXIMIZED                      (1 << 8)
+#define GUI_WIN_FLAG_MINIMIZED                      (1 << 9)
 
 void gui_init(void);
 void gui_update(void);
