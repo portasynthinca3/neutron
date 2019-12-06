@@ -29,6 +29,10 @@ p2d_t window_dragging_cpos;
 window_t* window_focused;
 //Flag indicating that focusing was already processed this frame
 uint8_t focus_processed;
+//Window position in the the top bar
+uint16_t topb_win_pos;
+//The current time as a string
+char time[64] = "??:??:??\0";
 
 /*
  * Performs some GUI initialization
@@ -46,6 +50,7 @@ void gui_init(void){
     color_scheme.top_bar = 0x14; //Dark grey
     color_scheme.cursor = 0x0F; //White
     color_scheme.selection = 0x35; //Light blue
+    color_scheme.time = color_scheme.selection;
     color_scheme.win_bg = 0x17; //Grey
     color_scheme.win_border = 0x32; //Green-blue-ish
     color_scheme.win_title = 0x0F; //White
@@ -59,28 +64,28 @@ void gui_init(void){
     //Set up an example window
     windows[0].title = "Window #0";
     windows[0].position = (p2d_t){.x = 100, .y = 100};
-    windows[0].size = (p2d_t){.x = 150, .y = 100};
+    windows[0].size_real = (p2d_t){.x = 150, .y = 100};
     windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
                        GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
     windows[0].controls = NULL;
     //And another one...
     windows[1].title = "Window #1";
     windows[1].position = (p2d_t){.x = 120, .y = 120};
-    windows[1].size = (p2d_t){.x = 150, .y = 100};
+    windows[1].size_real = (p2d_t){.x = 150, .y = 100};
     windows[1].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
                        GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
     windows[1].controls = NULL;
     //The third one...
     windows[2].title = "Window #2";
     windows[2].position = (p2d_t){.x = 140, .y = 140};
-    windows[2].size = (p2d_t){.x = 150, .y = 100};
+    windows[2].size_real = (p2d_t){.x = 150, .y = 100};
     windows[2].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
                        GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
     windows[2].controls = NULL;
     //Mark the end of a window list
-    windows[3].size.x = 0;
+    windows[3].size_real.x = 0;
     //Set the window in focus
-    window_focused = &windows[0];
+    window_focused = &windows[2];
 }
 
 /*
@@ -116,6 +121,28 @@ void gui_update(void){
     gfx_fill(color_scheme.desktop);
     //Draw the top bar
     gfx_draw_filled_rect(0, 0, gfx_res_x(), 16, color_scheme.top_bar);
+    
+    //Print the time
+    uint8_t h, m, s = 0;
+    if(read_rtc_time(&h, &m, &s)){
+        //Clear the time string
+        time[0] = 0;
+        //Create a temporary local string
+        char temp[64];
+        temp[0] = 0;
+        strcat(time, temp);
+        //Append hours
+        strcat(time, sprintu(temp, h, 2));
+        strcat(time, ":");
+        //Append minutes
+        strcat(time, sprintu(temp, m, 2));
+        strcat(time, ":");
+        //Append seconds
+        strcat(time, sprintu(temp, s, 2));
+    }
+    //Actually print it
+    gfx_puts(gfx_res_x() - (strlen(time) * 6) - 4, 5, color_scheme.time, time);
+
     //Render the windows
     gui_render_windows();
     //Draw the cursor
@@ -129,38 +156,63 @@ void gui_update(void){
  */
 void gui_render_windows(void){
     //Some local variables
-    uint32_t i = 0;
+    int32_t i = 0;
     window_t* current_window;
     //Clear the focus processed flag
     focus_processed = 0;
+    //Reset the top bar position
+    topb_win_pos = 0;
 
     //If the window in focus is valid
     if(window_focused != NULL) //Process the window in focus first
         gui_process_window(window_focused);
-    //Fetch the next window, size.x=0 means it's the end of the list
-    while((current_window = &windows[i++])->size.x != 0){
-        //Process the current window
+    //Walk through the window list to determine the end of it, size_real.x=0 means it's the end of the list
+    while(windows[i++].size_real.x != 0);
+    i--;
+    //Fetch the next window
+    while(i >= 0){
+        current_window = &windows[i--];
+        //Process it
         gui_process_window(current_window);
     }
 
     //Reset the counter
     i = 0;
-    //Fetch the next window, size.x=0 means it's the end of the list
-    while((current_window = &windows[i++])->size.x != 0){
+    uint16_t win_cnt = 0;
+    //Fetch the next window, size_real.x=0 means it's the end of the list
+    while((current_window = &windows[i++])->size_real.x != 0){
+        //Draw the highlight in the top bar if the window is in focus
+        if(window_focused == current_window)
+            gfx_draw_filled_rect(topb_win_pos, 0, 16, 16, color_scheme.selection);
+        //Draw the window icon in the top bar
+        gfx_draw_filled_rect(topb_win_pos + 4, 4, 8, 8, color_scheme.win_bg);
+        gfx_draw_filled_rect(topb_win_pos + 5, 5, 3, 6, 0x35);
+        gfx_draw_hor_line(topb_win_pos + 9, 5, 2, color_scheme.win_title);
+        //Advance the bar position
+        topb_win_pos += 16;
+
         //Render the current window if it isn't in focus
         if(current_window != window_focused)
             gui_render_window(current_window);
+
+        //Increment the window counter
+        win_cnt++;
     }
     //If the window in focus is valid
     if(window_focused != NULL) //Render the window in focus first
         gui_render_window(window_focused);
+    
+    //Set the window in focus according to the top bar clicks
+    if(ml && mx / 16 <= win_cnt){
+        window_focused = &windows[mx / 16];
+    }
 }
 
 /*
  * Renders a window
  */
 void gui_render_window(window_t* ptr){
-    //Only draw the window if it has the visibility flag set
+    //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Fill a rectangle with a window background color
         gfx_draw_filled_rect(ptr->position.x, ptr->position.y, ptr->size.x, ptr->size.y, color_scheme.win_bg);
@@ -171,16 +223,19 @@ void gui_render_window(window_t* ptr){
             gfx_puts(ptr->position.x + 2, ptr->position.y + 2, color_scheme.win_title, ptr->title);
         //Draw a border arount the title
         gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, 11, color_scheme.win_border);
+
         //Draw the close button 
         if(ptr->flags & GUI_WIN_FLAG_CLOSABLE)
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_exit_btn);
         else
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+
         //Draw the maximize (state change) button 
         if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 19, ptr->position.y + 2, 8, 8, color_scheme.win_state_btn);
         else
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+
         //Draw the minimize button 
         if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 28, ptr->position.y + 2, 8, 8, color_scheme.win_minimize_btn);
@@ -190,9 +245,11 @@ void gui_render_window(window_t* ptr){
 }
 
 /*
- * Process window's interaction with the cursor
+ * Processes window's interaction with the mouse
  */
 void gui_process_window(window_t* ptr){
+    //Set the size to the real one as the proper processing hadn't been implemented yet
+    ptr->size = ptr->size_real;
     //Only process the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Process window dragging
@@ -207,11 +264,22 @@ void gui_process_window(window_t* ptr){
         }
         //If the window we're dragging is this one, drag it
         if(window_dragging == ptr){
-            //If the left mouse button is still being pressed, drag the window
-            if(ml)
+            if(ml){
+                //If the left mouse button is still being pressed, drag the window
                 ptr->position = (p2d_t){.x = mx + window_dragging_cpos.x, .y = my + window_dragging_cpos.y};
-            else //Else, reset the pointer
+                //Constrain the window coordinates
+                if(ptr->position.x < 0)
+                    ptr->position.x = 0;
+                if(ptr->position.y < 16) //The top bar is 16 pixels T H I C C
+                    ptr->position.y = 16;
+                if(ptr->position.x > gfx_res_x() - ptr->size.x - 1)
+                    ptr->position.x = gfx_res_x() - ptr->size.x - 1;
+                if(ptr->position.y > gfx_res_y() - ptr->size.y - 1)
+                    ptr->position.y = gfx_res_y() - ptr->size.y - 1;
+            } else {
+                //Else, reset the pointer
                 window_dragging = NULL;
+            }
         }
 
         //Process window focusing

@@ -20,6 +20,18 @@ char* floppy_name[] = { "Not present", "5.25\" 360KB", "5.25\" 1.2MB", "3.5\" 72
 const char hcc[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 /*
+ * Display a boot progress bar
+ */
+void krnl_boot_status(char* str, uint32_t progress){
+    //Draw the screen
+    gfx_draw_filled_rect(0, gfx_res_y() / 2, gfx_res_x(), 8, 0x1E);
+    gfx_puts((gfx_res_x() - (strlen(str) * 6)) / 2, gfx_res_y() / 2, 0, str);
+    gfx_draw_hor_line(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 3, 0x15);
+    gfx_draw_hor_line(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 300 * progress, 0x2F);
+    gfx_flip();
+}
+
+/*
  * The entry point for the kernel
  */
 void main(void){
@@ -31,10 +43,14 @@ void main(void){
 
     //Do some graphics-related initialization stuff
     gfx_init();
-    gfx_set_buf(GFX_BUF_VBE); //Start with logging directly onto VBE memory
-    gfx_fill(0x0F);
-    gfx_draw_checker(0, 0x0F);
+    gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
+    gfx_fill(0x1E);
     gfx_set_font(font_neutral);
+
+    //Print the quark version
+    gfx_puts((gfx_res_x() - (strlen(QUARK_VERSION_STR) * 6)) / 2, 0, 0, QUARK_VERSION_STR);
+    //Print the boot process
+    krnl_boot_status("N.Quark-C is running", 5);
 
     //Set up IDT
     struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
@@ -54,35 +70,11 @@ void main(void){
     //Load IDT
     load_idt(&idt_d);
 
-    gfx_vterm_println_hex((int)font_neutral, 0x0F);
-
-    //Tell the world about our success of getting here!
-    gfx_vterm_println("NEUTRON QUARK is running", 0x2F);
-    gfx_vterm_println(QUARK_VERSION_STR, 0x0F);
-
-    //Print the hardware info
-    gfx_vterm_println("Detecting hardware", 0x34);
-    gfx_vterm_println("Storage:", 0x34);
-    //Starting with boot divice detected floppies
-    gfx_vterm_println("BIOS boot disk no.:", 0x0F);
-    gfx_vterm_println_hex((int)(*(unsigned char*)(0x8FC08)), 0x0F);
-    unsigned char floppies = diskio_get_floppy_drives();
-    gfx_vterm_println("Floppy A:", 0x0F);
-    gfx_vterm_println(floppy_name[(floppies & 0xF0) >> 4], 0x0F);
-    gfx_vterm_println("Floppy B:", 0x0F);
-    gfx_vterm_println(floppy_name[floppies & 0x0F], 0x0F);
-    //Then, PCI devices
-    gfx_vterm_println("PCI devices:", 0x34);
+    //Enumerate PCI devices
+    krnl_boot_status("Detecting hardware", 15);
     pci_enumerate();
-    //Hardware detection and initialization is pretty much done at this point
-
-    //Tell the world about us initializing GUI
-    gfx_vterm_println("Initializing GUI", 0x2F);
-    gfx_flip(); //Transfer the VBE buffer to the secondary one
-    gfx_set_buf(GFX_BUF_SEC); //Switch to the secondary buffer, enabling doublebuffering
-    gfx_vterm_println("Doublebuffering enabled", 0x0F);
-    gfx_flip(); //Transfer the secondary buffer to the VBE one
-    //Initialize the GUI, finally
+    //Configure GUI
+    krnl_boot_status("Configuring GUI", 90);
     gui_init();
 
     //Constantly update the GUI

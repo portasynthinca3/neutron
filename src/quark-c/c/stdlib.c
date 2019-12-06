@@ -140,19 +140,27 @@ void* memset(void* dst, int ch, unsigned int size){
  * Copy a block of memory
  */
 void* memcpy(void* destination, const void* source, uint32_t num){
-    //Use a very clever REP MOVx command to perform a blazing-fast memory-to-memory data transfer
-    //x = size of the operands (B, W, D)
-    if(num % 4 == 0){
-        //We can transfer data in doublewords, which is faster than transferring four bytes
-        __asm__ volatile("mov %0, %%esi; mov %1, %%edi; rep movsd;" : : "r" (source), "r" (destination), "c" (num / 4));
-    } else if(num % 2 == 0){
-        //We can transfer data in words, which is faster than transferring two bytes
-        __asm__ volatile("mov %0, %%esi; mov %1, %%edi; rep movsw;" : : "r" (source), "r" (destination), "c" (num / 2));
-    } else {
-        //Or take the traditional method...
-        __asm__ volatile("mov %0, %%esi; mov %1, %%edi; rep movsb;" : : "r" (source), "r" (destination), "c" (num));
-    }
+    __asm__ volatile("push %ecx; push %ebx; push %esi; push %edi");
+    __asm__ volatile("mov 20(%esp), %edi");
+    __asm__ volatile("mov 24(%esp), %esi");
+    __asm__ volatile("mov 28(%esp), %ecx");
+    __asm__ volatile("rep movsb;");
+    __asm__ volatile("pop %edi; pop %esi; pop %ebx; pop %ecx");
     return destination;
+}
+
+/*
+ * Copy a block of memory to an overlapping block of memory
+ */
+void* memmove(void* dest, const void* src, size_t count){
+    if(dest <= src){
+        //Use memcpy if the destination is below the source
+        return memcpy(dest, src, count);
+    } else {
+        //Use another, non-optimized algorithm
+        for(int i = count; i >= 0; i--)
+            *(uint8_t*)(dest + i) = *(uint8_t*)(src + i);
+    }
 }
 
 /*
@@ -240,3 +248,120 @@ unsigned char fifo_popb(unsigned char* buffer, unsigned short* head, unsigned sh
 unsigned char fifo_av(unsigned short* head, unsigned short* tail){
     return *head - *tail;
 }
+
+/*
+ * Read the amount of cycles executed by the CPU
+ */
+uint64_t rdtsc(){
+    uint32_t h, l;
+    __asm__ volatile("rdtsc" : "=d" (h), "=a" (l));
+    return (uint64_t)((uint64_t)h << 32) | l;
+}
+
+/*
+ * Get the length of a zero-terminated string
+ */
+size_t strlen(const char* str){
+    size_t i = 0;
+    while(str[i++] != 0);
+    return i - 1;
+}
+
+/*
+ * Read RTC hour, minute and second registers
+ * Returns 0 if the data is valid
+ */
+int read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
+    //Read CMOS Status Register A
+    outb(0x70, 0x0A);
+    uint8_t status_a = inb(0x71);
+    uint32_t i = 0;
+    //If bit 7 is set, we wait for it to reset and then read the time OR 10k iterations and return
+    while(status_a & (1 << 7) && (i++ <= 10000)){
+        outb(0x70, 0x0A);
+        uint8_t status_a = inb(0x71);
+    }
+    if(i++ >= 10000)
+        return 0;
+    //Read hours
+    outb(0x70, 0x04);
+    *h = inb(0x71);
+    //Read minutes
+    outb(0x70, 0x02);
+    *m = inb(0x71);
+    //Read seconds
+    outb(0x70, 0x00);
+    *s = inb(0x71);
+
+    //Read Status Register B to find out the data format
+    outb(0x70, 0x0B);
+    uint8_t status_b = inb(0x71);
+    //If bit 2 is set, the values are BCD
+    if(!(status_b & (1 << 2))){
+        *h = (((*h >> 4) & 0x0F) * 10) + (*h & 0x0F); 
+        *m = (((*m >> 4) & 0x0F) * 10) + (*m & 0x0F); 
+        *s = (((*s >> 4) & 0x0F) * 10) + (*s & 0x0F); 
+    }
+    //If bit 1 is set, the time is in the 12-hour format
+    //  add 12 to the hour count if its highest bit is set
+    if(status_b & (1 << 1)){
+        if(*h & (1 << 7)){
+            *h += 12;
+            //Reset the highest bit as this bit set will now mess with the value
+            *h &= ~(1 << 7);
+        }
+    }
+
+    //Honestly, when I started to write this function, I
+    //  didn't even imagine how complex it would become
+    //  (compared to my expectations, of course)
+    return 1;
+}
+
+/*
+ * Print an uint32_t to the string
+ */
+char* sprintu(char* str, uint32_t i, uint8_t min){
+    //Create some variables
+    uint8_t pos = 0;
+    uint32_t div = 1000000000; //Start with the leftmost digit
+    uint8_t started = 0;
+    for(int j = 1; j <= 10; j++){
+        //Fetch the next digit
+        uint8_t digit = (i / div) % 10;
+        //If the conversion hasn't started already and the current digit
+        //  is greater than zero OR we exceeded the maximum amount of dropped
+        //  digits, assume that the conversion has started
+        if((!started && digit > 0) || (10 - j < min))
+            started = 1;
+        //If the conversion has started, write a digit to the string
+        if(started)
+            str[pos++] = digit + '0';
+        //Move to the next digit
+        div /= 10;
+    }
+    //Mark the end of the string
+    str[pos] = 0;
+    //Return the string
+    return str;
+}
+
+//Turn off optimization for the next function as the GCC was
+//  optimizing it in a veeeeeeeeeeeeeery strange way
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+/*
+ * Append the string at src to the end of the string at dest
+ */
+char* strcat(char* dest, char* src){
+    //Get the lengths of the strings
+    size_t dest_len = strlen(dest);
+    size_t src_len = strlen(src);
+    //Copy the source string
+    memcpy((void*)(dest + dest_len), (const void*)src, src_len);
+    //Mark the end
+    dest[dest_len + src_len] = 0;
+    //Return the destination
+    return dest;
+}
+#pragma GCC pop_options

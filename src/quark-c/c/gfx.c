@@ -118,14 +118,23 @@ void gfx_draw_rect(unsigned short sx, unsigned short sy, unsigned short w, unsig
     offset = ((sy + h) * res_x) + sx;
     memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
     //Draw two vertical lines
-    for(uint16_t y = sy; y < sy + h; y++){
+    for(uint16_t y = sy; y <= sy + h; y++){
         offset = (y * res_x) + sx;
         *((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer + offset) = c;
     }
-    for(uint16_t y = sy; y < sy + h; y++){
+    for(uint16_t y = sy; y <= sy + h; y++){
         offset = (y * res_x) + sx + w;
         *((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer + offset) = c;
     }
+}
+
+/*
+ * Draw a horizontal line
+ */
+void gfx_draw_hor_line(uint16_t sx, uint16_t sy, uint16_t w, color8_t c){
+    //We can use memset for that
+    unsigned int offset = (sy * res_x) + sx;
+    memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
 }
 
 /*
