@@ -1,7 +1,7 @@
 ;Neutron project
 ;Muon - second stage loader
 
-%define nfs_buffer   0x4000
+%define nfs_buffer   0x5000
 %define kbd_buf      0x105
 %define app_segment  0x175
 
