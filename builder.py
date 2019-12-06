@@ -71,7 +71,18 @@ for path in c_files:
 	path_obj = 'build/obj/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path + ' -> ' + path_obj)
-	os.system('cc -o ' + path_obj + ' ' + path + ' -m32 -c -nostdlib -nodefaultlibs -Og -ffunction-sections')
+	#So, hear me out.
+	#I literally spent more than two days trying to find out why my code doesn't work in VirtualBox
+	#  but does so in Bochs.
+	#It turned out to be a VirtualBox coding error. A newer ENDBR32 instruction is supposed to enhance the branch
+	#  prediction mechanism preformance on modern CPUs and is placed by GCC at the start of all functions. Older CPUs should
+	#  decode ENDBR32 as REP MULTIBYTE NOP, and that's exactly what Bochs does, so no problems there. But! VirtualBox decodes
+	#  it as a sequence of an illegal opcode and STI. I don't have a proper interrupt servicing mechanism yet, so this
+	#  creates a huge problem. I spent all this time just to find out why Neutron would crash randomly in absolutely
+	#  random places. The -fcf-protection=branch -mmanual-endbr options are here to prevent GCC from placing
+	#  ENDBR32. It could improve performance, in theory, but I disabled this feature solely for the sake of compatibility.
+	#https://stackoverflow.com/questions/56120231/how-do-old-cpus-execute-the-new-endbr64-and-endbr32-instructions/59219143#59219143
+	os.system('cc -o ' + path_obj + ' ' + path + ' -m32 -c -nostdlib -nodefaultlibs -Og -ffunction-sections -fcf-protection=branch -mmanual-endbr')
 
 print('Linking C object files')
 print('  Generating liker script')
