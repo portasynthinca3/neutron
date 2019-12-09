@@ -36,6 +36,12 @@ In theory, it should work on any modern system. Here are the minimal requirement
 Also, there are some detected problems:
 * Colors are weird in VirtualBox
 * Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
+# So, this all is just a couple of buzzwords! Show me the screenshots!
+Okay, there you go!\
+![boot](https://github.com/portasynthinca3/neutron/blob/master/screens/boot.png "boot")\
+*Boot screen*\
+![desktop](https://github.com/portasynthinca3/neutron/blob/master/screens/desktop.png "desktop")\
+*Desktop*
 # Okay, what do I need to be aware of?
 Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
 However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
