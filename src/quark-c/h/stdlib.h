@@ -11,7 +11,7 @@
 #define STDLIB_DRAM_SIZE (128 * 0x100000)
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "Quark v0.0.6"
+#define QUARK_VERSION_STR "Quark v0.0.7"
 //Quark panic code for reaching the end
 #define QUARK_PANIC_CODE_END 0xABADBABE
 
@@ -62,6 +62,7 @@ struct idt_entry {
 
 volatile void breakpoint();
 void abort();
+void puts_e9(char* str);
 
 //Low-level functions
 

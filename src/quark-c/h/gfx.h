@@ -28,6 +28,7 @@ void gfx_draw_filled_rect(unsigned short sx, unsigned short sy, unsigned short w
 void gfx_draw_hor_line(uint16_t sx, uint16_t sy, uint16_t w, color8_t c);
 void gfx_draw_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c);
 void gfx_draw_checker(unsigned char c1, unsigned char c2);
+void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t color_h, color8_t color_l);
 
 void gfx_putch(unsigned short pos_x, unsigned short pos_y, unsigned char color, char c);
 void gfx_putch_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color, unsigned char bcolor, char c);
