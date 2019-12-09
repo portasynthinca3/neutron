@@ -22,6 +22,16 @@ void abort(){
 }
 
 /*
+ * Print a string through Bochs's E9 debug port if the port_e9_hack config setting is enabled
+ */
+void puts_e9(char* str){
+    char c;
+    //Fetch the next character
+    while(c = *(str++))
+        outb(0xE9, c); //Write it
+}
+
+/*
  * Initialize the dynamic memory allocation
  */
 void dram_init(void){

@@ -157,6 +157,41 @@ void gfx_draw_checker(unsigned char c1, unsigned char c2){
 }
 
 /*
+ * Draw an XBM image
+ */
+void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t color_h, color8_t color_l){
+    //Create some local variables
+    uint8_t* ptr = xbm_ptr;
+    p2d_t pos = position;
+    color8_t* buffer = gfx_buffer();
+    while(1){
+        //Fetch a byte
+        uint8_t data = *(ptr++);
+        //Cycle through its bits
+        for(uint16_t x = 0; x < 8; x++){
+            //Check the position
+            if(pos.x - position.x < xbm_size.x){
+                //If it is in bounds, draw the pixel
+                if((data >> x) & 1)
+                    buffer[(pos.y * res_x) + pos.x] = color_h;
+                else
+                    buffer[(pos.y * res_x) + pos.x] = color_l;
+            }
+            //Increment the position
+            pos.x++;
+        }
+        //If the X coordinate has reached the limit, reset it and increment the Y coordinate
+        if(pos.x - position.x >= xbm_size.x){
+            pos.x = position.x;
+            pos.y++;
+        }
+        //If the Y coordinate has reached the limit, return
+        if(pos.y - position.y >= xbm_size.y)
+            return;
+    }
+}
+
+/*
  * Put a char in video buffer
  */
 void gfx_putch(unsigned short pos_x, unsigned short pos_y, unsigned char color, char c){

@@ -10,6 +10,8 @@
 #include "../h/pci.h"
 #include "../h/usb.h"
 
+#include "../h/neutron_logo.xbm"
+
 struct idt_desc idt_d;
 
 void enable_a20(void);
@@ -24,10 +26,10 @@ const char hcc[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 
  */
 void krnl_boot_status(char* str, uint32_t progress){
     //Draw the screen
-    gfx_draw_filled_rect(0, gfx_res_y() / 2, gfx_res_x(), 8, 0x1E);
+    gfx_draw_filled_rect(0, gfx_res_y() / 2, gfx_res_x(), 8, 0x0F);
     gfx_puts((gfx_res_x() - (strlen(str) * 6)) / 2, gfx_res_y() / 2, 0, str);
-    gfx_draw_hor_line(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 3, 0x15);
-    gfx_draw_hor_line(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 300 * progress, 0x2F);
+    gfx_draw_filled_rect(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 3, 2, 0x15);
+    gfx_draw_filled_rect(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 300 * progress, 2, 0x2F);
     gfx_flip();
 }
 
@@ -37,6 +39,8 @@ void krnl_boot_status(char* str, uint32_t progress){
 void main(void){
 	//Disable interrupts
 	__asm__ volatile("cli");
+    //Initialize x87 FPU
+    __asm__ volatile("finit");
     //Do some initialization stuff
     enable_a20();
     dram_init();
@@ -44,13 +48,16 @@ void main(void){
     //Do some graphics-related initialization stuff
     gfx_init();
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
-    gfx_fill(0x1E);
+    gfx_fill(0x0F);
     gfx_set_font(font_neutral);
 
     //Print the quark version
-    gfx_puts((gfx_res_x() - (strlen(QUARK_VERSION_STR) * 6)) / 2, 0, 0, QUARK_VERSION_STR);
+    gfx_puts((gfx_res_x() - (strlen(QUARK_VERSION_STR) * 6)) / 2, gfx_res_y() - 8, 0, QUARK_VERSION_STR);
+    //Draw the neutron logo
+    gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
+                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, 0, 0x0F);
     //Print the boot process
-    krnl_boot_status("N.Quark-C is running", 5);
+    krnl_boot_status("Starting up...", 0);
 
     //Set up IDT
     struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
@@ -71,7 +78,7 @@ void main(void){
     load_idt(&idt_d);
 
     //Enumerate PCI devices
-    krnl_boot_status("Detecting hardware", 15);
+    krnl_boot_status("Detecting PCI devices", 15);
     pci_enumerate();
     //Configure GUI
     krnl_boot_status("Configuring GUI", 90);
