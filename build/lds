@@ -1,7 +1,7 @@
 ENTRY(main)
 SECTIONS
 {
-	.text 0x00000D00 :
+	.text 0x00000F00 :
 	{
 		*(.text.main);
 		*(.text*);
