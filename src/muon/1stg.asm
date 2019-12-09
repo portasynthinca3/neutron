@@ -5,6 +5,7 @@ org 0x7C00
 use16
 
 entry:
+	cli						;Immediately disable interrupts
 	mov ax, 0x0300
 	mov ss, ax
 	xor ax, ax

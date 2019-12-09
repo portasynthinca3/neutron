@@ -1,7 +1,7 @@
 ;Neutron project
 ;Muon - second stage loader
 
-%define nfs_buffer   0x5000
+%define nfs_buffer   0x800
 %define kbd_buf      0x105
 %define app_segment  0x175
 
@@ -11,6 +11,9 @@ use16
 dw 0xEBA1					;signature for the 1st stage loader
 
 entry:
+	cli						;disable interrupts
+	mov al, 0x80			;disable non-maskable interrupts
+	out 0x70, al			;
 	push ds					;save DS
 	push 0					;move 0
 	pop ds					;to DS
@@ -26,7 +29,7 @@ entry:
 	call nfs_init			;read boot drive geometry
 	call nfs_load_master_sector ;load the nFS data
 	mov ch, 0x0F			;set the colors: white on black
-	jmp cli_krnl			;try yo load the kernel
+	jmp cli_krnl			;try to load the kernel
 cli_loop:
 	mov ch, 0x87			;set the colors: blinking gray on black
 	mov dx, cli_prefix_literal ;set the string to be printed
@@ -293,7 +296,6 @@ cli_run_ret_error:
 	jmp cli_loop			;return to the command line
 cli_krnl:
 	call print_ln			;go to a new line
-	cli						;disable the interrupts
 	call krnl_load			;load the kernel
 	cmp ax, 0				;check if the load was successful
 	jne cli_krnl_ret		;return if not
@@ -301,7 +303,7 @@ cli_krnl:
 	pop es					;
 	xor di, di				;clear DI
 	call map_memory			;map the memory while we didn't overwrite the IVT
-	je krnl_run				;run the kernel otherwise!
+	jmp krnl_run			;run the kernel!
 cli_krnl_ret:
 	mov ch, 0x0C
 	mov dx, command_krnl_error
@@ -326,17 +328,26 @@ krnl_load:
 	mov bx, dx				;load DX into the indexing register
 	mov ax, [ds:bx+28]		;load the file location into AX
 	mov dx, [ds:bx+24]		;load the file size into DX
-	push 0xD0				;load 0xD0 into
+	push 0xF0				;load 0xF0 into
 	pop es					;ES
 	xor di, di				;clear DI
 krnl_load_cycle:
-	mov si, nfs_buffer		;set SI to the nFS buffer
 	cmp dx, 0				;check if the entire file was read
 	jle krnl_load_ret		;return if so
+	pop bx
+	push dx
+	push cx
+	mov dx, command_krnl_debug
+	mov ch, 0x0F
+	call print_str
+	pop cx
+	pop dx
+	push bx
 	call nfs_read_drive_sector ;read one sector
 	cmp byte [ds:nfs_status], 0 ;check if the operation was successful
 	jne krnl_load_ret_err	;return immediately if not
 	mov ecx, 512			;set the number of bytes to copy: 512
+	mov si, nfs_buffer		;set SI to the nFS buffer
 	rep movsb				;copy the bytes
 	inc ax					;increment the sector number
 	sub dx, 512				;subtract the sector size from the file size
@@ -367,6 +378,12 @@ krnl_run:
 	;shit is getting unreal here
 	;i mean, switch the CPU into the protected mode
 	;(opposite of what we've had before up until now, the real mode)
+	mov ch, 0x0F
+	mov dx, command_krnl_debug_run
+	call print_str
+	cli						;disable interrupts
+	mov al, 0x80			;disable non-maskable interrupts
+	out 0x70, al			;
 	push 0x050				;load 0x050
 	pop ds					;into the data segment
 	mov ecx, gdt_end - gdt	;copy the entire GDT
@@ -406,45 +423,7 @@ krnl_run:
 	or ax, 3 << 12			;
 	push ax					;
 	popf					;
-	jmp 8:0xD00				;far jump into the beforehand-loaded kernel
-	
-enable_a20:													;enables the A20 line, allowing us to use more than a megabyte of RAM
-															;input: none
-															;output: none
-															;
-	push ax													;save AX
-	call a20_wait											;wait for the keyboard controller to be ready
-	mov al, 0xAD											;write 0xAD
-	out 0x64, al											;to port 0x64 (keyboard controller)
-	call a20_wait											;
-	mov al, 0xD0											;
-	out 0x64, al											;
-	call a20_wait_2											;
-	in al, 0x60												;input from port 0x60
-	push ax													;save AX
-	call a20_wait											;
-	mov al, 0xD1											;
-	out 0x64, al											;
-	call a20_wait											;
-	pop ax													;restore AX
-	or al, 2												;set bit 1 of AL
-	out 0x60, al											;
-	call a20_wait											;
-	mov al, 0xAE											;
-	out 0x64, al											;
-	call a20_wait											;
-	pop ax													;restore AX
-	ret														;return from subroutine
-a20_wait:
-	in al, 0x64												;
-	test al, 2												;
-	jnz a20_wait											;
-	ret														;
-a20_wait_2:
-	in al, 0x64												;
-	test al, 1												;
-	jz a20_wait_2											;
-	ret														;
+	jmp 8:0xF00				;far jump into the beforehand-loaded kernel
 	
 stg2_func_intr:				;is executed whenever there was a software IRQ from the running application
 	cmp ah, 0				;AH = 0
@@ -474,15 +453,14 @@ command_ls_info_literal: db 'Listing root of: ', 0
 command_view_literal: db 'view', 0
 command_view_error_fnf_literal: db 'Error: file not found', 0
 
-;command_gfx_literal: db 'gfx', 0
-;command_gfx_grretings: db 'Hello from GFX!', 0
-
 command_run_literal: db 'run', 0
 command_run_error_literal: db "Error: the file either doesn't exist, or it isn't Muon-2-executable", 0
 
 command_krnl_literal: db 'krnl', 0
 command_krnl_file: db 'quark', 0
 command_krnl_error: db "An error occured while loading Quark. Try the 'krnl' command to try to load it again. A reboot may help too", 0
+command_krnl_debug: db "SL ", 0
+command_krnl_debug_run: db "KEXEC", 0
 
 font_file: db 'neutral.nfnt', 0
 num_hex_const: db '0123456789ABCDEF'
