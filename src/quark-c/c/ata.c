@@ -5,8 +5,6 @@
 #include "../h/stdlib.h"
 
 /*
-<<<<<<< HEAD
-=======
  * Get the I/O base for an ATA bus
  */
 uint16_t ata_iobas(uint8_t bus){
@@ -21,7 +19,6 @@ uint16_t ata_devct(uint8_t bus){
 }
 
 /*
->>>>>>> ATA reading done
  * Wait some time, the unit for time is 100us
  */
 void ata_wait_100us(uint32_t periods){
@@ -37,19 +34,11 @@ void ata_wait_100us(uint32_t periods){
  */
 void ata_soft_reset(uint8_t bus){
     //Set SRST bit in Device Control Register
-<<<<<<< HEAD
-    outb(bus ? ATA_SECO_DEVCT : ATA_PRIM_DEVCT, 1 << 2);
-    //Wait 100us
-    ata_wait_100us(1);
-    //Reset SRST bit in Device Control Register
-    outb(bus ? ATA_SECO_DEVCT : ATA_PRIM_DEVCT, 0);
-=======
     outb(ata_devct(bus), 1 << 2);
     //Wait 100us
     ata_wait_100us(1);
     //Reset SRST bit in Device Control Register
     outb(ata_devct(bus), 0);
->>>>>>> ATA reading done
 }
 
 /*
@@ -59,29 +48,18 @@ uint8_t ata_get_type(uint8_t bus, uint8_t device){
     //Reset the bus
     ata_soft_reset(bus);
     //Select the device
-<<<<<<< HEAD
-    outb((bus ? ATA_SECO_IOBAS: ATA_PRIM_IOBAS) + ATA_REG_DEVSEL, 0xA0 | (device << 4));
-    //Wait 400us
-    ata_wait_100us(4);
-    //Read the signature bytes
-    uint8_t ch = inb((bus ? ATA_SECO_IOBAS : ATA_PRIM_IOBAS) + ATA_REG_CYL_HI);
-    uint8_t cl = inb((bus ? ATA_SECO_IOBAS : ATA_PRIM_IOBAS) + ATA_REG_CYL_LO);
-=======
     outb(ata_iobas(bus) + ATA_REG_DEVSEL, 0xA0 | (device << 4));
     //Wait 400us
     ata_wait_100us(4);
     //Read the signature bytes
     uint8_t ch = inb(ata_iobas(bus) + ATA_REG_CYL_HI);
     uint8_t cl = inb(ata_iobas(bus) + ATA_REG_CYL_LO);
->>>>>>> ATA reading done
     //Recognize the device type
     if (cl == 0x14 && ch == 0xEB) return ATA_DEV_PATAPI;
 	if (cl == 0x69 && ch == 0x96) return ATA_DEV_SATAPI;
 	if (cl == 0x00 && ch == 0x00) return ATA_DEV_PATA;
 	if (cl == 0x3c && ch == 0xc3) return ATA_DEV_SATA;
 	else return ATA_DEV_UNKNOWN;
-<<<<<<< HEAD
-=======
 }
 
 /*
@@ -110,5 +88,4 @@ void ata_read_sect(uint8_t bus, uint8_t device, uint32_t lba, uint8_t count, uin
     while(!(inb(ata_iobas(bus) + ATA_REG_STATUS) & (1 << 3)));
     //Read the data
     rep_insw(0x1F0, (uint32_t)count * 256, (uint16_t*)buffer);
->>>>>>> ATA reading done
 }

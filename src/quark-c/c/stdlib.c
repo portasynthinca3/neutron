@@ -220,8 +220,6 @@ unsigned short inw(unsigned short port){
 }
 
 /*
-<<<<<<< HEAD
-=======
  * Read a number of words from I/O port and store it in memory
  */
 void rep_insw(uint16_t port, uint32_t count, uint16_t* buf){
@@ -233,7 +231,6 @@ void rep_insw(uint16_t port, uint32_t count, uint16_t* buf){
 }
 
 /*
->>>>>>> ATA reading done
  * Output byte to I/O port
  */
 void outb(unsigned short port, unsigned char value){
