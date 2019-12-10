@@ -67,25 +67,28 @@ void gui_init(void){
     windows[0].size_real = (p2d_t){.x = 150, .y = 100};
     windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
                        GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
-    windows[0].controls = NULL;
-    //And another one...
-    windows[1].title = "Window #1";
-    windows[1].position = (p2d_t){.x = 120, .y = 120};
-    windows[1].size_real = (p2d_t){.x = 150, .y = 100};
-    windows[1].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
-                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
-    windows[1].controls = NULL;
-    //The third one...
-    windows[2].title = "Window #2";
-    windows[2].position = (p2d_t){.x = 140, .y = 140};
-    windows[2].size_real = (p2d_t){.x = 150, .y = 100};
-    windows[2].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
-                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
-    windows[2].controls = NULL;
+    //Create a simple list of controls
+    control_t* controls = (control_t*)malloc(sizeof(control_t) * 2);
+    controls[0].position = (p2d_t){.x = 2, .y = 2};
+    controls[0].size = (p2d_t){.x = 40, .y = 1};
+    controls[0].type = GUI_WIN_CTRL_LABEL;
+    controls[0].extended_size = sizeof(control_ext_label_t);
+    control_ext_label_t* label = (control_ext_label_t*)malloc(sizeof(control_ext_label_t));
+    label->alignment = ALIGN_V_TOP | ALIGN_H_LEFT;
+    label->bg_color = COLOR_TRANSPARENT;
+    label->text_color = 0x0F; //White
+    label->text = (char*)malloc(sizeof(char) * 50);
+    memcpy(label->text, "Hello, world!", 14);
+    controls[0].extended = (void*)label;
+    windows[0].controls = controls;
+    //Mark the end of a control list
+    controls[1].type = 0;
+    //Set the controls
+    windows[0].controls = controls;
     //Mark the end of a window list
-    windows[3].size_real.x = 0;
+    windows[1].size_real.x = 0;
     //Set the window in focus
-    window_focused = &windows[2];
+    window_focused = &windows[0];
 }
 
 /*
@@ -241,6 +244,34 @@ void gui_render_window(window_t* ptr){
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 28, ptr->position.y + 2, 8, 8, color_scheme.win_minimize_btn);
         else
             gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+
+        //Now draw its controls
+        control_t* control;
+        uint32_t i = 0;
+        //Control type = 0 marks the end of the list
+        while((control = &ptr->controls[i++])->type)
+            gui_render_control(ptr, control);
+    }
+}
+
+/*
+ * Renders a control
+ */
+void gui_render_control(window_t* win_ptr, control_t* ptr){
+    //Check controls type
+    switch(ptr->type){
+        case GUI_WIN_CTRL_LABEL: {
+            //Fetch the extended data
+            control_ext_label_t* label = (control_ext_label_t*)ptr->extended;
+            //Draw the label
+            if(label->bg_color == COLOR_TRANSPARENT)
+                gfx_puts(ptr->position.x + win_ptr->position.x + 1, ptr->position.y + win_ptr->position.y + 12, 
+                         label->text_color, label->text);
+            else
+                gfx_puts_bg(ptr->position.x + win_ptr->position.x + 1, ptr->position.y + win_ptr->position.y + 12,
+                            label->text_color, label->bg_color, label->text);
+        }
+        break;
     }
 }
 

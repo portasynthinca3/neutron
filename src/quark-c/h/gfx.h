@@ -14,6 +14,9 @@ typedef unsigned char color8_t;
 #define GFX_BUF_VBE 1
 #define GFX_BUF_SEC 2
 
+//Transparent color
+#define COLOR_TRANSPARENT ((color8_t)255)
+
 unsigned short gfx_res_x(void);
 unsigned short gfx_res_y(void);
 unsigned char* gfx_buffer(void);
