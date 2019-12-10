@@ -80,10 +80,14 @@ void gui_init(void){
     label->text_color = 0x0F; //White
     label->text = (char*)malloc(sizeof(char) * 500);
     char temp[20];
-    strcat(label->text, "Primary Master: ");
+    strcat(label->text, "Primary Master: \x01\x28");
     strcat(label->text, sprintu(temp, ata_get_type(0, 0), 1));
-    strcat(label->text, "\nPrimary Slave: ");
-    strcat(label->text, sprintu(temp, ata_get_type(0, 0), 1));
+    strcat(label->text, "\x01\x0F\nPrimary Slave: \x01\x28");
+    strcat(label->text, sprintu(temp, ata_get_type(0, 1), 1));
+    strcat(label->text, "\x01\x0F\nSecondary Master: \x01\x28");
+    strcat(label->text, sprintu(temp, ata_get_type(1, 0), 1));
+    strcat(label->text, "\x01\x0F\nSecondary Slave: \x01\x28");
+    strcat(label->text, sprintu(temp, ata_get_type(1, 1), 1));
     controls[0].extended = (void*)label;
     windows[0].controls = controls;
     //Mark the end of a control list
@@ -149,7 +153,7 @@ void gui_update(void){
         strcat(time, sprintu(temp, s, 2));
     }
     //Print it
-    gfx_puts((p2d_t){.x = gfx_res_x() - (strlen(time) * 6) - 4, .y = 5}, color_scheme.time, COLOR_TRANSPARENT, time);
+    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4, .y = 5}, color_scheme.time, COLOR_TRANSPARENT, time);
 
     //Render the windows
     gui_render_windows();

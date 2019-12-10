@@ -219,24 +219,77 @@ void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c){
  * Put a string in video buffer
  */
 void gfx_puts(p2d_t pos, color8_t color, color8_t bcolor, char* s){
-    //Data byte, position and counter
+    //Data byte, position, state and counter
     char c = 0;
-    unsigned char i = 0;
     p2d_t pos_actual = pos;
+    uint32_t state = 0;
+    uint32_t i = 0;
+    //Fetch the next character
+    while((c = s[i++]) != 0){
+        if(state == 0){ //Normal state
+            //Process control characters
+            switch(c){
+                case '\n': //Carriage return
+                    pos_actual.x = pos.x;
+                    pos_actual.y += 8;
+                    break;
+                case 1: //Foreground color change
+                    state = 1;
+                    break;
+                case 2: //Background color change
+                    state = 2;
+                    break;
+                default: //Print the char and advance its position
+                    pos_actual.x += 6;
+                    gfx_putch(pos_actual, color, bcolor, c);
+                    break;
+            }
+        } else if(state == 1){ //State: foreground color change
+            color = c;
+            state = 0;
+        } else if(state == 2){ //State: background color change
+            color = c;
+            state = 0;
+        }
+    }
+}
+
+/*
+ * Calculate the bounds of a string if it was rendered on screen
+ */
+p2d_t gfx_text_bounds(char* s){
+    char c = 0;
+    p2d_t sz = (p2d_t){.x = 0, .y = 0};
+    p2d_t pos = sz;
+    uint32_t state = 0;
+    uint32_t i = 0;
     //Fetch the next character
     while((c = s[i++]) != 0){
         //Process control characters
         switch(c){
             case '\n': //Carriage return
-                pos_actual.x = pos.x;
-                pos_actual.y += 8;
+                pos.x = 0;
+                pos.y += 8;
+                break;
+            case 1: //Foreground color change
+                i++; //Skip one char
+                break;
+            case 2: //Background color change
+                i++; //Skip one char
                 break;
             default: //Print the char and advance its position
-                pos_actual.x += 6;
-                gfx_putch(pos_actual, color, bcolor, c);
+                pos.x += 6;
                 break;
         }
+        //If the X position is greater than the X size, update the last one
+        if(pos.x > sz.x)
+            sz.x = pos.x;
+        //The same thing with the Y position
+        if(pos.y > sz.y)
+            sz.y = pos.y;
     }
+    //Return the size
+    return sz;
 }
 
 /*

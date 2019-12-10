@@ -35,6 +35,7 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t col
 
 void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c);
 void gfx_puts(p2d_t pos, color8_t color, color8_t bcolor, char* s);
+p2d_t gfx_text_bounds(char* s);
 
 void gfx_vterm_println(char* s, unsigned char color);
 void gfx_vterm_println_hex(int value, unsigned char color);
