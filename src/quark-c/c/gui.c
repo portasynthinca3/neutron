@@ -63,7 +63,7 @@ void gui_init(void){
     //Allocate a chunk of memory for windows
     windows = (window_t*)malloc(64 * sizeof(window_t));
     //Set up an example window
-    windows[0].title = "Window #0";
+    windows[0].title = "IDE device types";
     windows[0].position = (p2d_t){.x = 100, .y = 100};
     windows[0].size_real = (p2d_t){.x = 150, .y = 100};
     windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
