@@ -367,7 +367,7 @@ char* sprintu(char* str, uint32_t i, uint8_t min){
     return str;
 }
 
-//Turn off optimization for the next function as the GCC was
+//Turn off optimization for the next function as GCC was
 //  optimizing it in a veeeeeeeeeeeeeery strange way
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
@@ -386,3 +386,21 @@ char* strcat(char* dest, char* src){
     return dest;
 }
 #pragma GCC pop_options
+
+int strcmp(const char* str1, const char* str2){
+    //Calculate the length of both strings
+    int len1 = strlen(str1);
+    int len2 = strlen(str2);
+    //Find the minimal one
+    int min_len = (len1 < len2) ? len1 : len2;
+    //Go through each byte
+    for(int i = 0; i < min_len; i++){
+        //Return if the strings aren't equal
+        if(str1[i] > str2[i])
+            return 1;
+        else if(str1[i] < str2[i])
+            return -1;
+    }
+    //If we didn't return, the strings are equal
+    return 0;
+}

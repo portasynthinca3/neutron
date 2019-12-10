@@ -16,3 +16,4 @@ src/quark-c/c/ata.c
 build/quark.bin
 .fs
 build/quark.bin>quark
+neutron.nbuild>nbuild

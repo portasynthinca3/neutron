@@ -126,7 +126,7 @@ if len(fs_files) > 0:
 			f_size_sect = f_size // 512
 			if f_size_sect % 512 > 0:
 				f_size_sect = f_size_sect + 1
-				file_sects.append(next_f_sect)
+			file_sects.append(next_f_sect)
 		
 			print('   Writing entry for: ' + path_dst)
 			for i in range(len(path_dst)):

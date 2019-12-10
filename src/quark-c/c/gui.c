@@ -5,7 +5,7 @@
 #include "../h/gui.h"
 #include "../h/gfx.h"
 #include "../h/stdlib.h"
-#include "../h/ata.h"
+#include "../h/diskio.h"
 
 //Mouse position on the screen
 signed short mx, my;
@@ -63,39 +63,29 @@ void gui_init(void){
     //Allocate a chunk of memory for windows
     windows = (window_t*)malloc(64 * sizeof(window_t));
     //Set up an example window
-    windows[0].title = "IDE device types";
+    windows[0].title = "This text was used to build this:";
     windows[0].position = (p2d_t){.x = 100, .y = 100};
-    windows[0].size_real = (p2d_t){.x = 150, .y = 100};
+    windows[0].size_real = (p2d_t){.x = 300, .y = 300};
     windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
                        GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
     //Create a simple list of controls
     control_t* controls = (control_t*)malloc(sizeof(control_t) * 2);
     controls[0].position = (p2d_t){.x = 2, .y = 2};
-    controls[0].size = (p2d_t){.x = 40, .y = 1};
+    controls[0].size = (p2d_t){.x = 1, .y = 1};
     controls[0].type = GUI_WIN_CTRL_LABEL;
     controls[0].extended_size = sizeof(control_ext_label_t);
     control_ext_label_t* label = (control_ext_label_t*)malloc(sizeof(control_ext_label_t));
     label->alignment = ALIGN_V_TOP | ALIGN_H_LEFT;
     label->bg_color = COLOR_TRANSPARENT;
     label->text_color = 0x0F; //White
-    label->text = (char*)malloc(sizeof(char) * 500);
-    char temp[20];
-    strcat(label->text, "Primary Master: \x01\x28");
-    strcat(label->text, sprintu(temp, ata_get_type(0, 0), 1));
-    strcat(label->text, "\x01\x0F\nPrimary Slave: \x01\x28");
-    strcat(label->text, sprintu(temp, ata_get_type(0, 1), 1));
-    strcat(label->text, "\x01\x0F\nSecondary Master: \x01\x28");
-    strcat(label->text, sprintu(temp, ata_get_type(1, 0), 1));
-    strcat(label->text, "\x01\x0F\nSecondary Slave: \x01\x28");
-    strcat(label->text, sprintu(temp, ata_get_type(1, 1), 1));
-    //Read the first byte from the Primary Master ATA drive
-    uint8_t data[512];
-    ata_read_sect(0, 0, 0, 1, data);
-    //Display it
-    strcat(label->text, "\x01\x0F\nByte PM[0]: \x01\x28");
-    strcat(label->text, sprintu(temp, data[0], 1));
+    label->text = (char*)malloc(sizeof(char) * 512);
+    //Read the build config file just for fun
+    uint8_t fs_status = 0;
+    if((fs_status = diskio_fs_read_file(0, "nbuild", label->text, 0, 512)) != DISKIO_STATUS_OK){
+        char temp[20];
+        strcat(label->text, sprintu(temp, fs_status, 1));
+    }
     controls[0].extended = (void*)label;
-    windows[0].controls = controls;
     //Mark the end of a control list
     controls[1].type = 0;
     //Set the controls

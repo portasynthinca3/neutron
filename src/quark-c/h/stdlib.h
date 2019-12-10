@@ -104,5 +104,6 @@ uint8_t fifo_av(uint16_t* head, uint16_t* tail);
 size_t strlen(const char* str);
 char* sprintu(char* str, uint32_t i, uint8_t min);
 char* strcat(char* dest, char* src);
+int strcmp(const char* str1, const char* str2);
 
 #endif

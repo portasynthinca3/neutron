@@ -82,6 +82,9 @@ void main(void){
     //Enumerate PCI devices
     krnl_boot_status("Detecting PCI devices", 15);
     pci_enumerate();
+    //Enumerate partitions
+    krnl_boot_status("Detecting drive partitions", 30);
+    diskio_init();
     //Configure GUI
     krnl_boot_status("Configuring GUI", 90);
     gui_init();
