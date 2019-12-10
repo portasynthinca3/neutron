@@ -220,6 +220,20 @@ unsigned short inw(unsigned short port){
 }
 
 /*
+<<<<<<< HEAD
+=======
+ * Read a number of words from I/O port and store it in memory
+ */
+void rep_insw(uint16_t port, uint32_t count, uint16_t* buf){
+    //Save the registers that we're gonna scrub
+    //__asm__ volatile("push %edx; push %ecx");
+    __asm__ volatile("rep insw" : : "c" (count), "D" (buf), "d" (port));
+    //Restore the registers we've scrubbed
+    //__asm__ volatile("pop %ecx; pop %edx");
+}
+
+/*
+>>>>>>> ATA reading done
  * Output byte to I/O port
  */
 void outb(unsigned short port, unsigned char value){

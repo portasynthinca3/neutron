@@ -88,6 +88,15 @@ void gui_init(void){
     strcat(label->text, sprintu(temp, ata_get_type(1, 0), 1));
     strcat(label->text, "\x01\x0F\nSecondary Slave: \x01\x28");
     strcat(label->text, sprintu(temp, ata_get_type(1, 1), 1));
+<<<<<<< HEAD
+=======
+    //Read the first byte from the Primary Master ATA drive
+    uint8_t data[512];
+    ata_read_sect(0, 0, 0, 1, data);
+    //Display it
+    strcat(label->text, "\x01\x0F\nByte PM[0]: \x01\x28");
+    strcat(label->text, sprintu(temp, data[0], 1));
+>>>>>>> ATA reading done
     controls[0].extended = (void*)label;
     windows[0].controls = controls;
     //Mark the end of a control list
