@@ -9,6 +9,7 @@
 #include "../h/diskio.h"
 #include "../h/pci.h"
 #include "../h/usb.h"
+#include "../h/ata.h"
 
 #include "../h/neutron_logo.xbm"
 
@@ -27,7 +28,7 @@ const char hcc[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 
 void krnl_boot_status(char* str, uint32_t progress){
     //Draw the screen
     gfx_draw_filled_rect(0, gfx_res_y() / 2, gfx_res_x(), 8, 0x0F);
-    gfx_puts((gfx_res_x() - (strlen(str) * 6)) / 2, gfx_res_y() / 2, 0, str);
+    gfx_puts((p2d_t){.x = (gfx_res_x() - (strlen(str) * 6)) / 2, .y = gfx_res_y() / 2}, 0, COLOR_TRANSPARENT, str);
     gfx_draw_filled_rect(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 3, 2, 0x15);
     gfx_draw_filled_rect(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 300 * progress, 2, 0x2F);
     gfx_flip();
@@ -52,7 +53,7 @@ void main(void){
     gfx_set_font(font_neutral);
 
     //Print the quark version
-    gfx_puts((gfx_res_x() - (strlen(QUARK_VERSION_STR) * 6)) / 2, gfx_res_y() - 8, 0, QUARK_VERSION_STR);
+    gfx_puts((p2d_t){.x = (gfx_res_x() - (strlen(QUARK_VERSION_STR) * 6)) / 2, .y = gfx_res_y() - 8}, 0, COLOR_TRANSPARENT, QUARK_VERSION_STR);
     //Draw the neutron logo
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, 0, 0x0F);

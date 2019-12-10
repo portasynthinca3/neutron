@@ -2,7 +2,7 @@ import sys, os
 
 config_file = 'neutron.nbuild'
 image_file = 'build/neutron.img'
-image = bytearray(1440 * 1024)
+image = bytearray(16 * 1024 * 1024)
 
 config_file_obj = open(config_file, 'r')
 config_contents = config_file_obj.read()

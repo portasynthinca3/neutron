@@ -11,6 +11,7 @@ src/quark-c/c/gui.c
 src/quark-c/c/diskio.c
 src/quark-c/c/usb.c
 src/quark-c/c/pci.c
+src/quark-c/c/ata.c
 .crawout
 build/quark.bin
 .fs

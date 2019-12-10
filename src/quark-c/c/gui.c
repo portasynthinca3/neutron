@@ -5,6 +5,7 @@
 #include "../h/gui.h"
 #include "../h/gfx.h"
 #include "../h/stdlib.h"
+#include "../h/ata.h"
 
 //Mouse position on the screen
 signed short mx, my;
@@ -77,8 +78,12 @@ void gui_init(void){
     label->alignment = ALIGN_V_TOP | ALIGN_H_LEFT;
     label->bg_color = COLOR_TRANSPARENT;
     label->text_color = 0x0F; //White
-    label->text = (char*)malloc(sizeof(char) * 50);
-    memcpy(label->text, "Hello, world!", 14);
+    label->text = (char*)malloc(sizeof(char) * 500);
+    char temp[20];
+    strcat(label->text, "Primary Master: ");
+    strcat(label->text, sprintu(temp, ata_get_type(0, 0), 1));
+    strcat(label->text, "\nPrimary Slave: ");
+    strcat(label->text, sprintu(temp, ata_get_type(0, 0), 1));
     controls[0].extended = (void*)label;
     windows[0].controls = controls;
     //Mark the end of a control list
@@ -125,7 +130,7 @@ void gui_update(void){
     //Draw the top bar
     gfx_draw_filled_rect(0, 0, gfx_res_x(), 16, color_scheme.top_bar);
     
-    //Print the time
+    //Get the time
     uint8_t h, m, s = 0;
     if(read_rtc_time(&h, &m, &s)){
         //Clear the time string
@@ -143,8 +148,8 @@ void gui_update(void){
         //Append seconds
         strcat(time, sprintu(temp, s, 2));
     }
-    //Actually print it
-    gfx_puts(gfx_res_x() - (strlen(time) * 6) - 4, 5, color_scheme.time, time);
+    //Print it
+    gfx_puts((p2d_t){.x = gfx_res_x() - (strlen(time) * 6) - 4, .y = 5}, color_scheme.time, COLOR_TRANSPARENT, time);
 
     //Render the windows
     gui_render_windows();
@@ -223,7 +228,7 @@ void gui_render_window(window_t* ptr){
         gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, ptr->size.y, color_scheme.win_border);
         //Print its title if window has the title visibility flag set
         if(ptr->flags & GUI_WIN_FLAG_TITLE_VISIBLE)
-            gfx_puts(ptr->position.x + 2, ptr->position.y + 2, color_scheme.win_title, ptr->title);
+            gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR_TRANSPARENT, ptr->title);
         //Draw a border arount the title
         gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, 11, color_scheme.win_border);
 
@@ -264,12 +269,8 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             //Fetch the extended data
             control_ext_label_t* label = (control_ext_label_t*)ptr->extended;
             //Draw the label
-            if(label->bg_color == COLOR_TRANSPARENT)
-                gfx_puts(ptr->position.x + win_ptr->position.x + 1, ptr->position.y + win_ptr->position.y + 12, 
-                         label->text_color, label->text);
-            else
-                gfx_puts_bg(ptr->position.x + win_ptr->position.x + 1, ptr->position.y + win_ptr->position.y + 12,
-                            label->text_color, label->bg_color, label->text);
+            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1, .y = ptr->position.y + win_ptr->position.y + 12},
+                     label->text_color, label->bg_color, label->text);
         }
         break;
     }

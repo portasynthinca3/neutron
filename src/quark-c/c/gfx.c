@@ -192,30 +192,13 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t col
 }
 
 /*
- * Put a char in video buffer
- */
-void gfx_putch(unsigned short pos_x, unsigned short pos_y, unsigned char color, char c){
-    //Calculate the video buffer offset
-    unsigned int buf_offset = (pos_y * res_x) + pos_x - 6;
-    //Calculate the font offset
-    unsigned int font_offset = (c - 1) * 6;
-    //For each column in the font
-    for(unsigned char i = 0; i < 6; i++){
-        //Load it
-        unsigned char font_col = font[font_offset + i];
-        //And for each pixel in that column
-        for(unsigned char j = 0; j < 8; j++)
-            if((font_col >> j) & 1)
-                ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer)[buf_offset + i + (j * res_x)] = color; //Draw it
-    }
-}
-
-/*
  * Put a char with backgrund color in video buffer
  */
-void gfx_putch_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color, unsigned char bcolor, char c){
+void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c){
+    //Get the video buffer
+    color8_t* buf = gfx_buffer();
     //Calculate the video buffer offset
-    unsigned int buf_offset = (pos_y * res_x) + pos_x - 6;
+    unsigned int buf_offset = (pos.y * res_x) + pos.x - 6;
     //Calculate the font offset
     unsigned int font_offset = (c - 1) * 6;
     //For each column in the font
@@ -224,11 +207,10 @@ void gfx_putch_bg(unsigned short pos_x, unsigned short pos_y, unsigned char colo
         unsigned char font_col = font[font_offset + i];
         //And for each pixel in that column
         for(unsigned char j = 0; j < 8; j++){
-            //Draw it
             if((font_col >> j) & 1)
-                ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer)[buf_offset + i + (j * res_x)] = color;
-            else //Or clear it
-                ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer)[buf_offset + i + (j * res_x)] = bcolor;
+                buf[buf_offset + i + (j * res_x)] = color; //Draw it
+            else if(bcolor != COLOR_TRANSPARENT)
+                buf[buf_offset + i + (j * res_x)] = bcolor; //Or clear it
         }
     }
 }
@@ -236,21 +218,25 @@ void gfx_putch_bg(unsigned short pos_x, unsigned short pos_y, unsigned char colo
 /*
  * Put a string in video buffer
  */
-void gfx_puts(unsigned short pos_x, unsigned short pos_y, unsigned char color, char* s){
-    char c;
+void gfx_puts(p2d_t pos, color8_t color, color8_t bcolor, char* s){
+    //Data byte, position and counter
+    char c = 0;
     unsigned char i = 0;
-    while((c = s[i++]) != 0)
-        gfx_putch(pos_x += 6, pos_y, color, c);
-}
-
-/*
- * Put a string with background color in video buffer
- */
-void gfx_puts_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color, unsigned char bcolor, char* s){
-    char c;
-    unsigned char i = 0;
-    while((c = s[i++]) != 0)
-        gfx_putch_bg(pos_x += 6, pos_y, color, bcolor, c);
+    p2d_t pos_actual = pos;
+    //Fetch the next character
+    while((c = s[i++]) != 0){
+        //Process control characters
+        switch(c){
+            case '\n': //Carriage return
+                pos_actual.x = pos.x;
+                pos_actual.y += 8;
+                break;
+            default: //Print the char and advance its position
+                pos_actual.x += 6;
+                gfx_putch(pos_actual, color, bcolor, c);
+                break;
+        }
+    }
 }
 
 /*
@@ -258,7 +244,7 @@ void gfx_puts_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color
  */
 void gfx_vterm_println(char* s, unsigned char color){
     //Normally put a string
-    gfx_puts_bg(0, vterm_y, color, 0, s);
+    gfx_puts((p2d_t){.x = 0, .y = vterm_y}, color, 0, s);
     //Increment the position
     vterm_y += 8;
 }

@@ -56,11 +56,13 @@ nfs_read_drive_sector:				;reads a sector from the drive
 	push cx							;
 	push dx							;
 	push es							;
+	xor bx, bx						;clear BX
 nfs_rs_retry:						;
 									;
 	push ds							;set the load segment to the data segment
 	pop es							;>>
 									;
+	push bx							;save BX
 	push ax							;save AX
 	mov cl, [ds:nfs_spt]			;load sectors per track into CL
 	div cl							;divide AX by CL, storing the quotient in AL and the remainder in AH
@@ -77,19 +79,20 @@ nfs_rs_retry:						;
 	mul byte [ds:nfs_hds]			;multiply AL by Heads and store the result in AX
 	mov bx, ax						;move SPT*HDS into BX
 	pop ax							;restore AX (original LBA)
+	push ax							;save AX
 	div bl							;divide AX (LBA) by BX (SPT*HDS), storing the quotient in AL and the remainder in AH
 	mov ch, al						;move AL into CH (cylinder for the BIOS)
 									;
 	mov dl, [ds:nfs_drive_no]		;set the drive number to load from
 	mov al, 1						;set the amount of sectors to read: 1
 	mov ah, 2						;BIOS routine no.: disk read
-	push bx							;save BX
 	mov bx, nfs_buffer				;set the target location: a buffer
 	int 0x13						;execute the BIOS routine
+	pop ax							;restore AX
 	pop bx							;restore BX
 	jc nfs_rs_io_err				;I/O error handler
-	cmp ah, 0						;check if the operation was successful
-	jne nfs_rs_io_err				;I/O error handler
+	;cmp ah, 0						;check if the operation was successful
+	;jne nfs_rs_io_err				;I/O error handler
 	mov byte [ds:nfs_status], 0		;set the success flag
 	jmp nfs_read_sector_return		;jump straight to the return handler if the operation was successful
 nfs_rs_io_err:
@@ -97,10 +100,10 @@ nfs_rs_io_err:
 	inc bh							;increment the error counter
 	cmp bh, 5						;give it five tries
 	jae nfs_read_sector_return		;
-	push ecx						;
-	mov ecx, 100000					;wait 100K iterations
+	push cx							;
+	mov cx, 10000					;wait 10K iterations
 	nfs_rs_loop: loop nfs_rs_loop	;
-	pop ecx							;
+	pop cx							;
 	jmp nfs_rs_retry				;
 nfs_read_sector_return:
 	pop es							;restore all registers

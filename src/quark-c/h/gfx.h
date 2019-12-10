@@ -33,10 +33,8 @@ void gfx_draw_rect(unsigned short sx, unsigned short sy, unsigned short w, unsig
 void gfx_draw_checker(unsigned char c1, unsigned char c2);
 void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t color_h, color8_t color_l);
 
-void gfx_putch(unsigned short pos_x, unsigned short pos_y, unsigned char color, char c);
-void gfx_putch_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color, unsigned char bcolor, char c);
-void gfx_puts(unsigned short pos_x, unsigned short pos_y, unsigned char color, char* s);
-void gfx_puts_bg(unsigned short pos_x, unsigned short pos_y, unsigned char color, unsigned char bcolor, char* s);
+void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c);
+void gfx_puts(p2d_t pos, color8_t color, color8_t bcolor, char* s);
 
 void gfx_vterm_println(char* s, unsigned char color);
 void gfx_vterm_println_hex(int value, unsigned char color);
