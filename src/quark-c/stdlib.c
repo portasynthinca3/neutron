@@ -385,6 +385,9 @@ char* strcat(char* dest, char* src){
 }
 #pragma GCC pop_options
 
+/*
+ * Compare two zero-terminated strings
+ */
 int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
     int len1 = strlen(str1);
@@ -401,4 +404,34 @@ int strcmp(const char* str1, const char* str2){
     }
     //If we didn't return, the strings are equal
     return 0;
+}
+
+/*
+ * Create a GDT entry
+ */
+void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access){
+    //Calculate the entry base pointer
+    struct idt_desc desc;
+    __asm__ volatile("sgdt %0" : : "m" (desc)); //Store the GDT descriptor
+    void* entry_ptr = desc.base + (sel * 8);
+
+    //Set limit[15:0]
+    *(uint16_t*)(entry_ptr + 0) = limit & 0xFFFF;
+    //Set base[15:0]
+    *(uint16_t*)(entry_ptr + 2) = base & 0xFFFF;
+    //Set base[23:16]
+    *(uint16_t*)(entry_ptr + 4) = (base >> 16) & 0xFF;
+    //Set access byte
+    *(uint8_t*)(entry_ptr + 5) = access;
+    //Set limit[19:16]
+    *(uint8_t*)(entry_ptr + 6) = (limit >> 16) & 0xF;
+    //Set flags
+    *(uint8_t*)(entry_ptr + 6) |= (flags & 0xF) << 4;
+    //Set base[31:24]
+    *(uint8_t*)(entry_ptr + 4) = (base >> 24) & 0xFF;
+
+    //Load GDT
+    if(desc.limit < sel * 8) //Increase the limit if it won't fit
+        desc.limit = sel * 8;
+    __asm__ volatile("lgdt %0" : : "m" (desc));
 }

@@ -17,11 +17,18 @@ typedef unsigned char color8_t;
 //Transparent color
 #define COLOR_TRANSPARENT ((color8_t)255)
 
+//GFX VBE function call errors
+
+#define GFX_VBE_OK                              0
+#define GFX_VBE_ERR_NO_PMIB                     1
+
 unsigned short gfx_res_x(void);
 unsigned short gfx_res_y(void);
 unsigned char* gfx_buffer(void);
 
 void gfx_init(void);
+uint32_t gfx_vbe3_setup(void);
+void gfx_vbe3_call(uint16_t func, uint32_t esdi, uint8_t trans_esdi);
 void gfx_flip(void);
 void gfx_set_font(const unsigned char* fnt);
 void gfx_set_buf(unsigned char buf);

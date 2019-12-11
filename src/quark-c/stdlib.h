@@ -70,6 +70,7 @@ void load_idt(struct idt_desc* idt);
 void bswap_dw(int* value);
 uint64_t rdtsc();
 int read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s);
+void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access);
 
 //Dynamic memory allocation functions
 
