@@ -88,6 +88,8 @@ void main(void){
     //Configure GUI
     krnl_boot_status("Configuring GUI", 90);
     gui_init();
+    //The loading process is done!
+    krnl_boot_status("Done!", 100);
 
     //Constantly update the GUI
     while(1){

@@ -63,7 +63,8 @@ void gui_init(void){
     //Allocate a chunk of memory for windows
     windows = (window_t*)malloc(64 * sizeof(window_t));
     //Set up an example window
-    windows[0].title = "This text was used to build this:";
+    windows[0].title = (char*)malloc(sizeof(char) * 100);
+    memcpy(windows[0].title, "This text was used to build this:", 34);
     windows[0].position = (p2d_t){.x = 100, .y = 100};
     windows[0].size_real = (p2d_t){.x = 300, .y = 300};
     windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
@@ -79,12 +80,14 @@ void gui_init(void){
     label->bg_color = COLOR_TRANSPARENT;
     label->text_color = 0x0F; //White
     label->text = (char*)malloc(sizeof(char) * 512);
+    label->text[0] = 0;
     //Read the build config file just for fun
     uint8_t fs_status = 0;
-    if((fs_status = diskio_fs_read_file(0, "nbuild", label->text, 0, 512)) != DISKIO_STATUS_OK){
+    if((fs_status = diskio_fs_read_file(0, "nbuild\x00", label->text)) != DISKIO_STATUS_OK){
         char temp[20];
         strcat(label->text, sprintu(temp, fs_status, 1));
     }
+    label->text[332] = 0;
     controls[0].extended = (void*)label;
     //Mark the end of a control list
     controls[1].type = 0;

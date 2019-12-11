@@ -37,6 +37,6 @@ unsigned char diskio_get_floppy_drives(void);
 
 void diskio_read_sect(uint8_t part_no, uint32_t sect, uint8_t count, uint32_t from_part);
 
-uint8_t diskio_fs_read_file(uint8_t part, char* name, uint8_t* dest_buffer, uint32_t sect_start, uint32_t len);
+uint8_t diskio_fs_read_file(uint8_t part_no, char* name, uint8_t* dest_buffer);
 
 #endif

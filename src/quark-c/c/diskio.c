@@ -28,9 +28,10 @@ void diskio_init(void){
             //Go through all the partition entries
             for(uint8_t p = 0; p < 4; p++){
                 uint32_t p_base = (uint32_t)buffer + 0x1BE + (p * 16);
-                //Write the partition disk type and number
+                //Write the partition disk type, number and MBR entry number
                 partitions[cur_part].device_type = DISK_PATA;
                 partitions[cur_part].device_no = i;
+                partitions[cur_part].mbr_entry_no = p;
                 //Fetch the partition type
                 partitions[cur_part].type = *(uint8_t*)(p_base + 4);
                 //Fetch the partition start sector
@@ -77,41 +78,39 @@ void diskio_read_sect(uint8_t part_no, uint32_t sect, uint8_t count, uint32_t fr
 /*
  * Read a file from disk
  */
-uint8_t diskio_fs_read_file(uint8_t part_no, char* name, uint8_t* dest_buffer, uint32_t sect_start, uint32_t len){
+uint8_t diskio_fs_read_file(uint8_t part_no, char* name, uint8_t* dest_buffer){
     disk_part_t* part = &partitions[part_no];
     //Immediately return if the partition is invalid
     if(!part->valid)
         return DISKIO_STATUS_INVALID_PART;
-    //Immediately return if the length requested won't fit in the buffer
-    if(len >= DISK_IO_BUFFER_SIZE)
-        return DISKIO_STATUS_OOB;
-    //Immediately return if the length requested exceeds the 255 sector limit
-    if(len >= 512 * 255)
-        return DISKIO_STATUS_OOB;
-    //Firstly, everything depends on the filesystem
+    //Everything depends on the filesystem
     //Neutron currently only supports nFS
     if(part->type == 0x58){
-        //Read nFS master sector and master filetable
-        diskio_read_sect(part_no, 0, 2, 1);
+        //Read nFS master sector
+        diskio_read_sect(part_no, 0, 1, 1);
         //Check nFS signature
         if(*(uint32_t*)(buffer) != 0xDEADF500)
             return DISKIO_STATUS_INVALID_PART;
+        //Read nFS master filetable
+        diskio_read_sect(part_no, 1, 1, 1);
         //Go through all the file entries
-        for(uint16_t i = 512; i < 1024; i += 32){
+        for(uint16_t i = 0; i < 512; i += 32){
             //Fetch the filename
             char* filename = (char*)(buffer + i);
-            //Compare with with the desired name
+            //Compare it with the desired name
             if(strcmp(filename, name) == 0){
-                //Fetch file's length and starting sector
+                //Fetch file's length
                 uint32_t fsize = *(uint32_t*)(buffer + i + 24);
-                uint32_t fslba = *(uint32_t*)(buffer + i + 28) - part->lba_start;
-                //If the desired starting LBA or length is out of bounds, return
-                if((sect_start * 512) + len >= (fslba * 512) + fsize)
-                    return DISKIO_STATUS_OOB;
+                //Calculate file length in sectors
+                uint32_t fsize_sect = fsize / 512;
+                if(fsize % 512 > 0)
+                    fsize_sect++;
+                //Fetch file's starting LBA
+                uint32_t fslba = *(uint32_t*)(buffer + i + 28);
                 //Read the sectors
-                diskio_read_sect(part_no, fslba + sect_start, len / 512, 1);
+                diskio_read_sect(part_no, fslba, fsize_sect, 0);
                 //Copy them over to the destination buffer
-                memcpy(dest_buffer, buffer, len);
+                memcpy(dest_buffer, buffer, fsize);
                 //Return
                 return DISKIO_STATUS_OK;
             }

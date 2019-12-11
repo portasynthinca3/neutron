@@ -36,7 +36,7 @@ void puts_e9(char* str){
  */
 void dram_init(void){
     //Clear the blocks
-    memset(_mem_blocks, 0, STDLIB_DRAM_MEMBLOCKS);
+    memset(_mem_blocks, 0, sizeof(struct _mem_block) * STDLIB_DRAM_MEMBLOCKS);
     //Create a beginning block
     struct _mem_block blk;
     blk.ptr = (void*)STDLIB_DRAM_START;

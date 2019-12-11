@@ -66,7 +66,7 @@ uint8_t ata_get_type(uint8_t bus, uint8_t device){
  * Read ATA device sectors
  */
 void ata_read_sect(uint8_t bus, uint8_t device, uint32_t lba, uint8_t count, uint8_t* buffer){
-    //Software reset
+    //Reset the bus
     ata_soft_reset(bus);
     //Select the device
     outb(ata_iobas(bus) + ATA_REG_DEVSEL, 0xA0 | (device << 4));
