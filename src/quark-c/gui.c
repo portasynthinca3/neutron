@@ -3,7 +3,7 @@
 //Built on top of the GFX library (src/quark-c/c/gfx.c)
 
 #include "./gui.h"
-#include "./gfx.h"
+#include "./drivers/gfx.h"
 #include "./stdlib.h"
 #include "./drivers/diskio.h"
 
@@ -87,7 +87,7 @@ void gui_init(void){
         char temp[20];
         strcat(label->text, sprintu(temp, fs_status, 1));
     }
-    label->text[332] = 0;
+    label->text[344] = 0;
     controls[0].extended = (void*)label;
     //Mark the end of a control list
     controls[1].type = 0;

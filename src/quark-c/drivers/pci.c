@@ -4,7 +4,6 @@
 #include "./pci.h"
 #include "./usb.h"
 #include "../stdlib.h"
-#include "../gfx.h"
 
 /*
  * Read config word from a PCI device
@@ -50,20 +49,9 @@ void pci_enumerate(void){
                 //Try to detect a known device
                 //Firstly, USB controllers (C=0C, S=03)
                 if(class_sub == 0x00000C03){
-                    //UHCI, IF=0x00
-                    if((if_rev & 0xFF00) == 0x0000)
-                        gfx_vterm_println("UHCI USB controller found [unsupported]", 0x28);
-                    //OHCI, IF=0x10
-                    if((if_rev & 0xFF00) == 0x1000)
-                        gfx_vterm_println("OHCI USB controller found [unsupported]", 0x28);
                     //EHCI, IF=0x20
-                    if((if_rev & 0xFF00) == 0x2000){
-                        gfx_vterm_println("EHCI USB controller found", 0x0F);
+                    if((if_rev & 0xFF00) == 0x2000)
                         ehci_add_cont(b, d);
-                    }
-                    //xHCI, IF=0x30
-                    if((if_rev & 0xFF00) == 0x3000)
-                        gfx_vterm_println("xHCI USB controller found [unsupported]", 0x28);
                 }
             }
         }

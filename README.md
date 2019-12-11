@@ -28,15 +28,10 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 In theory, it should work on any modern system. Here are the minimal requirements:
 * CPU: Pentium I or later
 * RAM: 8 MB
-<<<<<<< HEAD
-* Buses: PCI, USB
-* An USB stick of at least 2 MB in size to boot from
-=======
 * Buses: PCI, ATA
 * An internal empty hard drive to boot from. You may be able to boot from external USB sticks, disk drives, floppies, etc., but
 as the kernel only has ATA support right now, it woudn't be able to read any data from any drives except ATA drives or SATA
 drives in ATA compatibility mode (can almost certainly be enabled in the BIOS)
->>>>>>> ATA reading done
 * Legacy BIOS system or an UEFI system with legacy emulation mode
 * A video card supporting VESA 1.0 standard (integrated CPU graphics should also work)\
 \

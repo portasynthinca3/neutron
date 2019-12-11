@@ -3,9 +3,9 @@
 //(there previously was Quark, written in assembly language)
 
 #include "./stdlib.h"
-#include "./gfx.h"
 #include "./gui.h"
 
+#include "./drivers/gfx.h"
 #include "./drivers/diskio.h"
 #include "./drivers/pci.h"
 #include "./drivers/usb.h"

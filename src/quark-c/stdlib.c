@@ -2,7 +2,6 @@
 //C Standard Library
 
 #include "./stdlib.h"
-#include "./gfx.h"
 
 struct _mem_block _mem_blocks[STDLIB_DRAM_MEMBLOCKS];
 
@@ -17,7 +16,6 @@ volatile void breakpoint(){
  * Abort execution
  */
 void abort(){
-    gfx_panic(0, 0xDEADBEEF);
     while(1);
 }
 

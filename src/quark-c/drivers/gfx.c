@@ -2,7 +2,7 @@
 //Kernel graphics driver
 
 #include "./gfx.h"
-#include "./stdlib.h"
+#include "../stdlib.h"
 
 //The video buffer pointers
 unsigned char* vbe_buffer;
