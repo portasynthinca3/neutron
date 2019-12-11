@@ -1,9 +1,9 @@
 //Neutron project
 //USB driver
 
-#include "../h/usb.h"
-#include "../h/pci.h"
-#include "../h/stdlib.h"
+#include "./usb.h"
+#include "./pci.h"
+#include "../stdlib.h"
 
 //Array of EHCI controller parameters
 ehci_cont_t ehci_conts[4];

@@ -1,10 +1,10 @@
 //Neutron Project
 //PCI driver
 
-#include "../h/pci.h"
-#include "../h/usb.h"
-#include "../h/stdlib.h"
-#include "../h/gfx.h"
+#include "./pci.h"
+#include "./usb.h"
+#include "../stdlib.h"
+#include "../gfx.h"
 
 /*
  * Read config word from a PCI device

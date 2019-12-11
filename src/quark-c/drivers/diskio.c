@@ -1,9 +1,9 @@
 //Neutron Project
 //General disk I/O
 
-#include "../h/diskio.h"
-#include "../h/stdlib.h"
-#include "../h/ata.h"
+#include "./diskio.h"
+#include "../stdlib.h"
+#include "./ata.h"
 
 disk_part_t* partitions;
 uint8_t* buffer;

@@ -1,7 +1,7 @@
 #ifndef GFX_H
 #define GFX_H
 
-#include "../h/stdlib.h"
+#include "./stdlib.h"
 
 //Structure defining a 2D point
 typedef struct {

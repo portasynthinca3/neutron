@@ -2,16 +2,18 @@
 //Quark-C - the C kernel
 //(there previously was Quark, written in assembly language)
 
-#include "../h/stdlib.h"
-#include "../h/gfx.h"
-#include "../h/gui.h"
-#include "../h/font_neutral.h"
-#include "../h/diskio.h"
-#include "../h/pci.h"
-#include "../h/usb.h"
-#include "../h/ata.h"
+#include "./stdlib.h"
+#include "./gfx.h"
+#include "./gui.h"
 
-#include "../h/neutron_logo.xbm"
+#include "./drivers/diskio.h"
+#include "./drivers/pci.h"
+#include "./drivers/usb.h"
+#include "./drivers/ata.h"
+
+#include "./fonts/font_neutral.h"
+
+#include "./images/neutron_logo.xbm"
 
 struct idt_desc idt_d;
 

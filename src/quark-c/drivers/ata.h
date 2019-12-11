@@ -1,7 +1,7 @@
 #ifndef ATA_H
 #define ATA_H
 
-#include "../h/stdlib.h"
+#include "../stdlib.h"
 
 //ATA I/O ports
 

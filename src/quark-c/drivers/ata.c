@@ -1,8 +1,8 @@
 //Neutron project
 //ATA driver
 
-#include "../h/ata.h"
-#include "../h/stdlib.h"
+#include "./ata.h"
+#include "../stdlib.h"
 
 /*
  * Get the I/O base for an ATA bus

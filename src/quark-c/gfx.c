@@ -1,8 +1,8 @@
 //Neutron Project
 //Kernel graphics driver
 
-#include "../h/gfx.h"
-#include "../h/stdlib.h"
+#include "./gfx.h"
+#include "./stdlib.h"
 
 //The video buffer pointers
 unsigned char* vbe_buffer;

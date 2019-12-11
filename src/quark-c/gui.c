@@ -2,10 +2,10 @@
 //Graphical User interface
 //Built on top of the GFX library (src/quark-c/c/gfx.c)
 
-#include "../h/gui.h"
-#include "../h/gfx.h"
-#include "../h/stdlib.h"
-#include "../h/diskio.h"
+#include "./gui.h"
+#include "./gfx.h"
+#include "./stdlib.h"
+#include "./drivers/diskio.h"
 
 //Mouse position on the screen
 signed short mx, my;

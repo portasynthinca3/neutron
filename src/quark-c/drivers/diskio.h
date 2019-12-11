@@ -1,7 +1,7 @@
 #ifndef DISKIO_H
 #define DISKIO_H
 
-#include "../h/ata.h"
+#include "./ata.h"
 
 //Size of the buffer dedicated to disk I/O
 #define DISK_IO_BUFFER_SIZE                 4096

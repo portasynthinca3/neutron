@@ -1,8 +1,8 @@
 //Neutron Project
 //C Standard Library
 
-#include "../h/stdlib.h"
-#include "../h/gfx.h"
+#include "./stdlib.h"
+#include "./gfx.h"
 
 struct _mem_block _mem_blocks[STDLIB_DRAM_MEMBLOCKS];
 
