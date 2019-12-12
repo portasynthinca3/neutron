@@ -4,20 +4,43 @@
 gfx_go_best:						;switches the video mode to the best available one
 									;  Saves video buffer linear address into ECX,
 									;  resolution into EDX, bpp in AH
-	mov cl, 24						;only try 24bpp modes first
-	mov eax, (1920 << 16) | 1080	;1920x1080
+	mov si, gfx_res_db				;point SI to the video database
+	push bx							;save the position on screen
+	gfx_go_best_loop:				;
+	mov ax, word [cs:si]			;load the resolution
+	shl eax, 16						;
+	mov ax, word [cs:si + 2]		;
+	cmp eax, 0						;EAX=0 indicates the end of the list
+	je gfx_go_best_ret				;return in this case
+	mov cl, 24						;try 24bpp
 	call gfx_try_mode				;
-	cmp al, 0						;
+	cmp al, 0						;check the success
 	jne gfx_go_best_ret				;
-	mov eax, (1600 << 16) | 900		;1600x900
+	pop bx							;print the | character
+	push cx							;
+	mov ch, 0x0A					;
+	mov cl, '|'						;
+	call print_char					;
+	pop cx							;
+	push bx							;
+	mov ax, word [cs:si]			;load the resolution again
+	shl eax, 16						;
+	mov ax, word [cs:si + 2]		;
+	mov cl, 15						;try 15bpp
 	call gfx_try_mode				;
-	cmp al, 0						;
+	cmp al, 0						;check the success
 	jne gfx_go_best_ret				;
-	mov eax, (640 << 16) | 480		;640x480
-	call gfx_try_mode				;
-	cmp al, 0						;
-	jne gfx_go_best_ret				;
+	pop bx							;print the | character
+	push cx							;
+	mov ch, 0x0A					;
+	mov cl, '|'						;
+	call print_char					;
+	pop cx							;
+	push bx							;
+	add si, 4						;point SI to the next entry
+	jmp gfx_go_best_loop			;loop
 	gfx_go_best_ret:				;
+	pop bx							;restore position on screen
 	ret								;return from subrountine
 
 gfx_go_mode:						;switches the video mode to one which number is stored in DX
@@ -59,6 +82,7 @@ gfx_try_mode:						;try to find a VBE mode with resolution stored in EAX and bpp
 	gfx_try_mode_found:				;
 	pop dx							;restore DX
 	call gfx_go_mode				;go to that mode
+	mov al, 1						;indicate the success
 	ret								;return
 	gfx_try_mode_not_found:			;
 	xor al, al						;indicate an error
@@ -89,3 +113,16 @@ gfx_go_80x25x16t:					;switches the video mode to 80x25x16c text
 	int 10h							;call BIOS routine
 	pop ax							;restore AX
 	ret								;return from subroutine
+
+gfx_res_db:							;Graphics Resolutions Database
+									;Each database entry is 4 bytes long and has the following structure:
+									;  word res_x
+									;  word res_y
+	dw 1600, 900
+	dw 1600, 200
+	dw 1280, 720
+	dw 1024, 768
+	dw 1280, 720
+	dw 800, 600
+	dw 640, 480
+	dw 0, 0							;end

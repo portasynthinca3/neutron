@@ -41,35 +41,6 @@ print_str:					;prints a string
 print_ret:
 	ret						;return from subroutine
 	
-print_hex:					;prints the hex value onto the screen
-							;input: CL = byte to print
-							;       CH = color
-							;       BX = position
-							;            bx = (x * 80 + y) * 2
-							;output: character on the screen
-							;       BX = BX + 2
-							;
-	push cx					;save CX
-	shr cl, 4				;CL >> 4
-	and cl, 0x0F			;mask the lower 4 bits only
-	push bx					;save BX
-	mov bl, cl				;BL <- CL
-	xor bh, bh				;clear BH
-	mov cl, [ds:num_hex_const+bx] ;transform the number into char
-	pop bx					;restore BX
-	call print_char			;print the char
-	pop cx					;restore CX
-	push cx					;save CX again
-	and cl, 0x0F			;mask the lower 4 bits only
-	push bx					;save BX
-	mov bl, cl				;BL <- CL
-	xor bh, bh				;clear BH
-	mov cl, [ds:num_hex_const+bx] ;transform the number into char
-	pop bx					;restore BX
-	call print_char			;print the char
-	pop cx					;restore CX
-	ret						;return from subroutine
-	
 print_str_line:				;prints a string and then goes to a new line
 							;
 	call print_str			;normal string printout
@@ -151,37 +122,6 @@ str_eq:
 	pop ax					;restore AX
 	mov al, 1				;set the AL to 1
 	ret						;return from subroutine
-	
-str_cmp_wspc:				;compares two strings: GS:AX and FS:DX
-							;output: AL = 0 if they aren't equal, AL = 1 otherwise
-							;the strings may end in either 0 or whitespace
-	push ax					;save AX
-	push bx					;save BX
-	push cx					;save CX
-	push dx					;save DX
-	mov bx, ax				;move AX to BX
-str_cmp_loop_wspc:
-	mov bx, ax				;load AX into the indexing register
-	cmp byte [gs:bx], 0		;compare str1 at the desired offset to zero
-	je str_zero_check_wspc	;check the second
-	cmp byte [gs:bx], ' '	;compare str1 at the desired offset to whitespace
-	je str_zero_check_wspc	;check the second
-	mov bx, ax				;load AX into the indexing register
-	mov ch, [gs:bx]			;load str2 byte at the desired offset
-	mov bx, dx				;load DX into the indexing register
-	mov cl, [fs:bx]			;load str1 byte at the desired offset
-	cmp cl, ch				;compare str1 and str2 bytes at the desired offset
-	jne str_neq				;jump to the inequality return subroutine
-	inc ax					;increment the str1 offset
-	inc dx					;increment the str2 offset
-	jmp str_cmp_loop_wspc	;looping
-str_zero_check_wspc:
-	mov bx, dx				;load DX into the indexing register
-	cmp byte [fs:bx], 0		;compare str2 at the desired offset to zero
-	je str_eq				;jump to the equality return subroutine
-	cmp byte [fs:bx], ' '	;compare str2 at the desired offset to whitespace
-	je str_eq				;jump to the equality return subroutine
-	jmp str_neq				;jump to the inequality return subroutine
 
 map_memory:					;draws the memory map
 							;input: ES:DI = location to save the map to

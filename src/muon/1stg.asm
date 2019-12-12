@@ -25,7 +25,7 @@ lp:
 	mov ax, 0x50			;
 	mov es, ax				;set ES to the load ptr
 	xor bx, bx				;clear BX
-	mov al, 8				;8 sectors to read
+	mov al, 4				;4 sectors to read
 	pop dx					;restore drive number
 	xor dh, dh				;head 0
 	xor ch, ch				;cylinder 0
