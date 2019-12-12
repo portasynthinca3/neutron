@@ -36,10 +36,12 @@ drives in ATA compatibility mode (can almost certainly be enabled in the BIOS)
 \
 Also, there are some detected problems:
 * Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
-# So, this all is just a couple of buzzwords! Show me the screenshots!
+# Show me the screenshots!
 Okay, there you go!\
-![boot](https://github.com/portasynthinca3/neutron/blob/master/screens/boot.png "boot")\
-*Boot screen*\
+![boot1](https://github.com/portasynthinca3/neutron/blob/master/screens/boot_1.png "boot1")\
+*Boot screen 1*\
+![boot2](https://github.com/portasynthinca3/neutron/blob/master/screens/boot_2.png "boot2")\
+*Boot screen 2*\
 ![desktop](https://github.com/portasynthinca3/neutron/blob/master/screens/desktop.png "desktop")\
 *Desktop*
 # Okay, what do I need to be aware of?
