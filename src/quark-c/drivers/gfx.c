@@ -5,41 +5,36 @@
 #include "../stdlib.h"
 
 //The video buffer pointers
-unsigned char* vbe_buffer;
-unsigned char* sec_buffer;
+color24_t* vbe_buffer;
+color24_t* sec_buffer;
 //The resolution
-unsigned short res_x;
-unsigned short res_y;
+uint16_t res_x;
+uint16_t res_y;
 //The font
 const unsigned char* font;
 //The buffer selected for operations
 unsigned char buf_sel;
 //Virtual text mode position
 unsigned short vterm_y = 0;
-//VBE 3.0 stuff
-uint16_t vbe_ss;
-uint16_t vbe_cs;
-uint32_t vbe_init;
-uint32_t vbe_call;
 
 /*
  * Retrieve the horizontal resolution
  */
-unsigned short gfx_res_x(void){
+uint16_t gfx_res_x(void){
     return res_x;
 }
 
 /*
  * Retrieve the vertical resolution
  */
-unsigned short gfx_res_y(void){
+uint16_t gfx_res_y(void){
     return res_y;
 }
 
 /*
  * Retrieve the currently used buffer pointer
  */
-unsigned char* gfx_buffer(void){
+color24_t* gfx_buffer(void){
     return (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
 }
 
@@ -48,14 +43,14 @@ unsigned char* gfx_buffer(void){
  */
 void gfx_init(void){
     //Read the VBE buffer pointer (it was written in memory by the second stage loader)
-    vbe_buffer = (unsigned char*)(*(int*)(0x8FC00));
+    vbe_buffer = (color24_t*)(*(int*)(0x8FC00));
     //Read the display resolution
-    unsigned int res = *(unsigned int*)(0x8FC04);
+    uint32_t res = *(uint32_t*)(0x8FC04);
     res_y = res & 0xFFFF;
     res_x = (res >> 16) & 0xFFFF;
     //Allocate the second buffer based on the screen size
-    sec_buffer = (unsigned char*)malloc(res_x * res_y);
-    //Clear the virtual text mode position
+    sec_buffer = (color24_t*)malloc(res_x * res_y * sizeof(color24_t));
+    //Reset the virtual text mode position
     vterm_y = 0;
 }
 
@@ -64,15 +59,10 @@ void gfx_init(void){
  */
 void gfx_flip(void){
     //Choose the source and destination buffers
-    unsigned char* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
-    unsigned char* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
-    //Calculate the number of doublewords to be transferred
-    unsigned int size_dw = res_x * res_y / 4;
-    //Use the very clever assembly REP MOVSD opcode to transfer a large amount of data quickly
-    __asm__ volatile("mov %%eax, %%esi;"
-                     "mov %%ebx, %%edi;"
-                     "rep movsd;" : :
-                     "c" (size_dw), "a" (buf_src), "b" (buf_dst));
+    color24_t* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
+    color24_t* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+    //Transfer the data
+    memcpy(buf_dst, buf_src, res_x * res_y * sizeof(color24_t));
 }
 
 /*
@@ -96,79 +86,69 @@ void gfx_set_buf(unsigned char buf){
 /*
  * Fill the screen with one color
  */
-void gfx_fill(unsigned char color){
-    //We can use memset for that
-    memset((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer, (int)color, res_x * res_y);
+void gfx_fill(color32_t color){
+    //Get the video buffer
+    color24_t* buf = gfx_buffer();
+    //Draw each pixel
+    for(uint32_t i = 0; i < res_x * res_y; i++)
+        buf[i] = COLOR24(color);
 }
 
 /*
  * Draw a filled rectangle
  */
-void gfx_draw_filled_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c){
-    //For each horizontal line in the rectangle
-    for(unsigned short y = sy; y < sy + h; y++){
-        //Use memset to draw a horizontal line
-        unsigned int offset = (y * res_x) + sx;
-        memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
-    }
+void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
+    //Draw each horizontal line in the rectangle
+    for(uint16_t y = pos.y; y < pos.y + size.y; y++)
+        gfx_draw_hor_line((p2d_t){.x = pos.x, .y = y}, size.x, c);
 }
 
 /*
  * Draw a rectangle
  */
-void gfx_draw_rect(unsigned short sx, unsigned short sy, unsigned short w, unsigned short h, color8_t c){
+void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c){
     //Draw two horizontal lines
-    unsigned int offset = (sy * res_x) + sx;
-    memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
-    offset = ((sy + h) * res_x) + sx;
-    memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
+    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y}, size.x, c);
+    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y + size.y}, size.x, c);
     //Draw two vertical lines
-    for(uint16_t y = sy; y <= sy + h; y++){
-        offset = (y * res_x) + sx;
-        *((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer + offset) = c;
-    }
-    for(uint16_t y = sy; y <= sy + h; y++){
-        offset = (y * res_x) + sx + w;
-        *((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer + offset) = c;
-    }
+    gfx_draw_vert_line((p2d_t){.x = pos.x, .y = pos.y}, size.y, c);
+    gfx_draw_vert_line((p2d_t){.x = pos.x + size.x, .y = pos.y}, size.y, c);
 }
 
 /*
  * Draw a horizontal line
  */
-void gfx_draw_hor_line(uint16_t sx, uint16_t sy, uint16_t w, color8_t c){
-    //We can use memset for that
-    unsigned int offset = (sy * res_x) + sx;
-    memset(((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer) + offset, c, w);
+void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c){
+    //Get the video buffer
+    color24_t* buf = gfx_buffer();
+    //Calculate the scanline start
+    uint32_t st = pos.y * res_x;
+    //Draw each pixel in the line
+    for(uint16_t x = pos.x; x < pos.x + w; x++)
+        buf[st + x] = COLOR24(c);
 }
 
 /*
- * Draw checkerboard pattern
+ * Draw a vertical line
  */
-void gfx_draw_checker(unsigned char c1, unsigned char c2){
-    for(unsigned short y = 0; y < res_y; y++){
-        //Choose the starting color
-        unsigned char c = ((y % 2 == 1) ? c2 : c1);
-        for (unsigned short x = 0; x < res_x; x++){
-            //Draw a pixel
-            ((buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer)[(y * res_x) + x] = c;
-            //Switch the color
-            if(c == c1)
-                c = c2;
-            else
-                c = c1;
-        }
-    }
+void gfx_draw_vert_line(p2d_t pos, uint16_t h, color32_t c){
+    //Get the video buffer
+    color24_t* buf = gfx_buffer();
+    //Calculate the scanline start
+    uint32_t st = (pos.y * res_x) + pos.x;
+    //Draw each pixel in the line
+    for(uint32_t o = 0; o < h * res_x; o += res_x)
+        buf[st + o] = COLOR24(c);
 }
 
 /*
  * Draw an XBM image
  */
-void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t color_h, color8_t color_l){
+void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l){
     //Create some local variables
     uint8_t* ptr = xbm_ptr;
     p2d_t pos = position;
-    color8_t* buffer = gfx_buffer();
+    color24_t* buffer = gfx_buffer();
     while(1){
         //Fetch a byte
         uint8_t data = *(ptr++);
@@ -178,9 +158,9 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t col
             if(pos.x - position.x < xbm_size.x){
                 //If it is in bounds, draw the pixel
                 if((data >> x) & 1)
-                    buffer[(pos.y * res_x) + pos.x] = color_h;
+                    buffer[(pos.y * res_x) + pos.x] = COLOR24(color_h);
                 else
-                    buffer[(pos.y * res_x) + pos.x] = color_l;
+                    buffer[(pos.y * res_x) + pos.x] = COLOR24(color_l);
             }
             //Increment the position
             pos.x++;
@@ -199,9 +179,9 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color8_t col
 /*
  * Put a char with backgrund color in video buffer
  */
-void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c){
+void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
     //Get the video buffer
-    color8_t* buf = gfx_buffer();
+    color24_t* buf = gfx_buffer();
     //Calculate the video buffer offset
     unsigned int buf_offset = (pos.y * res_x) + pos.x - 6;
     //Calculate the font offset
@@ -213,9 +193,9 @@ void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c){
         //And for each pixel in that column
         for(unsigned char j = 0; j < 8; j++){
             if((font_col >> j) & 1)
-                buf[buf_offset + i + (j * res_x)] = color; //Draw it
-            else if(bcolor != COLOR_TRANSPARENT)
-                buf[buf_offset + i + (j * res_x)] = bcolor; //Or clear it
+                buf[buf_offset + i + (j * res_x)] = COLOR24(color); //Draw it
+            else if(bcolor.a != 0)
+                buf[buf_offset + i + (j * res_x)] = COLOR24(bcolor); //Or clear it
         }
     }
 }
@@ -223,7 +203,7 @@ void gfx_putch(p2d_t pos, color8_t color, color8_t bcolor, char c){
 /*
  * Put a string in video buffer
  */
-void gfx_puts(p2d_t pos, color8_t color, color8_t bcolor, char* s){
+void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s){
     //Data byte, position, state and counter
     char c = 0;
     p2d_t pos_actual = pos;
@@ -238,24 +218,26 @@ void gfx_puts(p2d_t pos, color8_t color, color8_t bcolor, char* s){
                     pos_actual.x = pos.x;
                     pos_actual.y += 8;
                     break;
+                    /*
                 case 1: //Foreground color change
                     state = 1;
                     break;
                 case 2: //Background color change
                     state = 2;
                     break;
+                    */
                 default: //Print the char and advance its position
                     pos_actual.x += 6;
                     gfx_putch(pos_actual, color, bcolor, c);
                     break;
             }
-        } else if(state == 1){ //State: foreground color change
+        }/* else if(state == 1){ //State: foreground color change
             color = c;
             state = 0;
         } else if(state == 2){ //State: background color change
             color = c;
             state = 0;
-        }
+        }*/
     }
 }
 
@@ -300,9 +282,9 @@ p2d_t gfx_text_bounds(char* s){
 /*
  * Put a string in virtual text mode
  */
-void gfx_vterm_println(char* s, unsigned char color){
+void gfx_vterm_println(char* s, color32_t color){
     //Normally put a string
-    gfx_puts((p2d_t){.x = 0, .y = vterm_y}, color, 0, s);
+    gfx_puts((p2d_t){.x = 0, .y = vterm_y}, color, COLOR32(0, 0, 0, 0), s);
     //Increment the position
     vterm_y += 8;
 }
@@ -313,7 +295,7 @@ const char hex_conv_const[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 /*
  * Put a string representing a 32-bit hexadecimal value in virtual text mode
  */
-void gfx_vterm_println_hex(int value, unsigned char color){
+void gfx_vterm_println_hex(int value, color32_t color){
     //Convert the value into string
     char* hex = "  PLACEHLD";
     hex[2] = hex_conv_const[(value >> 28) & 0xF];
@@ -338,12 +320,12 @@ void gfx_panic(int ip, int code){
     //Draw directly onto VBE memory
     gfx_set_buf(GFX_BUF_VBE);
     //Print the header message
-    gfx_vterm_println("QUARK PANIC @", 0x28);
+    gfx_vterm_println("QUARK PANIC @", COLOR32(0, 255, 0, 0));
     //Print error IP
-    gfx_vterm_println_hex(ip, 0x28);
+    gfx_vterm_println_hex(ip, COLOR32(0, 255, 0, 0));
     //Print error code
-    gfx_vterm_println("Error code:", 0x28);
-    gfx_vterm_println_hex(code, 0x28);
+    gfx_vterm_println("Error code:", COLOR32(0, 255, 0, 0));
+    gfx_vterm_println_hex(code, COLOR32(0, 255, 0, 0));
 }
 
 /*
@@ -351,9 +333,9 @@ void gfx_panic(int ip, int code){
  */
 void gfx_memdump(unsigned int addr, int amount){
     //Print the header
-    gfx_vterm_println("Dumping memory at", 0x0F);
-    gfx_vterm_println_hex(addr, 0x0F);
-    gfx_vterm_println("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", 0x0D);
+    gfx_vterm_println("Dumping memory at", COLOR32(0, 255, 255, 255));
+    gfx_vterm_println_hex(addr, COLOR32(0, 255, 255, 255));
+    gfx_vterm_println("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", COLOR32(0, 255, 0, 255));
     //Calculate some stuff
     unsigned int ad = addr - (addr % 16);
     unsigned int am = amount + 16 - (addr % 16);
@@ -372,7 +354,7 @@ void gfx_memdump(unsigned int addr, int amount){
         }
         msg[56] = 0;
         //Print it
-        gfx_vterm_println(msg, 0x0F);
+        gfx_vterm_println(msg, COLOR32(0, 255, 255, 255));
     }
 }
 

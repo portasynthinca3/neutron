@@ -21,18 +21,19 @@ void enable_a20(void);
 void isr_wrapper(void);
 void isr_wrapper_code(void);
 
-char* floppy_name[] = { "Not present", "5.25\" 360KB", "5.25\" 1.2MB", "3.5\" 720KB", "3.5\" 1.44MB", "3.5\" 2.88MB" };
-const char hcc[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
 /*
  * Display a boot progress bar
  */
 void krnl_boot_status(char* str, uint32_t progress){
     //Draw the screen
-    gfx_draw_filled_rect(0, gfx_res_y() / 2, gfx_res_x(), 8, 0x0F);
-    gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(str).x) / 2, .y = gfx_res_y() / 2}, 0, COLOR_TRANSPARENT, str);
-    gfx_draw_filled_rect(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 3, 2, 0x15);
-    gfx_draw_filled_rect(gfx_res_x() / 3, gfx_res_y() * 3 / 4, gfx_res_x() / 300 * progress, 2, 0x2F);
+    gfx_draw_filled_rect((p2d_t){.x = 0, .y = gfx_res_y() / 2},
+                         (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 255, 255, 255));
+    gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(str).x) / 2, .y = gfx_res_y() / 2},
+             COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), str);
+    gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4}, 
+                         (p2d_t){.x = gfx_res_x() / 3, .y = 2}, COLOR32(255, 64, 64, 64));
+    gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
+                         (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 0, 255, 0));
     gfx_flip();
 }
 
@@ -51,15 +52,15 @@ void main(void){
     //Do some graphics-related initialization stuff
     gfx_init();
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
-    gfx_fill(0x0F);
+    gfx_fill(COLOR32(255, 255, 255, 255));
     gfx_set_font(font_neutral);
 
     //Print the quark version
     gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
-             0, COLOR_TRANSPARENT, QUARK_VERSION_STR);
+             COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
     //Draw the neutron logo
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
-                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, 0, 0x0F);
+                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 0, 0, 0), COLOR32(255, 255, 255, 255));
     //Print the boot process
     krnl_boot_status("Starting up...", 0);
 

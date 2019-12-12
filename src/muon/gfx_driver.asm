@@ -23,20 +23,6 @@ gfx_go_best:						;switches the video mode to the best available one
 	call print_char					;
 	pop cx							;
 	push bx							;
-	mov ax, word [cs:si]			;load the resolution again
-	shl eax, 16						;
-	mov ax, word [cs:si + 2]		;
-	mov cl, 15						;try 15bpp
-	call gfx_try_mode				;
-	cmp al, 0						;check the success
-	jne gfx_go_best_ret				;
-	pop bx							;print the | character
-	push cx							;
-	mov ch, 0x0A					;
-	mov cl, '|'						;
-	call print_char					;
-	pop cx							;
-	push bx							;
 	add si, 4						;point SI to the next entry
 	jmp gfx_go_best_loop			;loop
 	gfx_go_best_ret:				;

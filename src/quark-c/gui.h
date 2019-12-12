@@ -5,18 +5,18 @@
 
 //Structure defining the GUI color scheme
 typedef struct {
-    color8_t top_bar;
-    color8_t time;
-    color8_t desktop;
-    color8_t cursor;
-    color8_t selection;
-    color8_t win_bg;
-    color8_t win_border;
-    color8_t win_title;
-    color8_t win_exit_btn;
-    color8_t win_state_btn;
-    color8_t win_minimize_btn;
-    color8_t win_unavailable_btn;
+    color32_t top_bar;
+    color32_t time;
+    color32_t desktop;
+    color32_t cursor;
+    color32_t selection;
+    color32_t win_bg;
+    color32_t win_border;
+    color32_t win_title;
+    color32_t win_exit_btn;
+    color32_t win_state_btn;
+    color32_t win_minimize_btn;
+    color32_t win_unavailable_btn;
 } color_scheme_t;
 
 //Alignement
@@ -48,8 +48,8 @@ typedef struct {
 typedef struct {
     char* text;
     uint32_t alignment;
-    color8_t text_color;
-    color8_t bg_color;
+    color32_t text_color;
+    color32_t bg_color;
 } control_ext_label_t;
 
 //Keyboard buffer size in bytes

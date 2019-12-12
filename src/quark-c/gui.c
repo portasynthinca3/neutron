@@ -46,19 +46,18 @@ void gui_init(void){
     //Reset some variables
     window_dragging = NULL;
     //Set the default color scheme
-    //The palette for reference is here: https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fwww.fountainware.com%2FEXPL%2Fvgapalette.png&f=1&nofb=1
-    color_scheme.desktop = 0x12; //Very dark grey
-    color_scheme.top_bar = 0x14; //Dark grey
-    color_scheme.cursor = 0x0F; //White
-    color_scheme.selection = 0x35; //Light blue
-    color_scheme.time = color_scheme.selection;
-    color_scheme.win_bg = 0x17; //Grey
-    color_scheme.win_border = 0x32; //Green-blue-ish
-    color_scheme.win_title = 0x0F; //White
-    color_scheme.win_exit_btn = 0x28; //Red
-    color_scheme.win_state_btn = 0x2C; //Yellow
-    color_scheme.win_minimize_btn = 0x2F; //Lime
-    color_scheme.win_unavailable_btn = 0x12; //Very dark grey
+    color_scheme.desktop =                  COLOR32(255, 40, 40, 40);           //Very dark grey
+    color_scheme.top_bar =                  COLOR32(255, 70, 70, 70);           //Dark grey
+    color_scheme.cursor =                   COLOR32(255, 255, 255, 255);        //White
+    color_scheme.selection =                COLOR32(255, 0, 128, 255);          //Light blue
+    color_scheme.time =                     COLOR32(255, 0, 128, 255);          //Light blue
+    color_scheme.win_bg =                   COLOR32(255, 127, 127, 127);        //Grey
+    color_scheme.win_border =               COLOR32(255, 0, 255, 128);          //Green-blue-ish
+    color_scheme.win_title =                COLOR32(255, 255, 255, 255);        //White
+    color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);            //Red
+    color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);          //Yellow
+    color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);            //Lime
+    color_scheme.win_unavailable_btn =      COLOR32(255, 40, 40, 40);           //Very dark grey
 
     //Allocate a chunk of memory for windows
     windows = (window_t*)malloc(64 * sizeof(window_t));
@@ -77,8 +76,8 @@ void gui_init(void){
     controls[0].extended_size = sizeof(control_ext_label_t);
     control_ext_label_t* label = (control_ext_label_t*)malloc(sizeof(control_ext_label_t));
     label->alignment = ALIGN_V_TOP | ALIGN_H_LEFT;
-    label->bg_color = COLOR_TRANSPARENT;
-    label->text_color = 0x0F; //White
+    label->bg_color = COLOR32(0, 0, 0, 0);
+    label->text_color = COLOR32(255, 255, 255, 255); //White
     label->text = (char*)malloc(sizeof(char) * 512);
     label->text[0] = 0;
     //Read the build config file just for fun
@@ -131,7 +130,7 @@ void gui_update(void){
     //Draw the desktop
     gfx_fill(color_scheme.desktop);
     //Draw the top bar
-    gfx_draw_filled_rect(0, 0, gfx_res_x(), 16, color_scheme.top_bar);
+    gfx_draw_filled_rect((p2d_t){.x = 0, .y = 0}, (p2d_t){.x = gfx_res_x(), .y = 16}, color_scheme.top_bar);
     
     //Get the time
     uint8_t h, m, s = 0;
@@ -152,7 +151,7 @@ void gui_update(void){
         strcat(time, sprintu(temp, s, 2));
     }
     //Print it
-    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4, .y = 5}, color_scheme.time, COLOR_TRANSPARENT, time);
+    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4, .y = 5}, color_scheme.time, COLOR32(0, 0, 0, 0), time);
 
     //Render the windows
     gui_render_windows();
@@ -194,11 +193,14 @@ void gui_render_windows(void){
     while((current_window = &windows[i++])->size_real.x != 0){
         //Draw the highlight in the top bar if the window is in focus
         if(window_focused == current_window)
-            gfx_draw_filled_rect(topb_win_pos, 0, 16, 16, color_scheme.selection);
+            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos, .y = 0},
+                                 (p2d_t){.x = 16, .y = 16}, color_scheme.selection);
         //Draw the window icon in the top bar
-        gfx_draw_filled_rect(topb_win_pos + 4, 4, 8, 8, color_scheme.win_bg);
-        gfx_draw_filled_rect(topb_win_pos + 5, 5, 3, 6, 0x35);
-        gfx_draw_hor_line(topb_win_pos + 9, 5, 2, color_scheme.win_title);
+        gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 4, .y = 4},
+                             (p2d_t){.x = 8, .y = 8}, color_scheme.win_bg);
+        gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 5, .y = 5},
+                             (p2d_t){.x = 3, .y = 6}, COLOR32(255, 0, 64, 255));
+        gfx_draw_hor_line((p2d_t){.x = topb_win_pos + 9, .y = 5}, 2, color_scheme.win_title);
         //Advance the bar position
         topb_win_pos += 16;
 
@@ -226,32 +228,35 @@ void gui_render_window(window_t* ptr){
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Fill a rectangle with a window background color
-        gfx_draw_filled_rect(ptr->position.x, ptr->position.y, ptr->size.x, ptr->size.y, color_scheme.win_bg);
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
+                             (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_bg);
         //Draw a border around it
-        gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, ptr->size.y, color_scheme.win_border);
+        gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
+                      (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_border);
         //Print its title if window has the title visibility flag set
         if(ptr->flags & GUI_WIN_FLAG_TITLE_VISIBLE)
-            gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR_TRANSPARENT, ptr->title);
+            gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
         //Draw a border arount the title
-        gfx_draw_rect(ptr->position.x, ptr->position.y, ptr->size.x, 11, color_scheme.win_border);
+        gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
+                      (p2d_t){.x = ptr->size.x, .y = 11}, color_scheme.win_border);
 
         //Draw the close button 
         if(ptr->flags & GUI_WIN_FLAG_CLOSABLE)
-            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_exit_btn);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_exit_btn);
         else
-            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
 
         //Draw the maximize (state change) button 
         if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
-            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 19, ptr->position.y + 2, 8, 8, color_scheme.win_state_btn);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_state_btn);
         else
-            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
 
         //Draw the minimize button 
-        if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
-            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 28, ptr->position.y + 2, 8, 8, color_scheme.win_minimize_btn);
+        if(ptr->flags & GUI_WIN_FLAG_MINIMIZABLE)
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_minimize_btn);
         else
-            gfx_draw_filled_rect(ptr->position.x + ptr->size.x - 10, ptr->position.y + 2, 8, 8, color_scheme.win_unavailable_btn);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
 
         //Now draw its controls
         control_t* control;
@@ -381,19 +386,19 @@ void gui_poll_ps2(){
 /*
  * Draws the cursor on screen
  */
-void gui_draw_cursor(unsigned short x, unsigned short y){
+void gui_draw_cursor(uint16_t x, uint16_t y){
     //Retrieve the graphics buffer; draw directly on it
-    unsigned char* buf = gfx_buffer();
+    color24_t* buf = gfx_buffer();
     //Retrieve the X resolution
-    unsigned short res_x = gfx_res_x();
+    uint16_t res_x = gfx_res_x();
     //Draw!
-    buf[(y * res_x) + x] = color_scheme.cursor;
-    buf[(y * res_x) + x + 1] = color_scheme.cursor;
-    buf[(y * res_x) + x + 2] = color_scheme.cursor;
-    buf[((y + 1) * res_x) + x] = color_scheme.cursor;
-    buf[((y + 2) * res_x) + x] = color_scheme.cursor;
-    buf[((y + 1) * res_x) + x + 1] = color_scheme.cursor;
-    buf[((y + 2) * res_x) + x + 2] = color_scheme.cursor;
-    buf[((y + 3) * res_x) + x + 3] = color_scheme.cursor;
-    buf[((y + 4) * res_x) + x + 4] = color_scheme.cursor;
+    buf[(y * res_x) + x] = COLOR24(color_scheme.cursor);
+    buf[(y * res_x) + x + 1] = COLOR24(color_scheme.cursor);
+    buf[(y * res_x) + x + 2] = COLOR24(color_scheme.cursor);
+    buf[((y + 1) * res_x) + x] = COLOR24(color_scheme.cursor);
+    buf[((y + 2) * res_x) + x] = COLOR24(color_scheme.cursor);
+    buf[((y + 1) * res_x) + x + 1] = COLOR24(color_scheme.cursor);
+    buf[((y + 2) * res_x) + x + 2] = COLOR24(color_scheme.cursor);
+    buf[((y + 3) * res_x) + x + 3] = COLOR24(color_scheme.cursor);
+    buf[((y + 4) * res_x) + x + 4] = COLOR24(color_scheme.cursor);
 }
