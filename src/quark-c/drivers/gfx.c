@@ -47,126 +47,16 @@ unsigned char* gfx_buffer(void){
  * Initialize the graphics driver
  */
 void gfx_init(void){
-    //Try to use the VBE 3.0 interface to choose the best possible mode
-    if(gfx_vbe3_setup() == GFX_VBE_OK){
-        while(1);
-    } else {
-        //If that didn't work, continue with the 640x480x8bpp mode
-        //Read the VBE buffer pointer (it was written in memory by the second stage loader)
-        vbe_buffer = (unsigned char*)(*(int*)(0x8FC00));
-        //Read the display resolution
-        unsigned int res = *(unsigned int*)(0x8FC04);
-        res_y = res & 0xFFFF;
-        res_x = (res >> 16) & 0xFFFF;
-    }
+    //Read the VBE buffer pointer (it was written in memory by the second stage loader)
+    vbe_buffer = (unsigned char*)(*(int*)(0x8FC00));
+    //Read the display resolution
+    unsigned int res = *(unsigned int*)(0x8FC04);
+    res_y = res & 0xFFFF;
+    res_x = (res >> 16) & 0xFFFF;
     //Allocate the second buffer based on the screen size
     sec_buffer = (unsigned char*)malloc(res_x * res_y);
     //Clear the virtual text mode position
     vterm_y = 0;
-}
-
-/*
- * Initialize and detect some VBE 3.0 stuff
- */
-uint32_t gfx_vbe3_setup(void){
-    //Step I. Allocate a buffer to copy the Video BIOS code to
-    void* vbios_cpy = malloc(32 * 1024); //32 KB
-
-    //Step II. Copy the Video BIOS code over to that buffer
-    memcpy(vbios_cpy, (void*)0xC0000, 32 * 1024);
-
-    //Step III. Scan the BIOS code to obtain the "PMInfoBlock" structure
-    void* pmib = NULL;
-    for(uint32_t i = (uint32_t)vbios_cpy; i <= (uint32_t)vbios_cpy + (32 * 1024); i++){
-        //The first sign of this structure is the "PMID" string at the start of it
-        //Note that this string in not zero-terminated, so we can't use strcmp
-        breakpoint();
-        uint8_t* st_ptr = (uint8_t*)i;
-        if(st_ptr[0] == 'P' && st_ptr[1] == 'M' &&
-           st_ptr[2] == 'I' && st_ptr[3] == 'D'){
-                //The second and last sign is the checksum
-                //We sum up all the bytes in the structure
-                //  and compare it with zero. If they aren't equal, this isn't the structure we're aiming for
-                uint8_t sum;
-                for(int j = 0; j < 20; j++)
-                    sum += *(uint8_t*)(st_ptr + j);
-                if(sum == 0){
-                    //We've found the structure!
-                    pmib = st_ptr;
-                    break;
-                }
-        }
-    }
-    //If the structure pointer is still NULL, return with an error
-    if(pmib == NULL)
-        return GFX_VBE_ERR_NO_PMIB;
-    
-    //Step IV. Allocate a block of memory for emulating the BIOS Data Area, create a GDT entry for it and assign it.
-    void* emulated_bda = malloc(0x600);
-    gdt_create(3, (uint32_t)emulated_bda, 0x600, 0b0000, 0b10010010);
-    *(uint16_t*)(pmib + 8) = 3;
-    //Step V. Create and assign three GDT entries that point to 0xA0000, 0xB0000 and 0xB8000
-    gdt_create(4, 0xA0000, 64 * 1024, 0b0000, 0b10010010);
-    *(uint16_t*)(pmib + 10) = 4;
-    gdt_create(5, 0xB0000, 64 * 1024, 0b0000, 0b10010010);
-    *(uint16_t*)(pmib + 12) = 5;
-    gdt_create(6, 0xB8000, 32 * 1024, 0b0000, 0b10010010);
-    *(uint16_t*)(pmib + 14) = 6;
-    //Step VI. Create and assign a GDT entry for copied Video BIOS code
-    gdt_create(7, (uint32_t)vbios_cpy, 32 * 1024, 0b0000, 0b10010010);
-    *(uint16_t*)(pmib + 16) = 7;
-    //Step VII. Raise the "InProtectedMode" flag
-    *(uint8_t*)(pmib + 17) = 1;
-    //Step VIII. Create a code GDT entry for the copied Video BIOS
-    gdt_create(8, (uint32_t)vbios_cpy, 32 * 1024, 0b0000, 0b10011000);
-    //Step IX. Create a code GDT entry for the BIOS protected mode stack
-    void* bios_stack = malloc(1024);
-    gdt_create(9, (uint32_t)bios_stack, 1024, 0b0000, 0b10010010);
-    //Step X. Save the pointers that will be used later
-    vbe_ss = 9;
-    vbe_cs = 8;
-    vbe_init = (uint32_t)*(uint16_t*)(pmib + 6);
-    vbe_call = (uint32_t)*(uint16_t*)(pmib + 4);
-    //Far call the initialization function
-    __asm__ volatile("movw %0, %%es" : : "r" (vbe_cs));
-    __asm__ volatile("call %%es:*%0" : : "m" (vbe_init));
-    while(1);
-    //Return with success!
-    return GFX_VBE_OK;
-}
-
-/*
- * Call a VBE 3.0 function from protected mode
- */
-void gfx_vbe3_call(uint16_t func, uint32_t esdi, uint8_t trans_esdi){
-    //Translate the ES:DI into 16-bit values if requested
-    if(trans_esdi){
-        gdt_create(10, esdi, 64 * 1024, 0b0000, 0b10010010);
-        esdi = (10 << 16) | 0;
-    }
-
-    //Save the current stack pointer and segment
-    uint16_t current_sp;
-    uint16_t current_ss;
-    __asm__ volatile("movw %%sp, %0" : "=r" (current_sp));
-    __asm__ volatile("movw %%ss, %0" : "=r" (current_ss));
-    //Load the ES:DI
-    __asm__ volatile("mov %0, %%es" : : "r" (esdi >> 16), "D" (esdi & 0xFFFF));
-    //Load the target code segment
-    __asm__ volatile("movw %0, %%fs" : : "r" (vbe_cs));
-    //Load the function number
-    __asm__ volatile("movw %0, %0" : : "a" (func));
-    //Load the target stack segment
-    __asm__ volatile("movw %0, %%ss" : : "r" (vbe_ss));
-    //Clear the target stack pointer
-    __asm__ volatile("movw %%dx, %%sp" : : "d" (0));
-
-    //Call the protected mode entry point
-    __asm__ volatile("call %%fs:*%0" : : "m" (vbe_call));
-
-    //Restore the stack pointer and segment
-    __asm__ volatile("movw %0, %%sp" : : "r" (current_sp));
-    __asm__ volatile("movw %0, %%ss" : : "r" (current_ss));
 }
 
 /*

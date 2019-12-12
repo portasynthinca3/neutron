@@ -25,7 +25,7 @@ lp:
 	mov ax, 0x50			;
 	mov es, ax				;set ES to the load ptr
 	xor bx, bx				;clear BX
-	mov al, 4				;4 sectors to read
+	mov al, 8				;8 sectors to read
 	pop dx					;restore drive number
 	xor dh, dh				;head 0
 	xor ch, ch				;cylinder 0
@@ -104,11 +104,11 @@ screen_clear_loop:
 screen_clear_exit:
 	ret						;return from subroutine
 	
-startup_literal: db "Muon-1 has been started", 0
+startup_literal: db "Muon-1 [a part of nOS] has been started", 0
 error_literal: db "Load error: ", 0
 error_bad_signature_literal: db "bad signature", 0
 error_diskio_literal: db "disk I/O", 0
-error_noexec_literal: db "Muon-2 stage loader didn't execute", 0
+error_noexec_literal: db "Muon-2 didn't execute", 0
 successful_literal: db "Executing Muon-2", 0
 
 times 446-($-$$) db 0		;fill-in
@@ -119,8 +119,8 @@ mbr_part_entry_1:
 	mbr_pe1_start_chs: db 0, 0, 0
 	mbr_pe1_part_type: db 0x58
 	mbr_pe1_end_chs: db 0, 0, 0
-	mbr_pe1_start_lba: dd 5
-	mbr_pe1_length_lba: dd 2876
+	mbr_pe1_start_lba: dd 9
+	mbr_pe1_length_lba: dd 2872
 mbr_part_entry_2: dd 0, 0, 0, 0
 mbr_part_entry_3: dd 0, 0, 0, 0
 mbr_part_entry_4: dd 0, 0, 0, 0

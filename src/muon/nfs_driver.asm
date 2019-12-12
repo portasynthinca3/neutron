@@ -121,7 +121,7 @@ nfs_check_drive_fs:					;checks if a drive has valid nFS signature
 									;
 	push ax							;save AX
 									;
-	mov ax, 5						;set the sector to be read: nFS master sector
+	mov ax, 9						;set the sector to be read: nFS master sector
 	call nfs_read_drive_sector		;read it
 	cmp byte [ds:nfs_status], 0		;check if the read was successful
 	jne nfs_cdfs_return				;return from subroutine preserving the status code if not
@@ -166,7 +166,7 @@ nfs_load_master_filetable:			;loads the master file table
 									;					  1 on disk I/O err
 									;
 	push ax							;save AX
-	mov ax, 6						;set the sector to be read: 6th
+	mov ax, 10						;set the sector to be read: master filetable
 	call nfs_read_drive_sector		;read the sector
 	pop ax							;restore AX
 	ret								;return from subroutine

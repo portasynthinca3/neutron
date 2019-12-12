@@ -99,25 +99,20 @@ os.system('objcopy -O binary build/obj/cbuild.o ' + crawout)
 if len(fs_files) > 0:
 	print('Building nFS')
 	print('  Writing signature')
-	image[2560] = 0x00
-	image[2561] = 0xF5
-	image[2562] = 0xAD
-	image[2563] = 0xDE
+	image[4608] = 0x00
+	image[4609] = 0xF5
+	image[4610] = 0xAD
+	image[4611] = 0xDE
 	
 	print('  Writing partition name')
 	part_name = 'Neutron Test FS'
 	for i in range(len(part_name)):
 		c = part_name[i]
-		image[2564 + i] = ord(c)
-		
-	print('  Writing metadata')
-	image[2565] = 0
-	image[2566] = 1
-	image[2567] = 1
+		image[4612 + i] = ord(c)
 	
 	print('  Writing Master FileTable')
 	file_sects = list()
-	next_f_sect = 7
+	next_f_sect = 11
 	for path in fs_files:
 		if path != "":
 			path_src = path.split('>')[0]
@@ -131,16 +126,16 @@ if len(fs_files) > 0:
 			print('   Writing entry for: ' + path_dst)
 			for i in range(len(path_dst)):
 				c = path_dst[i]
-				image[3072 + (fs_files.index(path) * 32) + i] = ord(c)
+				image[5120 + (fs_files.index(path) * 32) + i] = ord(c)
 			
-			image[3072 + (fs_files.index(path) * 32) + 24] = f_size & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 25] = (f_size >> 8) & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 26] = (f_size >> 16) & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 27] = (f_size >> 24) & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 28] = next_f_sect & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 29] = (next_f_sect >> 8) & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 30] = (next_f_sect >> 16) & 0xFF
-			image[3072 + (fs_files.index(path) * 32) + 31] = (next_f_sect >> 24) & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 24] = f_size & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 25] = (f_size >> 8) & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 26] = (f_size >> 16) & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 27] = (f_size >> 24) & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 28] = next_f_sect & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 29] = (next_f_sect >> 8) & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 30] = (next_f_sect >> 16) & 0xFF
+			image[5120 + (fs_files.index(path) * 32) + 31] = (next_f_sect >> 24) & 0xFF
 
 			next_f_sect = next_f_sect + f_size_sect
 
