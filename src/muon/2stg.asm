@@ -240,23 +240,6 @@ cli_view_ret:
 	pop cx					;restore CX
 	pop ax					;restore AX
 	jmp cli_loop			;return to the command line
-;cli_gfx:
-;	push ds					;move DS
-;	pop gs					;to GS
-;	mov ax, font_file		;load the font file name pointer
-;	call gfx_load_font		;load the font itself
-;	call gfx_go_320x240x8	;switch to the graphical mode
-;	mov ch, 0x0A
-;	mov dx, command_gfx_grretings
-;	mov bx, 0
-;	mov ah, 0
-;	call gfx_print_str
-;	call gfx_flip
-;	jmp $					;an infinite loop
-;	call gfx_go_80x25x16t	;switch do the text mode
-;	xor bx, bx				;reset the screen pos
-;	pop es					;restore ES
-;	jmp cli_loop			;return to the command line
 cli_run:
 	call print_ln			;go to a new line
 	push 0x0400				;load 0x0400 (keyboard buffer segment)
@@ -399,7 +382,7 @@ krnl_run:
 	xor dx, dx				;set DS to 0
 	mov ds, dx				;
 	lgdt [0]				;Load Global Descriptor Table
-	call gfx_go_640x480x256c;exit the text mode, as the kernel can't do it on its own
+	call gfx_go_best		;exit the text mode, as the kernel can't do it on its own
 	push 0x8FC0				;load 0x8C0
 	pop es					;into ES
 	mov [es:0], ecx			;save ECX (gfx buf linear address) in RAM

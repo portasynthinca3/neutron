@@ -1,25 +1,85 @@
 ;Neutron project
 ;Graphics driver
 
-gfx_go_640x480x256c:				;switches the video mode to 640x480x256c graphical
+gfx_go_best:						;switches the video mode to the best available one
+									;  Saves video buffer linear address into ECX,
+									;  resolution into EDX, bpp in AH
+	mov cl, 24						;only try 24bpp modes first
+	mov eax, (1920 << 16) | 1080	;1920x1080
+	call gfx_try_mode				;
+	cmp al, 0						;
+	jne gfx_go_best_ret				;
+	mov eax, (1600 << 16) | 900		;1600x900
+	call gfx_try_mode				;
+	cmp al, 0						;
+	jne gfx_go_best_ret				;
+	mov eax, (640 << 16) | 480		;640x480
+	call gfx_try_mode				;
+	cmp al, 0						;
+	jne gfx_go_best_ret				;
+	gfx_go_best_ret:				;
+	ret								;return from subrountine
+
+gfx_go_mode:						;switches the video mode to one which number is stored in DX
+									;  Saves video buffer linear address into ECX,
+									;  resolution into EDX, bpp in AH
 	push bx							;save the registers
 	push es							;
-	push ax							;
-	mov ax, 4f02h					;set BIOS function: set VESA mode
-	mov bx, 101h					;VESA mode 101h
-	or bh, 01000000b				;set some kind of bit (idk what this does, but without this line it doesn't work XD)
+	mov ax, 4f02h					;set BIOS function: set VBE mode
+	mov bx, dx						;VBE mode
+	or bh, 01000000b				;raise the flag indicating that we want a flat video buffer
 	int 10h							;call BIOS routine
-	mov ax, 4f01h					;set BIOS function: get VESA mode properties
-	mov cx, 101h					;VESA mode 101h
+	call gfx_get_mode				;get mode parameters
+	pop es							;restore the registers
+	pop bx							;
+	ret								;return from subroutine
+
+gfx_try_mode:						;try to find a VBE mode with resolution stored in EAX and bpp in CL
+									;returns AL != 0 on success
+	mov dx, 100h					;start with mode 100h
+	gfx_try_mode_loop:				;
+	push dx							;save DX
+	push ax							;     AX
+	push cx							;     CX
+	call gfx_get_mode				;get mode information
+	pop cx							;restore CX
+	cmp ah, cl						;compare mode bpp with the desired one
+	pop ax							;restore AX
+	je gfx_try_mode_found_1			;make a resolution check if they are equal
+	gfx_try_mode_false_alarm:		;
+	pop dx							;restore DX
+	inc dx							;try another mode number
+	cmp dx, 301h					;but don't exceed mode 301h
+	ja gfx_try_mode_not_found		;
+	jmp gfx_try_mode_loop			;loop
+	gfx_try_mode_found_1:			;jump occurs when bpp's are equal
+	cmp eax, edx					;compare the mode resolutions
+	je gfx_try_mode_found			;we found the one we've benn looking for if they are equal
+	jmp gfx_try_mode_false_alarm	;if they aren't, continue searching
+	gfx_try_mode_found:				;
+	pop dx							;restore DX
+	call gfx_go_mode				;go to that mode
+	ret								;return
+	gfx_try_mode_not_found:			;
+	xor al, al						;indicate an error
+	ret								;return
+
+gfx_get_mode:						;returns information about a VBE mode
+									;input: DX = mode number
+									;output: ECX = linear framebuffer address
+									;        EDX = resolution
+									;        AH = bits per pixel
+	mov ax, 4f01h					;set BIOS function: get VBE mode properties
+	mov cx, dx						;VBE mode
 	push 0x1050						;load info into 0x1050:0x0000
 	pop es							;
 	xor di, di						;
-	int 10h							;call BIOS function
+	int 10h							;call BIOS routine
 	mov dword ecx, [es:0x28]		;move the buffer linear address into ECX
-	mov edx, (640 << 16) | 480		;load the mode resolutrion into EDX
-	pop ax							;restore the registers
-	pop es							;
-	pop bx							;
+	movzx edx, word [es:0x12]		;load width
+	shl edx, 16						;
+	mov dx, word [es:0x14]			;load height
+	mov ah, byte [es:0x19]			;load bits per pixel
 	ret								;return from subroutine
 
 gfx_go_80x25x16t:					;switches the video mode to 80x25x16c text
