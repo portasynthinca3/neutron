@@ -12,9 +12,8 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 # List of things that are done
 * Booting
 * Loading second stage loader
-* Second stage loader command line
 * Loading kernel
-* Kernel graphics
+* Hi-res 24bpp kernel graphics
 # List of things that are in development right now
 * USB (EHCI) support
 * GUI
@@ -36,7 +35,6 @@ drives in ATA compatibility mode (can almost certainly be enabled in the BIOS)
 * A video card supporting VESA 1.0 standard (integrated CPU graphics should also work)\
 \
 Also, there are some detected problems:
-* Colors are weird in VirtualBox
 * Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
 # So, this all is just a couple of buzzwords! Show me the screenshots!
 Okay, there you go!\
