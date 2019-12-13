@@ -16,10 +16,10 @@ gfx_go_best:						;switches the video mode to the best available one
 	call gfx_try_mode				;
 	cmp al, 0						;check the success
 	jne gfx_go_best_ret				;
-	pop bx							;print the | character
+	pop bx							;print the . character
 	push cx							;
-	mov ch, 0x0A					;
-	mov cl, '|'						;
+	mov ch, 0x0F					;
+	mov cl, '.'						;
 	call print_char					;
 	pop cx							;
 	push bx							;

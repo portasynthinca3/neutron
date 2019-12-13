@@ -3,8 +3,8 @@
 //Built on top of the GFX library (src/quark-c/c/gfx.c)
 
 #include "./gui.h"
-#include "./drivers/gfx.h"
 #include "./stdlib.h"
+#include "./drivers/gfx.h"
 #include "./drivers/diskio.h"
 
 //Mouse position on the screen
@@ -21,13 +21,13 @@ unsigned short ms_buffer_head, ms_buffer_tail;
 color_scheme_t color_scheme;
 
 //The list of windows
-window_t* windows;
+window_t* windows = NULL;
 //The window that is being dragged currently
-window_t* window_dragging;
+window_t* window_dragging = NULL;
 //The point of the dragging window that is pinned to the cursor
 p2d_t window_dragging_cpos;
 ///The window that is in focus
-window_t* window_focused;
+window_t* window_focused = NULL;
 //Flag indicating that focusing was already processed this frame
 uint8_t focus_processed;
 //Window position in the the top bar
@@ -58,44 +58,96 @@ void gui_init(void){
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);          //Yellow
     color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);            //Lime
     color_scheme.win_unavailable_btn =      COLOR32(255, 40, 40, 40);           //Very dark grey
+    
+    //Allocate some space for the windows
+    windows = (window_t*)malloc(32 * sizeof(window_t));
+    windows[0].title = NULL;
 
-    //Allocate a chunk of memory for windows
-    windows = (window_t*)malloc(64 * sizeof(window_t));
     //Set up an example window
-    windows[0].title = (char*)malloc(sizeof(char) * 100);
-    memcpy(windows[0].title, "This text was used to build this:", 34);
-    windows[0].position = (p2d_t){.x = 100, .y = 100};
-    windows[0].size_real = (p2d_t){.x = 300, .y = 300};
-    windows[0].flags = GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_DRAGGABLE | GUI_WIN_FLAG_MAXIMIZABLE |
-                       GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_TITLE_VISIBLE | GUI_WIN_FLAG_VISIBLE;
-    //Create a simple list of controls
-    control_t* controls = (control_t*)malloc(sizeof(control_t) * 2);
-    controls[0].position = (p2d_t){.x = 2, .y = 2};
-    controls[0].size = (p2d_t){.x = 1, .y = 1};
-    controls[0].type = GUI_WIN_CTRL_LABEL;
-    controls[0].extended_size = sizeof(control_ext_label_t);
+    window_t* ex_win = gui_create_window("Hello, World", GUI_WIN_FLAGS_STANDARD,
+                                         (p2d_t){.x = 100, .y = 100}, (p2d_t){.x = 150, .y = 150});
+    window_focused = ex_win;
+    //Create an example control
+    gui_create_label(ex_win, (p2d_t){.x = 1, .y = 1},
+                             (p2d_t){.x = 100, .y = 100}, "Hello-o", COLOR32(255, 255, 255, 255),
+                                                                      COLOR32(0, 0, 0, 0));
+
+
+    window_t* ex_win_2 = gui_create_window("Hello, World #2", GUI_WIN_FLAGS_STANDARD,
+                                           (p2d_t){.x = 150, .y = 150}, (p2d_t){.x = 400, .y = 300});
+    gui_create_label(ex_win_2, (p2d_t){.x = 1, .y = 1},
+                               (p2d_t){.x = 100, .y = 100}, "Hello-o #2", COLOR32(255, 255, 255, 255),
+                                                                           COLOR32(0, 0, 0, 0));
+}
+
+/*
+ * Creates a window and adds it to the window list
+ */
+window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size){
+    window_t win;
+    //Allocate memory for its title
+    win.title = (char*)malloc(sizeof(char) * (strlen(title) + 1));
+    //Copy the title over
+    memcpy(win.title, title, strlen(title) + 1);
+    //Assign flags, position and size
+    win.flags = flags;
+    win.position = pos;
+    win.size_real = size;
+    //Allocate some space for window controls
+    win.controls = (control_t*)malloc(32 * sizeof(control_t));
+    win.controls[0].type = 0;
+    //Scan through the window list to determine its end
+    window_t* last;
+    uint32_t i = 0;
+    while((last = &windows[i++])->title);
+    i--;
+    //Assign the window
+    windows[i] = win;
+    //Mark the end of the list
+    windows[i + 1].title = NULL;
+    //Return the window
+    return &windows[i];
+}
+
+/*
+ * Creates a control and adds it to the window
+ */
+control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size){
+    //Allocate memory for the control
+    control_t cont;
+    //Set its parameters
+    cont.type = type;
+    cont.extended = ext_ptr;
+    cont.position = pos;
+    cont.size = size;
+    //Scan through the control list to determine its end
+    control_t* last;
+    uint32_t i = 0;
+    while((last = &win->controls[i++])->type);
+    i--;
+    //Assign the control
+    win->controls[i] = cont;
+    //Mark the end of the list
+    win->controls[i + 1].type = 0;
+    //Return the control
+    return &win->controls[i];
+}
+
+/*
+ * Creates a label and adds it to the window
+ */
+control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color){
+    //Create the "extended control" of label type
     control_ext_label_t* label = (control_ext_label_t*)malloc(sizeof(control_ext_label_t));
-    label->alignment = ALIGN_V_TOP | ALIGN_H_LEFT;
-    label->bg_color = COLOR32(0, 0, 0, 0);
-    label->text_color = COLOR32(255, 255, 255, 255); //White
-    label->text = (char*)malloc(sizeof(char) * 512);
-    label->text[0] = 0;
-    //Read the build config file just for fun
-    uint8_t fs_status = 0;
-    if((fs_status = diskio_fs_read_file(0, "nbuild\x00", label->text)) != DISKIO_STATUS_OK){
-        char temp[20];
-        strcat(label->text, sprintu(temp, fs_status, 1));
-    }
-    label->text[344] = 0;
-    controls[0].extended = (void*)label;
-    //Mark the end of a control list
-    controls[1].type = 0;
-    //Set the controls
-    windows[0].controls = controls;
-    //Mark the end of a window list
-    windows[1].size_real.x = 0;
-    //Set the window in focus
-    window_focused = &windows[0];
+    //Allocate memory for the label text
+    label->text = malloc(sizeof(char) * (strlen(text) + 1));
+    //Copy the text over
+    memcpy(label->text, text, strlen(text) + 1);
+    //Assign other parameters
+    label->bg_color = bg_color;
+    label->text_color = text_color;
+    //Create a normal control with this extension
+    return gui_create_control(win, GUI_WIN_CTRL_LABEL, (void*)label, pos, size);
 }
 
 /*
@@ -166,7 +218,6 @@ void gui_update(void){
  */
 void gui_render_windows(void){
     //Some local variables
-    int32_t i = 0;
     window_t* current_window;
     //Clear the focus processed flag
     focus_processed = 0;
@@ -176,21 +227,22 @@ void gui_render_windows(void){
     //If the window in focus is valid
     if(window_focused != NULL) //Process the window in focus first
         gui_process_window(window_focused);
-    //Walk through the window list to determine the end of it, size_real.x=0 means it's the end of the list
-    while(windows[i++].size_real.x != 0);
+    //Scan through the window list to determine its end
+    window_t* last;
+    uint32_t i = 0;
+    while((last = &windows[i++])->title);
     i--;
-    //Fetch the next window
-    while(i >= 0){
-        current_window = &windows[i--];
-        //Process it
-        gui_process_window(current_window);
+    //Process windows from the end of the list
+    while(i--){
+        if(&windows[i] != window_focused)
+            gui_process_window(&windows[i]);
     }
 
     //Reset the counter
-    i = 0;
     uint16_t win_cnt = 0;
-    //Fetch the next window, size_real.x=0 means it's the end of the list
-    while((current_window = &windows[i++])->size_real.x != 0){
+    i = 0;
+    //Fetch the next window
+    while((current_window = &windows[i++])->title){
         //Draw the highlight in the top bar if the window is in focus
         if(window_focused == current_window)
             gfx_draw_filled_rect((p2d_t){.x = topb_win_pos, .y = 0},
@@ -233,9 +285,8 @@ void gui_render_window(window_t* ptr){
         //Draw a border around it
         gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                       (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_border);
-        //Print its title if window has the title visibility flag set
-        if(ptr->flags & GUI_WIN_FLAG_TITLE_VISIBLE)
-            gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
+        //Print its title
+        gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
         //Draw a border arount the title
         gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
                       (p2d_t){.x = ptr->size.x, .y = 11}, color_scheme.win_border);
@@ -259,9 +310,8 @@ void gui_render_window(window_t* ptr){
             gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
 
         //Now draw its controls
-        control_t* control;
         uint32_t i = 0;
-        //Control type = 0 marks the end of the list
+        control_t* control;
         while((control = &ptr->controls[i++])->type)
             gui_render_control(ptr, control);
     }

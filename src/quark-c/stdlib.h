@@ -11,7 +11,7 @@
 #define STDLIB_DRAM_SIZE (128 * 0x100000)
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "Quark v0.0.8"
+#define QUARK_VERSION_STR "Quark v0.0.9"
 //Quark panic code for reaching the end
 #define QUARK_PANIC_CODE_END 0xABADBABE
 
@@ -27,6 +27,16 @@ typedef signed int int32_t;
 typedef unsigned long long uint64_t;
 typedef signed long long int64_t;
 typedef unsigned int size_t;
+
+/*
+ * Structure defining a linked list node
+ */
+struct list_node {
+    void* data;
+    struct list_node* prev;
+    struct list_node* next;
+};
+typedef struct list_node list_node_t;
 
 /*
  * Structure defining a memory block
@@ -99,6 +109,11 @@ void rep_insw(uint16_t port, uint32_t count, uint16_t* buf);
 void fifo_pushb(uint8_t* buffer, uint16_t* head, uint8_t value);
 uint8_t fifo_popb(uint8_t* buffer, uint16_t* head, uint16_t* tail);
 uint8_t fifo_av(uint16_t* head, uint16_t* tail);
+
+//Linked list operations
+
+list_node_t* list_append(list_node_t* first, void* element);
+void* list_get_at_idx(list_node_t* first, uint32_t idx);
 
 //String functions
 

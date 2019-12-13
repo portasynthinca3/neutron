@@ -25,7 +25,6 @@ entry:
 	mov ch, 0x0F			;set the colors: white on black
 	jmp krnl				;try to load the kernel
 krnl:
-	call print_ln			;go to a new line
 	call krnl_load			;load the kernel
 	cmp ax, 0				;check if the load was successful
 	jne krnl_ret			;return if not
@@ -41,6 +40,9 @@ krnl_ret:
 	jmp $
 krnl_load:
 	;load the kernel into RAM
+	mov dx, krnl_debug_ldstart ;print the debug message
+	mov ch, 0x0F			;
+	call print_str			;
 	push gs					;save the registers
 	push es					;
 	push si					;
@@ -67,7 +69,7 @@ krnl_load_cycle:
 	pop bx
 	push dx
 	push cx
-	mov dx, command_krnl_debug
+	mov dx, krnl_debug_ld
 	mov ch, 0x0F
 	call print_str
 	pop cx
@@ -108,9 +110,9 @@ krnl_run:
 	;shit is getting unreal here
 	;i mean, switch the CPU into the protected mode
 	;(opposite of what we've had before up until now, the real mode)
-	mov ch, 0x0F
-	mov dx, command_krnl_debug_run
-	call print_str_line
+	mov ch, 0x0F			;print the debug message
+	mov dx, krnl_debug_run	;
+	call print_str_line		;
 	cli						;disable interrupts
 	mov al, 0x80			;disable non-maskable interrupts
 	out 0x70, al			;
@@ -129,6 +131,11 @@ krnl_run:
 	xor dx, dx				;set DS to 0
 	mov ds, dx				;
 	lgdt [0]				;Load Global Descriptor Table
+	push cs					;load CS into DS
+	pop ds					;
+	mov ch, 0x0F			;print another debug message
+	mov dx, krnl_debug_video;
+	call print_str			;
 	call gfx_go_best		;exit the text mode, as the kernel can't do it on its own
 	push 0x8FC0				;load 0x8C0
 	pop es					;into ES
@@ -161,13 +168,14 @@ krnl_run:
 %include "gfx_driver.asm"	;include the graphics driver
 %include "stdlib.asm"		;include the "standard library"
 
-krnl_error: db "An error occured while loading Quark.", 0
+krnl_error: db "An error occured while loading Quark", 0
 krnl_file: db "quark", 0
-command_krnl_debug: db "S", 0
-command_krnl_debug_run: db " KEXEC", 0
+krnl_debug_ldstart: db "Loading Quark", 0
+krnl_debug_ld: db ".", 0
+krnl_debug_run: db "done", 0
+krnl_debug_video: db "Choosing video mode", 0
 
 gdt:                    ;Global Descriptor Table
-
 gdt_null:               ;null segment
 	dd 0
     dd 0

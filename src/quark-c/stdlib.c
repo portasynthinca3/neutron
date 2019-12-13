@@ -269,6 +269,45 @@ unsigned char fifo_av(unsigned short* head, unsigned short* tail){
 }
 
 /*
+ * Append an element at the end of the list
+ */
+list_node_t* list_append(list_node_t* first, void* element){
+    //Allocate a block of memory for the node
+    list_node_t* node = (list_node_t*)malloc(sizeof(list_node_t));
+    //Assign the element pointer to it
+    node->data = element;
+    node->next = NULL;
+    node->prev = NULL;
+    if(first == NULL){
+        //If the first element is NULL, we're creating a new list
+        return node;
+    } else {
+        //Else, walk through the list to find its last element
+        //  and assign the new one to that one
+        //Also, assign that one to the new one as a previous element
+        list_node_t* last = first;
+        while((last = last->next)->next);
+        last->next = node;
+        node->prev = last;
+        return first;
+    }
+}
+
+/*
+ * Get an element at a specific index from the list
+ */
+void* list_get_at_idx(list_node_t* first, uint32_t idx){
+    uint32_t cnt = 0;
+    //Scan through the list
+    //    WARNING: TRYING TO UNDERSTAND THE TWO LINES OF CODE LISTED BELOW
+    //    MIGHT LEAD TO SERIOUS BRAIN INJURIES.
+    list_node_t* last = first;
+    while((cnt++ != idx) && (last = last->next));
+    //Return the element
+    return last->data;
+}
+
+/*
  * Read the amount of cycles executed by the CPU
  */
 uint64_t rdtsc(){
