@@ -27,13 +27,13 @@ void isr_wrapper_code(void);
 void krnl_boot_status(char* str, uint32_t progress){
     //Draw the screen
     gfx_draw_filled_rect((p2d_t){.x = 0, .y = gfx_res_y() / 2},
-                         (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 255, 255, 255));
+                         (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 0, 0, 0));
     gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(str).x) / 2, .y = gfx_res_y() / 2},
-             COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), str);
+             COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), str);
     gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4}, 
                          (p2d_t){.x = gfx_res_x() / 3, .y = 2}, COLOR32(255, 64, 64, 64));
     gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
-                         (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 0, 255, 0));
+                         (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 255, 255, 255));
     gfx_flip();
 }
 
@@ -52,15 +52,15 @@ void main(void){
     //Do some graphics-related initialization stuff
     gfx_init();
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
-    gfx_fill(COLOR32(255, 255, 255, 255));
+    gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_set_font(font_neutral);
 
     //Print the quark version
     gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
-             COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
+             COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
     //Draw the neutron logo
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
-                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 0, 0, 0), COLOR32(255, 255, 255, 255));
+                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
     //Print the boot process
     krnl_boot_status("Starting up...", 0);
 
