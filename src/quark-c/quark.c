@@ -10,6 +10,8 @@
 #include "./drivers/pci.h"
 #include "./drivers/usb.h"
 #include "./drivers/ata.h"
+#include "./drivers/pic.h"
+#include "./drivers/pit.h"
 
 #include "./fonts/font_neutral.h"
 
@@ -17,9 +19,25 @@
 
 struct idt_desc idt_d;
 
-void enable_a20(void);
-void isr_wrapper(void);
-void isr_wrapper_code(void);
+extern void enable_a20(void);
+extern void exc_wrapper(void);
+extern void exc_wrapper_code(void);
+extern void irq0_wrap(void);
+extern void irq1_wrap(void);
+extern void irq2_wrap(void);
+extern void irq3_wrap(void);
+extern void irq4_wrap(void);
+extern void irq5_wrap(void);
+extern void irq6_wrap(void);
+extern void irq7_wrap(void);
+extern void irq8_wrap(void);
+extern void irq9_wrap(void);
+extern void irq10_wrap(void);
+extern void irq11_wrap(void);
+extern void irq12_wrap(void);
+extern void irq13_wrap(void);
+extern void irq14_wrap(void);
+extern void irq15_wrap(void);
 
 /*
  * Display a boot progress bar
@@ -64,23 +82,48 @@ void main(void){
     //Print the boot process
     krnl_boot_status("Starting up...", 0);
 
+    //Initialize PICs
+    pic_init(32, 40); //Remap IRQs
     //Set up IDT
     struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
-    //Set every IDT using the same pattern
-    for(int i = 0; i < 256; i++){
-        int wrapper_address = (int)&isr_wrapper;
+    //Set every exception IDT entry using the same pattern
+    for(int i = 0; i < 32; i++){
+        int wrapper_address = (int)&exc_wrapper;
         if(i == 8 || (i >= 10 && i <= 14) || i == 17 || i == 30) //Set a special wrapper for exceptions that push error code onto stack
-            wrapper_address = (int)&isr_wrapper_code;
+            wrapper_address = (int)&exc_wrapper_code;
         idt[i].offset_lower = wrapper_address & 0xFFFF;
         idt[i].offset_higher = (wrapper_address >> 16) & 0xFFFF;
         idt[i].code_selector = 0x08;
         idt[i].zero = 0;
         idt[i].type_attr = 0b10001110;
     }
+    //Set up gates for IRQs
+    idt[32] = IDT_ENTRY_ISR((uint32_t)&irq0_wrap);
+    idt[33] = IDT_ENTRY_ISR((uint32_t)&irq1_wrap);
+    idt[34] = IDT_ENTRY_ISR((uint32_t)&irq2_wrap);
+    idt[35] = IDT_ENTRY_ISR((uint32_t)&irq3_wrap);
+    idt[36] = IDT_ENTRY_ISR((uint32_t)&irq4_wrap);
+    idt[37] = IDT_ENTRY_ISR((uint32_t)&irq5_wrap);
+    idt[38] = IDT_ENTRY_ISR((uint32_t)&irq6_wrap);
+    idt[39] = IDT_ENTRY_ISR((uint32_t)&irq7_wrap);
+    idt[40] = IDT_ENTRY_ISR((uint32_t)&irq8_wrap);
+    idt[41] = IDT_ENTRY_ISR((uint32_t)&irq9_wrap);
+    idt[42] = IDT_ENTRY_ISR((uint32_t)&irq10_wrap);
+    idt[43] = IDT_ENTRY_ISR((uint32_t)&irq11_wrap);
+    idt[44] = IDT_ENTRY_ISR((uint32_t)&irq12_wrap);
+    idt[45] = IDT_ENTRY_ISR((uint32_t)&irq13_wrap);
+    idt[46] = IDT_ENTRY_ISR((uint32_t)&irq14_wrap);
+    idt[47] = IDT_ENTRY_ISR((uint32_t)&irq15_wrap);
+    //Load IDT
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(struct idt_entry);
-    //Load IDT
     load_idt(&idt_d);
+    //Initialize PIT
+    pit_configure_irq0_ticks(PIT_FQ / 1000); //Generate an interrupt at 1 kHz
+    //Enable interrupts
+    __asm__ volatile("sti");
+    //Enable non-maskable interrupts
+    outb(0x70, 0);
 
     //Enumerate PCI devices
     krnl_boot_status("Detecting PCI devices", 15);
@@ -109,9 +152,9 @@ void main(void){
 }
 
 /*
- * Interrupt Service Routine
+ * Exception ISR
  */
-void quark_isr(void){
+void quark_exc(void){
     //Print some info
     unsigned int ip;
     __asm__ volatile("mov %0, %%edx" : "=r" (ip));
@@ -119,4 +162,15 @@ void quark_isr(void){
 
     //Hang
     while(1);
+}
+
+/*
+ * IRQ ISR
+ */
+void quark_irq(uint32_t irq_no){
+    //IRQ0 is sent by the PIT
+    if(irq_no == 0)
+        pit_irq0();
+    //Signal End Of Interrupt
+    pic_send_eoi(irq_no);
 }

@@ -12,6 +12,8 @@ src/quark-c/drivers/diskio.c
 src/quark-c/drivers/usb.c
 src/quark-c/drivers/pci.c
 src/quark-c/drivers/ata.c
+src/quark-c/drivers/pic.c
+src/quark-c/drivers/pit.c
 .crawout
 build/quark.bin
 .fs

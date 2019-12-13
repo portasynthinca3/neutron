@@ -68,6 +68,11 @@ struct idt_entry {
    uint16_t offset_higher;
 } __attribute__ ((packed));
 
+//A macro that creates generic IDT entries
+#define IDT_ENTRY(OFFS, CSEL, TYPE) ((struct idt_entry){.offset_lower = (OFFS) & 0xFFFF, .code_selector = CSEL, .zero = 0, .type_attr = TYPE, .offset_higher = (((OFFS) >> 16) & 0xFFFF)})
+//A macro that creates Quark ISR IDT entries
+#define IDT_ENTRY_ISR(OFFS) (IDT_ENTRY(OFFS, 8, 0b10001110))
+
 //Debug functions
 
 volatile void breakpoint();

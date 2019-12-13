@@ -6,6 +6,7 @@
 #include "./stdlib.h"
 #include "./drivers/gfx.h"
 #include "./drivers/diskio.h"
+#include "./drivers/pit.h"
 
 //Mouse position on the screen
 signed short mx, my;
@@ -177,6 +178,10 @@ void gui_init_ps2(){
  * Redraw the GUI
  */
 void gui_update(void){
+    char tmp[50];
+    memcpy(((control_ext_label_t*)(windows[0].controls[0].extended))->text, sprintu(tmp, (uint32_t)pit_ticks(), 1), 50);
+    strcat(((control_ext_label_t*)(windows[0].controls[0].extended))->text, " ms since start");
+
     //Poll the PS/2 controller
     gui_poll_ps2();
     //Draw the desktop
