@@ -36,12 +36,15 @@ uint16_t topb_win_pos;
 //The current time as a string
 char time[64] = "??:??:??\0";
 
+control_ext_progress_t* example_progress_bar;
+
 void gui_example_button_callback(ui_event_args_t* args){
-    control_ext_button_t* btn = (control_ext_button_t*)args->control->extended;
-    if(btn->border_color.r == 64)
-        btn->border_color = COLOR32(255, 255, 0, 0);
-    else
-        btn->border_color = COLOR32(255, 64, 64, 64);
+    if(example_progress_bar->val == 0)
+        example_progress_bar->val = 50;
+    else if(example_progress_bar->val == 50)
+        example_progress_bar->val = 100;
+    else if(example_progress_bar->val == 100)
+        example_progress_bar->val = 0;
 }
 
 /*
@@ -74,7 +77,7 @@ void gui_init(void){
 
     //Set up an example window
     window_t* ex_win = gui_create_window("Hello, World", GUI_WIN_FLAGS_STANDARD,
-                                         (p2d_t){.x = 100, .y = 100}, (p2d_t){.x = 150, .y = 150});
+                                         (p2d_t){.x = 200, .y = 200}, (p2d_t){.x = 250, .y = 250});
     window_focused = ex_win;
     //Create an example control
     gui_create_label(ex_win, (p2d_t){.x = 1, .y = 1},
@@ -86,6 +89,11 @@ void gui_init(void){
                       COLOR32(255, 128, 128, 128),
                       COLOR32(255, 64, 64, 64),
                       COLOR32(255, 64, 64, 64));
+    example_progress_bar = (control_ext_progress_t*)
+    gui_create_progress_bar(ex_win, (p2d_t){.x = 1, .y = 90}, (p2d_t){.x = 150, .y = 15}, COLOR32(255, 127, 127, 127),
+                                                                                          COLOR32(255, 0, 255, 0),
+                                                                                          COLOR32(255, 255, 255, 255),
+                                                                                          100, 0)->extended;
 }
 
 /*
@@ -178,6 +186,23 @@ control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, v
     button->pressed_last_frame = 0;
     //Create a normal control with this extension
     return gui_create_control(win, GUI_WIN_CTRL_BUTTON, (void*)button, pos, size);
+}
+
+/*
+ * Creates a progress bar and adds it to the window
+ */
+control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
+                                   color32_t border_color, uint32_t max_val, uint32_t val){
+    //Create the "extended control" of progress bar type
+    control_ext_progress_t* progress = (control_ext_progress_t*)malloc(sizeof(control_ext_progress_t));
+    //Assign the parameters
+    progress->bg_color = bg_color;
+    progress->border_color = border_color;
+    progress->fill_color = fill_color;
+    progress->max_val = max_val;
+    progress->val = val;
+    //Create a normal control with this extension
+    return gui_create_control(win, GUI_WIN_CTRL_PROGRESS_BAR, (void*)progress, pos, size);
 }
 
 /*
@@ -400,6 +425,23 @@ void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointe
                 event.mouse_pos = (p2d_t){.x = mx, .y = my};
                 button->event_handler(&event);
             }
+        }
+        break;
+        case GUI_WIN_CTRL_PROGRESS_BAR: {
+            //Fetch the extended data
+            control_ext_progress_t* progress = (control_ext_progress_t*)ptr->extended;
+            //Draw the rectangles
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 ptr->size, progress->bg_color);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 (p2d_t){.x = ptr->size.x * progress->val / progress->max_val,
+                                         .y = ptr->size.y},
+                                 progress->fill_color);
+            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                  .y = ptr->position.y + win_ptr->position.y + 12},
+                          ptr->size, progress->border_color);
         }
         break;
     }
