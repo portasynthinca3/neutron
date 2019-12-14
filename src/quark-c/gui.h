@@ -69,7 +69,7 @@ typedef struct {
     uint8_t pressed_last_frame;
 } control_ext_button_t;
 
-//Structure defining a progress bas
+//Structure defining a progress bar
 typedef struct {
     color32_t bg_color;
     color32_t fill_color;
@@ -78,10 +78,23 @@ typedef struct {
     uint32_t val;
 } control_ext_progress_t;
 
+//Structure defining an image
+typedef struct {
+    uint32_t image_format;
+    void* image;
+    color32_t color_hi;
+    color32_t color_lo;
+} control_ext_image_t;
+
 //UI event types
 
 #define GUI_EVENT_UNDEFINED                         0
 #define GUI_EVENT_CLICK                             1
+
+//Image formats
+
+#define GUI_IMAGE_FORMAT_XBM                        1
+#define GUI_IMAGE_FORMAT_RAW                        2
 
 //Keyboard buffer size in bytes
 #define GUI_KEYBOARD_BUFFER_SIZE 128
@@ -105,6 +118,7 @@ typedef struct {
 #define GUI_WIN_CTRL_LABEL                          1
 #define GUI_WIN_CTRL_BUTTON                         2
 #define GUI_WIN_CTRL_PROGRESS_BAR                   3
+#define GUI_WIN_CTRL_IMAGE                          4
 
 void gui_init(void);
 void gui_update(void);
@@ -116,6 +130,7 @@ control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, v
                              color32_t text_color, color32_t bg_color, color32_t pressed_bg_color, color32_t border_color);
 control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
                                    color32_t border_color, uint32_t max_val, uint32_t val);
+control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi);
 
 void gui_render_windows(void);
 void gui_process_window(window_t* ptr);

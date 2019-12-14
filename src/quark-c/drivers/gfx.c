@@ -157,9 +157,9 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t co
             //Check the position
             if(pos.x - position.x < xbm_size.x){
                 //If it is in bounds, draw the pixel
-                if((data >> x) & 1)
+                if(((data >> x) & 1) && color_h.a != 0)
                     buffer[(pos.y * res_x) + pos.x] = COLOR24(color_h);
-                else
+                else if(color_l.a != 0)
                     buffer[(pos.y * res_x) + pos.x] = COLOR24(color_l);
             }
             //Increment the position

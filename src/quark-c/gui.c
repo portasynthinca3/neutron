@@ -8,6 +8,8 @@
 #include "./drivers/diskio.h"
 #include "./drivers/pit.h"
 
+#include "./images/neutron_logo.xbm"
+
 //Mouse position on the screen
 signed short mx, my;
 //Mouse buttons state
@@ -94,6 +96,8 @@ void gui_init(void){
                                                                                           COLOR32(255, 0, 255, 0),
                                                                                           COLOR32(255, 255, 255, 255),
                                                                                           100, 0)->extended;
+    gui_create_image(ex_win, (p2d_t){.x = 1, .y = 110}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, GUI_IMAGE_FORMAT_XBM,
+                             neutron_logo_bits, COLOR32(0, 0, 0, 0), COLOR32(255, 0, 0, 0));
 }
 
 /*
@@ -203,6 +207,21 @@ control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32
     progress->val = val;
     //Create a normal control with this extension
     return gui_create_control(win, GUI_WIN_CTRL_PROGRESS_BAR, (void*)progress, pos, size);
+}
+
+/*
+ * Creates a progress bar and adds it to the window
+ */
+control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi){
+    //Create the "extended control" of image type
+    control_ext_image_t* image = (control_ext_image_t*)malloc(sizeof(control_ext_image_t));
+    //Assign properties
+    image->image_format = format;
+    image->image = data;
+    image->color_lo = color_lo;
+    image->color_hi = color_hi;
+    //Create a normal control with this extension
+    return gui_create_control(win, GUI_WIN_CTRL_IMAGE, (void*)image, pos, size);
 }
 
 /*
@@ -442,6 +461,16 @@ void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointe
             gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                                   .y = ptr->position.y + win_ptr->position.y + 12},
                           ptr->size, progress->border_color);
+        }
+        break;
+        case GUI_WIN_CTRL_IMAGE: {
+            //Fetch the extended data
+            control_ext_image_t* image = (control_ext_image_t*)ptr->extended;
+            //Draw the image
+            if(image->image_format == GUI_IMAGE_FORMAT_XBM)
+                gfx_draw_xbm((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                     .y = ptr->position.y + win_ptr->position.y + 12},
+                             (uint8_t*)image->image, ptr->size, image->color_hi, image->color_lo);
         }
         break;
     }
