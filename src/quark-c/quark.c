@@ -67,21 +67,6 @@ void main(void){
     enable_a20();
     dram_init();
 
-    //Do some graphics-related initialization stuff
-    gfx_init();
-    gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
-    gfx_fill(COLOR32(255, 0, 0, 0));
-    gfx_set_font(font_neutral);
-
-    //Print the quark version
-    gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
-             COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
-    //Draw the neutron logo
-    gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
-                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
-    //Print the boot process
-    krnl_boot_status("Starting up...", 0);
-
     //Initialize PICs
     pic_init(32, 40); //Remap IRQs
     //Set up IDT
@@ -119,11 +104,26 @@ void main(void){
     idt_d.limit = 256 * sizeof(struct idt_entry);
     load_idt(&idt_d);
     //Initialize PIT
-    pit_configure_irq0_ticks(PIT_FQ / 1000); //Generate an interrupt at 1 kHz
+    pit_configure_irq0_ticks(PIT_FQ / 1000); //Generate an interrupt 1000 times a second
     //Enable interrupts
     __asm__ volatile("sti");
     //Enable non-maskable interrupts
     outb(0x70, 0);
+
+    //Do some graphics-related initialization stuff
+    gfx_init();
+    gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
+    gfx_fill(COLOR32(255, 0, 0, 0));
+    gfx_set_font(font_neutral);
+
+    //Print the quark version
+    gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
+             COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
+    //Draw the neutron logo
+    gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
+                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
+    //Print the boot process
+    krnl_boot_status("Loading...", 0);
 
     //Enumerate PCI devices
     krnl_boot_status("Detecting PCI devices", 15);
@@ -141,14 +141,6 @@ void main(void){
     while(1){
         gui_update();
     }
-
-    //Print an error message, the end of the kernel should never be reached
-    int ip;
-    __asm__("mov $., %0" : "=r" (ip));
-    gfx_panic(ip, QUARK_PANIC_CODE_END);
-
-    //Hang
-    while(1);
 }
 
 /*

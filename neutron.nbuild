@@ -7,8 +7,8 @@ src/quark-c/isr_wrapper.s
 src/quark-c/a20.s
 src/quark-c/stdlib.c
 src/quark-c/gui.c
-src/quark-c/drivers/gfx.c
 src/quark-c/drivers/diskio.c
+src/quark-c/drivers/gfx.c
 src/quark-c/drivers/usb.c
 src/quark-c/drivers/pci.c
 src/quark-c/drivers/ata.c

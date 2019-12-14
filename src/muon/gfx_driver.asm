@@ -11,7 +11,7 @@ gfx_go_best:						;switches the video mode to the best available one
 	shl eax, 16						;
 	mov ax, word [cs:si + 2]		;
 	cmp eax, 0						;EAX=0 indicates the end of the list
-	je gfx_go_best_ret				;return in this case
+	je gfx_go_best_fail				;fail in this case
 	mov cl, 24						;try 24bpp
 	call gfx_try_mode				;
 	cmp al, 0						;check the success
@@ -28,6 +28,11 @@ gfx_go_best:						;switches the video mode to the best available one
 	gfx_go_best_ret:				;
 	pop bx							;restore position on screen
 	ret								;return from subrountine
+	gfx_go_best_fail:				;in case of a failure
+	pop bx							;restore screen position
+	mov dx, 115h					;try mode 115h - 800x600x16M
+	call gfx_go_mode				;
+	ret								;return from subroutine
 
 gfx_go_mode:						;switches the video mode to one which number is stored in DX
 									;  Saves video buffer linear address into ECX,

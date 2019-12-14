@@ -32,6 +32,20 @@ krnl:
 	pop es					;
 	xor di, di				;clear DI
 	call map_memory			;map the memory while we didn't overwrite the IVT
+	mov ch, 0x0F			;print the debug message
+	mov dx, krnl_debug_run	;
+	call print_str_line		;
+	mov ch, 0x0F			;print another debug message
+	mov dx, krnl_debug_video;
+	call print_str			;
+	call gfx_go_best		;exit the text mode, as the kernel can't do it on its own
+	push 0x8FC0				;load 0x8C0
+	pop es					;into ES
+	mov [es:0], ecx			;save ECX (gfx buf linear address) in RAM
+	mov [es:4], edx			;save EDX (gfx resolution) in RAM
+	mov [es:8], ah			;save AH (gfx bits per pixel) in RAM
+	mov dl, [ds:nfs_drive_no] ;get the drive number
+	mov byte [es:9], dl		;save boot drive in RAM
 	jmp krnl_run			;run the kernel
 krnl_ret:
 	mov ch, 0x0C
@@ -110,9 +124,6 @@ krnl_run:
 	;shit is getting unreal here
 	;i mean, switch the CPU into the protected mode
 	;(opposite of what we've had before up until now, the real mode)
-	mov ch, 0x0F			;print the debug message
-	mov dx, krnl_debug_run	;
-	call print_str_line		;
 	cli						;disable interrupts
 	mov al, 0x80			;disable non-maskable interrupts
 	out 0x70, al			;
@@ -133,17 +144,6 @@ krnl_run:
 	lgdt [0]				;Load Global Descriptor Table
 	push cs					;load CS into DS
 	pop ds					;
-	mov ch, 0x0F			;print another debug message
-	mov dx, krnl_debug_video;
-	call print_str			;
-	call gfx_go_best		;exit the text mode, as the kernel can't do it on its own
-	push 0x8FC0				;load 0x8C0
-	pop es					;into ES
-	mov [es:0], ecx			;save ECX (gfx buf linear address) in RAM
-	mov [es:4], edx			;save EDX (gfx resolution) in RAM
-	mov [es:8], ah			;save AH (gfx bits per pixel) in RAM
-	mov dl, [ds:nfs_drive_no] ;get the drive number
-	mov byte [es:8], dl		;save boot drive in RAM
 	mov eax, cr0			;load the control register 0 into EAX
 	or eax, 1				;set its last bit
 	mov cr0, eax			;load the EAX the control register 0

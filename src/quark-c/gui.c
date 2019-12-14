@@ -72,13 +72,6 @@ void gui_init(void){
     gui_create_label(ex_win, (p2d_t){.x = 1, .y = 1},
                              (p2d_t){.x = 100, .y = 100}, "Hello-o", COLOR32(255, 255, 255, 255),
                                                                       COLOR32(0, 0, 0, 0));
-
-
-    window_t* ex_win_2 = gui_create_window("Hello, World #2", GUI_WIN_FLAGS_STANDARD,
-                                           (p2d_t){.x = 150, .y = 150}, (p2d_t){.x = 400, .y = 300});
-    gui_create_label(ex_win_2, (p2d_t){.x = 1, .y = 1},
-                               (p2d_t){.x = 100, .y = 100}, "Hello-o #2", COLOR32(255, 255, 255, 255),
-                                                                           COLOR32(0, 0, 0, 0));
 }
 
 /*
@@ -178,9 +171,6 @@ void gui_init_ps2(){
  * Redraw the GUI
  */
 void gui_update(void){
-    char tmp[50];
-    memcpy(((control_ext_label_t*)(windows[0].controls[0].extended))->text, sprintu(tmp, (uint32_t)pit_ticks(), 1), 50);
-    strcat(((control_ext_label_t*)(windows[0].controls[0].extended))->text, " ms since start");
 
     //Poll the PS/2 controller
     gui_poll_ps2();

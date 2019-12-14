@@ -39,3 +39,27 @@ void pic_send_eoi(uint8_t irq){
     //  IRQ line is routed through PIC1
     outb(PIC1_COMM, 0x20);
 }
+
+/*
+ * Mask an IRQ
+ */
+void pic_mask_irq(uint8_t no){
+    //Read interrupt mask
+    uint8_t mask = inb(PIC1_DATA);
+    //Set the bit that curresponds to the IRQ
+    mask |= (1 << no);
+    //Write the mask
+    outb(PIC1_DATA, mask);
+}
+
+/*
+ * Enable an IRQ
+ */
+void pic_en_irq(uint8_t no){
+    //Read interrupt mask
+    uint8_t mask = inb(PIC1_DATA);
+    //Clear the bit that curresponds to the IRQ
+    mask &= ~(1 << no);
+    //Write the mask
+    outb(PIC1_DATA, mask);
+}

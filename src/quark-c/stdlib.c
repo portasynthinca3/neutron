@@ -4,6 +4,7 @@
 #include "./stdlib.h"
 
 struct _mem_block _mem_blocks[STDLIB_DRAM_MEMBLOCKS];
+uint32_t bad_ram_size = 0;
 
 /*
  * Trigger bochs magic breakpoint
@@ -35,12 +36,44 @@ void puts_e9(char* str){
 void dram_init(void){
     //Clear the blocks
     memset(_mem_blocks, 0, sizeof(struct _mem_block) * STDLIB_DRAM_MEMBLOCKS);
-    //Create a beginning block
-    struct _mem_block blk;
-    blk.ptr = (void*)STDLIB_DRAM_START;
-    blk.size = STDLIB_DRAM_SIZE;
-    //Assign it
-    _mem_blocks[0] = blk;
+
+    //Parse the memory map
+    //It was put in memory as a result of a
+    //  collaboration between Muon-2 and BIOS
+    uint32_t cur_blk = 0;
+    uint32_t blk_type = 0;
+    volatile void* volatile block_base = (void*)(0x93C00);
+    while((blk_type = *(uint32_t*)(block_base + 16)) != 0){ //Type=0 marks the end
+        //Fetch block base
+        uint32_t base = *(uint32_t*)(block_base);
+        //Fetch block base upper bits
+        uint32_t base_upper = *(uint32_t*)(block_base + 4);
+        //Fetch block length
+        uint32_t size = *(uint32_t*)(block_base + 8);
+        //Fetch block length upper bits
+        uint32_t size_upper = *(uint32_t*)(block_base + 12);
+        //Only record the block if it's marked as type 1 (usable RAM)
+        //  and its base and size don't exceed 4 GB (upper bits are clear)
+        if(blk_type == 1 && size > 0 && base_upper == 0 && size_upper == 0){
+            //Only record the block if it starts from a certain location
+            if(base + size > STDLIB_DRAM_START){
+                if(base < STDLIB_DRAM_START){
+                    size -= STDLIB_DRAM_START - base;
+                    base = STDLIB_DRAM_START;
+                }
+                //Save block information
+                _mem_blocks[cur_blk].ptr = (void*)base;
+                _mem_blocks[cur_blk].size = size;
+                _mem_blocks[cur_blk].used = 0;
+                //Increment the counter
+                cur_blk++;
+            }
+        } else if(blk_type == 5){ //Type 5 means bad RAM (used to tell the user)
+            bad_ram_size += size;
+        }
+        //Move on to the next block
+        block_base += 20;
+    }
 }
 
 /*

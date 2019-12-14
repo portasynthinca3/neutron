@@ -141,5 +141,7 @@ map_memory_cycle:			;
 	add di, cx				;increment the pointer
 	jmp map_memory_cycle	;do it again
 map_memory_done:			;
+	add di, 20				;zero the next entry out
+	mov dword [ds:di], 0	;to indicate the end
 	popad					;restore the registers
 	ret						;return from subroutine

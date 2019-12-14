@@ -9,14 +9,6 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 # Who is involved?
 * Me, Andrey Antonenko, the creator, maintainer and programmer
 * Sasha Kulichkov, booted this on his PC several times; created the logo
-# List of things that are done
-* Booting
-* Loading second stage loader
-* Loading kernel
-* Hi-res 24bpp kernel graphics
-# List of things that are in development right now
-* USB (EHCI) support
-* GUI
 # What parts does this consist of?
 1. First stage loader, called Muon-1
 2. Second stage loader, called Muon-2

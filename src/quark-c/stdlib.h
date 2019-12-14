@@ -7,13 +7,9 @@
 #define STDLIB_DRAM_MEMBLOCKS 1024
 //The address that dynamic memory allocation starts from
 #define STDLIB_DRAM_START 0x500000
-//The total size of the memory available to the dynamic memory allocator
-#define STDLIB_DRAM_SIZE (128 * 0x100000)
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "Quark v0.0.9"
-//Quark panic code for reaching the end
-#define QUARK_PANIC_CODE_END 0xABADBABE
+#define QUARK_VERSION_STR "Quark v0.1.0"
 
 //Standard type definitions
 
