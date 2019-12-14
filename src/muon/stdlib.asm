@@ -123,9 +123,9 @@ str_eq:
 	mov al, 1				;set the AL to 1
 	ret						;return from subroutine
 
-map_memory:					;draws the memory map
+map_memory:					;makes the memory map
 							;input: ES:DI = location to save the map to
-							;output: the map at ES:DI, sorted and processed INT 0x15, EAX = 0xE820 output
+							;output: the map at ES:DI
 							;
 	pushad					;save the registers
 	xor ebx, ebx			;clear EBX
@@ -139,6 +139,10 @@ map_memory_cycle:			;
 	je map_memory_done		;the same thing
 	xor ch, ch				;clear CH
 	add di, cx				;increment the pointer
+	cmp cl, 24				;Make all the entries
+	je map_memory_skip_add	;24-byte aligned
+	add di, 4				;
+	map_memory_skip_add:	;
 	jmp map_memory_cycle	;do it again
 map_memory_done:			;
 	add di, 20				;zero the next entry out

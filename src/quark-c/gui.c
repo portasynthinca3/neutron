@@ -36,6 +36,14 @@ uint16_t topb_win_pos;
 //The current time as a string
 char time[64] = "??:??:??\0";
 
+void gui_example_button_callback(ui_event_args_t* args){
+    control_ext_button_t* btn = (control_ext_button_t*)args->control->extended;
+    if(btn->border_color.r == 64)
+        btn->border_color = COLOR32(255, 255, 0, 0);
+    else
+        btn->border_color = COLOR32(255, 64, 64, 64);
+}
+
 /*
  * Performs some GUI initialization
  */
@@ -71,7 +79,13 @@ void gui_init(void){
     //Create an example control
     gui_create_label(ex_win, (p2d_t){.x = 1, .y = 1},
                              (p2d_t){.x = 100, .y = 100}, "Hello-o", COLOR32(255, 255, 255, 255),
-                                                                      COLOR32(0, 0, 0, 0));
+                                                                     COLOR32(0, 0, 0, 0));
+    gui_create_button(ex_win, (p2d_t){.x = 1, .y = 20},
+                              (p2d_t){.x = 100, .y = 50}, "Click me", gui_example_button_callback,
+                      COLOR32(255, 0, 0, 0),
+                      COLOR32(255, 128, 128, 128),
+                      COLOR32(255, 64, 64, 64),
+                      COLOR32(255, 64, 64, 64));
 }
 
 /*
@@ -142,6 +156,28 @@ control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, co
     label->text_color = text_color;
     //Create a normal control with this extension
     return gui_create_control(win, GUI_WIN_CTRL_LABEL, (void*)label, pos, size);
+}
+
+/*
+ * Creates a button and adds it to the window
+ */
+control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, void (*event_handler)(ui_event_args_t*),
+                             color32_t text_color, color32_t bg_color, color32_t pressed_bg_color, color32_t border_color){
+    //Create the "extended control" of button type
+    control_ext_button_t* button = (control_ext_button_t*)malloc(sizeof(control_ext_button_t));
+    //Allocate memory for the label text
+    button->text = malloc(sizeof(char) * (strlen(text) + 1));
+    //Copy the text over
+    memcpy(button->text, text, strlen(text) + 1);
+    //Assign other parameters
+    button->bg_color = bg_color;
+    button->text_color = text_color;
+    button->border_color = border_color;
+    button->event_handler = event_handler;
+    button->pressed_bg_color = pressed_bg_color;
+    button->pressed_last_frame = 0;
+    //Create a normal control with this extension
+    return gui_create_control(win, GUI_WIN_CTRL_BUTTON, (void*)button, pos, size);
 }
 
 /*
@@ -305,18 +341,19 @@ void gui_render_window(window_t* ptr){
             gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
 
         //Now draw its controls
+        uint8_t process_ptr = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, ptr->position, ptr->size);
         uint32_t i = 0;
         control_t* control;
         while((control = &ptr->controls[i++])->type)
-            gui_render_control(ptr, control);
+            gui_render_control(ptr, control, process_ptr);
     }
 }
 
 /*
  * Renders a control
  */
-void gui_render_control(window_t* win_ptr, control_t* ptr){
-    //Check controls type
+void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer){
+    //Check control's type
     switch(ptr->type){
         case GUI_WIN_CTRL_LABEL: {
             //Fetch the extended data
@@ -324,6 +361,45 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             //Draw the label
             gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1, .y = ptr->position.y + win_ptr->position.y + 12},
                      label->text_color, label->bg_color, label->text);
+        }
+        break;
+        case GUI_WIN_CTRL_BUTTON: {
+            //Fetch the extended data
+            control_ext_button_t* button = (control_ext_button_t*)ptr->extended;
+            //Check if the button is pressed
+            uint8_t pressed = 0;
+            if(handle_pointer)
+                pressed = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, 
+                                            (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                                    .y = ptr->position.y + win_ptr->position.y + 12},
+                                            ptr->size) && ml;
+            //Check if the button is clicked (pressed for the first frame)
+            uint8_t clicked = 0;
+            if(pressed && !button->pressed_last_frame)
+                clicked = 1;
+            button->pressed_last_frame = pressed;
+            //Draw the rectangles
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 ptr->size, pressed ? button->pressed_bg_color : button->bg_color);
+            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                  .y = ptr->position.y + win_ptr->position.y + 12},
+                          ptr->size, button->border_color);
+            //Calculate text bounds
+            p2d_t t_bounds = gfx_text_bounds(button->text);
+            //Draw the text
+            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1  + ((ptr->size.y - t_bounds.y) / 2),
+                             .y = ptr->position.y + win_ptr->position.y + 12 + ((ptr->size.y - t_bounds.y) / 2)},
+                     button->text_color, COLOR32(0, 0, 0, 0), button->text);
+            //Call the event handler in case of a click
+            if(clicked && button->event_handler != NULL){
+                ui_event_args_t event;
+                event.control = ptr;
+                event.win = win_ptr;
+                event.type = GUI_EVENT_CLICK;
+                event.mouse_pos = (p2d_t){.x = mx, .y = my};
+                button->event_handler(&event);
+            }
         }
         break;
     }

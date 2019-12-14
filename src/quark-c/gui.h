@@ -37,6 +37,18 @@ typedef struct {
     p2d_t size_real;
 } window_t;
 
+//Structure defining parameters passed to the UI event handler
+typedef struct {
+    //Event type
+    uint32_t type;
+    //Pointer to the window that contains the control that has issued the event
+    window_t* win;
+    //Pointer to the control that has issued the event
+    control_t* control;
+    //Mouse position on screen when the event occured
+    p2d_t mouse_pos;
+} ui_event_args_t;
+
 //Structures defining extended controls
 
 //Structure defining a label
@@ -49,24 +61,13 @@ typedef struct {
 //Structure defining a button
 typedef struct {
     char* text;
-    void (*event_handler)(void);
+    void (*event_handler)(ui_event_args_t*);
     color32_t text_color;
     color32_t bg_color;
+    color32_t pressed_bg_color;
     color32_t border_color;
+    uint8_t pressed_last_frame;
 } control_ext_button_t;
-
-
-//Structure defining parameters passed to the UI event handler
-typedef struct {
-    //Event type
-    uint32_t type;
-    //Pointer to the window that contains the control that has issued the event
-    window_t* win;
-    //Pointer to the control that has issued the event
-    control_t* control;
-    //Mouse position on screen when the event occured
-    p2d_t mouse_pos;
-} ui_event_args_t;
 
 //UI event types
 
@@ -101,11 +102,13 @@ void gui_update(void);
 window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size);
 control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size);
 control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color);
+control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, void (*event_handler)(ui_event_args_t*),
+                             color32_t text_color, color32_t bg_color, color32_t pressed_bg_color, color32_t border_color);
 
 void gui_render_windows(void);
 void gui_process_window(window_t* ptr);
 void gui_render_window(window_t* ptr);
-void gui_render_control(window_t* win_ptr, control_t* ptr);
+void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer);
 
 void gui_init_ps2(void);
 void gui_poll_ps2(void);

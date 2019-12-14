@@ -246,8 +246,8 @@ void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s){
  */
 p2d_t gfx_text_bounds(char* s){
     char c = 0;
-    p2d_t sz = (p2d_t){.x = 0, .y = 0};
-    p2d_t pos = sz;
+    p2d_t sz = (p2d_t){.x = 0, .y = 8};
+    p2d_t pos = (p2d_t){.x = 0, .y = 0};
     uint32_t state = 0;
     uint32_t i = 0;
     //Fetch the next character

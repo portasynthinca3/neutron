@@ -31,7 +31,7 @@ void puts_e9(char* str){
 }
 
 /*
- * Initialize the dynamic memory allocation
+ * Initialize the dynamic memory allocator
  */
 void dram_init(void){
     //Clear the blocks
@@ -53,8 +53,11 @@ void dram_init(void){
         //Fetch block length upper bits
         uint32_t size_upper = *(uint32_t*)(block_base + 12);
         //Only record the block if it's marked as type 1 (usable RAM)
-        //  and its base and size don't exceed 4 GB (upper bits are clear)
-        if(blk_type == 1 && size > 0 && base_upper == 0 && size_upper == 0){
+        //  and its base doesn't exceed 4 GB (upper bits are clear)
+        if(blk_type == 1 && size > 0 && base_upper == 0){
+            //If size upper bytes are not zero, set the lower ones to the maximum value
+            if(size_upper > 0)
+                size = 0xFFFFFFFF;
             //Only record the block if it starts from a certain location
             if(base + size > STDLIB_DRAM_START){
                 if(base < STDLIB_DRAM_START){
@@ -72,7 +75,7 @@ void dram_init(void){
             bad_ram_size += size;
         }
         //Move on to the next block
-        block_base += 20;
+        block_base += 24;
     }
 }
 
