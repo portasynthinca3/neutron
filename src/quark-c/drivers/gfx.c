@@ -137,7 +137,7 @@ void gfx_draw_vert_line(p2d_t pos, uint16_t h, color32_t c){
     //Calculate the scanline start
     uint32_t st = (pos.y * res_x) + pos.x;
     //Draw each pixel in the line
-    for(uint32_t o = 0; o < h * res_x; o += res_x)
+    for(uint32_t o = 0; o <= h * res_x; o += res_x)
         buf[st + o] = COLOR24(c);
 }
 

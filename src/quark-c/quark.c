@@ -12,6 +12,7 @@
 #include "./drivers/ata.h"
 #include "./drivers/pic.h"
 #include "./drivers/pit.h"
+#include "./drivers/acpi.h"
 
 #include "./fonts/font_neutral.h"
 
@@ -40,9 +41,16 @@ extern void irq14_wrap(void);
 extern void irq15_wrap(void);
 
 /*
+ * This function is called whenewer the user presses a GUI power button
+ */
+void quark_gui_callback_power_pressed(void){
+    
+}
+
+/*
  * Display a boot progress bar
  */
-void krnl_boot_status(char* str, uint32_t progress){
+void quark_boot_status(char* str, uint32_t progress){
     //Draw the screen
     gfx_draw_filled_rect((p2d_t){.x = 0, .y = gfx_res_y() / 2},
                          (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 0, 0, 0));
@@ -123,19 +131,22 @@ void main(void){
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
     //Print the boot process
-    krnl_boot_status("Loading...", 0);
+    quark_boot_status("Loading...", 0);
 
     //Enumerate PCI devices
-    krnl_boot_status("Detecting PCI devices", 15);
+    quark_boot_status("Detecting PCI devices", 15);
     pci_enumerate();
     //Enumerate partitions
-    krnl_boot_status("Detecting drive partitions", 30);
+    quark_boot_status("Detecting drive partitions", 30);
     diskio_init();
+    //Initialize ACPI
+    quark_boot_status("Initializing ACPI", 45);
+    acpi_init();
     //Configure GUI
-    krnl_boot_status("Configuring GUI", 90);
+    quark_boot_status("Configuring GUI", 90);
     gui_init();
     //The loading process is done!
-    krnl_boot_status("Done!", 100);
+    quark_boot_status("Done!", 100);
 
     //Constantly update the GUI
     while(1){

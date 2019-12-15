@@ -461,6 +461,22 @@ char* strcat(char* dest, char* src){
 #pragma GCC pop_options
 
 /*
+ * Compare two memory blocks
+ */
+int memcmp(const void* lhs, const void* rhs, size_t cnt){
+    //Go through each byte
+    for(int i = 0; i < cnt; i++){
+        //Return if the blocks aren't equal
+        if(((const uint8_t*)lhs)[i] > ((const uint8_t*)rhs)[i])
+            return 1;
+        else if(((const uint8_t*)lhs)[i] < ((const uint8_t*)rhs)[i])
+            return -1;
+    }
+    //If we didn't return, the blocks are equal
+    return 0;
+}
+
+/*
  * Compare two zero-terminated strings
  */
 int strcmp(const char* str1, const char* str2){
