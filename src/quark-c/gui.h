@@ -142,4 +142,6 @@ void gui_poll_ps2(void);
 
 void gui_draw_cursor(unsigned short x, unsigned short y);
 
+void gui_set_focus_monopoly(uint8_t val);
+
 #endif

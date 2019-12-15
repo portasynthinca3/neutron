@@ -9,6 +9,7 @@
 #include "./drivers/pit.h"
 
 #include "./images/neutron_logo.xbm"
+#include "./images/power.xbm"
 
 //Mouse position on the screen
 signed short mx, my;
@@ -37,6 +38,12 @@ uint8_t focus_processed;
 uint16_t topb_win_pos;
 //The current time as a string
 char time[64] = "??:??:??\0";
+//If this flag is set, focus can't be changed and the background below
+//  the window in focus is darkended
+uint8_t focus_monopoly = 0;
+
+uint8_t last_frame_ml = 0;
+void quark_gui_callback_power_pressed(void);
 
 control_ext_progress_t* example_progress_bar;
 
@@ -117,14 +124,15 @@ window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size){
     win.controls = (control_t*)malloc(32 * sizeof(control_t));
     win.controls[0].type = 0;
     //Scan through the window list to determine its end
-    window_t* last;
     uint32_t i = 0;
-    while((last = &windows[i++])->title);
+    while((&windows[i++])->title);
     i--;
     //Assign the window
     windows[i] = win;
     //Mark the end of the list
     windows[i + 1].title = NULL;
+    //Mark it as focused
+    window_focused = &windows[i];
     //Return the window
     return &windows[i];
 }
@@ -280,12 +288,23 @@ void gui_update(void){
     //Print it
     gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4, .y = 5}, color_scheme.time, COLOR32(0, 0, 0, 0), time);
 
+    //Draw the power icon
+    gfx_draw_xbm((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, power_bits, (p2d_t){.x = power_width, .y = power_height},
+                 COLOR32(255, 255, 0, 0), COLOR32(0, 0, 0, 0));
+
+    //Call the callback if it was pressed
+    if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
+        quark_gui_callback_power_pressed();
+
     //Render the windows
     gui_render_windows();
     //Draw the cursor
     gui_draw_cursor(mx, my);
     //Flip the buffers
     gfx_flip();
+
+    //Record the mouse state
+    last_frame_ml = ml;
 }
 
 /*
@@ -338,12 +357,22 @@ void gui_render_windows(void){
         //Increment the window counter
         win_cnt++;
     }
+    //If focus monopoly is enabled, darken the background
+    if(focus_monopoly){
+        color24_t* buf = gfx_buffer();
+        for(uint32_t y = 0; y < gfx_res_y(); y++){
+            for(uint32_t x = 0; x < gfx_res_x(); x++){
+                color24_t orig = buf[(y * gfx_res_x()) + x];
+                buf[(y * gfx_res_x()) + x] = (color24_t){.r = orig.r / 4, .g = orig.g / 4, .b = orig.b / 4};
+            }
+        }
+    }
     //If the window in focus is valid
-    if(window_focused != NULL) //Render the window in focus first
+    if(window_focused != NULL) //Render the window in focus last
         gui_render_window(window_focused);
     
     //Set the window in focus according to the top bar clicks
-    if(ml && mx / 16 <= win_cnt){
+    if(ml && mx / 16 <= win_cnt && !focus_monopoly){
         window_focused = &windows[mx / 16];
     }
 }
@@ -432,7 +461,7 @@ void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointe
             //Calculate text bounds
             p2d_t t_bounds = gfx_text_bounds(button->text);
             //Draw the text
-            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1  + ((ptr->size.y - t_bounds.y) / 2),
+            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1  + ((ptr->size.x - t_bounds.x) / 2),
                              .y = ptr->position.y + win_ptr->position.y + 12 + ((ptr->size.y - t_bounds.y) / 2)},
                      button->text_color, COLOR32(0, 0, 0, 0), button->text);
             //Call the event handler in case of a click
@@ -516,8 +545,9 @@ void gui_process_window(window_t* ptr){
 
         //Process window focusing
         //If the cursor is inside the current window, the focusing hadn't been done in the current frame,
-        //  and the left button is held down, set the window in focus and set the "focus processed" flag
-        if(ml &&
+        //  focus monopoly isn't enabled and the left button is held down, set the window in focus and set the "focus processed" flag
+        if(!focus_monopoly &&
+           ml &&
            !focus_processed &&
            gfx_point_in_rect((p2d_t){.x = mx, .y = my},
                              (p2d_t){.x = ptr->position.x + 1, .y = ptr->position.y + 1},
@@ -593,4 +623,11 @@ void gui_draw_cursor(uint16_t x, uint16_t y){
     buf[((y + 2) * res_x) + x + 2] = COLOR24(color_scheme.cursor);
     buf[((y + 3) * res_x) + x + 3] = COLOR24(color_scheme.cursor);
     buf[((y + 4) * res_x) + x + 4] = COLOR24(color_scheme.cursor);
+}
+
+/*
+ * Sets or clears the focus monopoly 
+ */
+void gui_set_focus_monopoly(uint8_t val){
+    focus_monopoly = val;
 }

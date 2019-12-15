@@ -36,6 +36,8 @@ Okay, there you go!\
 *Boot screen 2*\
 ![desktop](https://github.com/portasynthinca3/neutron/blob/master/screens/desktop.png "desktop")\
 *Desktop*
+![shutdown](https://github.com/portasynthinca3/neutron/blob/master/screens/sdown.png "shutdown")\
+*Shutdown prompt*
 # Okay, what do I need to be aware of?
 Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
 However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
