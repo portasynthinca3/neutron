@@ -4,7 +4,7 @@
 //Null pointer
 #define NULL 0
 //The amount of memory blocks for dynamic memory allocation functions to use
-#define STDLIB_DRAM_MEMBLOCKS 1024
+#define STDLIB_DRAM_MEMBLOCKS 2048
 //The address that dynamic memory allocation starts from
 #define STDLIB_DRAM_START 0x500000
 

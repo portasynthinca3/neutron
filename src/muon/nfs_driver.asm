@@ -65,13 +65,16 @@ nfs_rs_retry:						;
 	push bx							;save BX
 	push ax							;save AX
 	mov cl, [ds:nfs_spt]			;load sectors per track into CL
-	div cl							;divide AX by CL, storing the quotient in AL and the remainder in AH
-	mov cl, ah						;store the remainder in CL
+	xor ch, ch						;clear CH
+	xor dx, dx						;clear DX
+	div cx							;divide DX:AX by CX, storing the quotient in AX and the remainder in DX
+	mov cl, dl						;store the remainder in CL
 	inc cl							;add 1 to CL
-	xor ah, ah						;clear AH
-	mov dl, [ds:nfs_hds]			;load heads into DL
-	div dl							;divide AX (AL) by DL, storing the quotient in AL and the remainder in AH
-	mov dh, ah						;store the remainder in DH
+	mov bl, [ds:nfs_hds]			;load heads into BL
+	xor bh, bh						;clear BH
+	xor dx, dx						;clear DX
+	div bx							;divide DX:AX by BX (BL), storing the quotient in AX and the remainder in DX
+	shl dx, 8						;store the remainder in DH
 	shr al, 3						;AL >>= 3
 	and al, 0xC0					;AL &= 0xC0
 	or cl, al						;CL |= AL
@@ -80,8 +83,11 @@ nfs_rs_retry:						;
 	mov bx, ax						;move SPT*HDS into BX
 	pop ax							;restore AX (original LBA)
 	push ax							;save AX
-	div bl							;divide AX (LBA) by BX (SPT*HDS), storing the quotient in AL and the remainder in AH
+	push dx							;save DX
+	xor dx, dx						;clear DX
+	div bx							;divide DX:AX (LBA) by BX (SPT*HDS), storing the quotient in AX and the remainder in DX
 	mov ch, al						;move AL into CH (cylinder for the BIOS)
+	pop dx							;restore DX
 									;
 	mov dl, [ds:nfs_drive_no]		;set the drive number to load from
 	mov al, 1						;set the amount of sectors to read: 1

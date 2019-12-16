@@ -5,11 +5,11 @@
 #include "../stdlib.h"
 
 //The video buffer pointers
-color24_t* vbe_buffer;
-color24_t* sec_buffer;
+color32_t* vbe_buffer;
+color32_t* sec_buffer;
 //The resolution
-uint16_t res_x;
-uint16_t res_y;
+uint32_t res_x;
+uint32_t res_y;
 //The font
 const unsigned char* font;
 //The buffer selected for operations
@@ -20,21 +20,21 @@ unsigned short vterm_y = 0;
 /*
  * Retrieve the horizontal resolution
  */
-uint16_t gfx_res_x(void){
+uint32_t gfx_res_x(void){
     return res_x;
 }
 
 /*
  * Retrieve the vertical resolution
  */
-uint16_t gfx_res_y(void){
+uint32_t gfx_res_y(void){
     return res_y;
 }
 
 /*
  * Retrieve the currently used buffer pointer
  */
-color24_t* gfx_buffer(void){
+color32_t* gfx_buffer(void){
     return (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
 }
 
@@ -43,13 +43,13 @@ color24_t* gfx_buffer(void){
  */
 void gfx_init(void){
     //Read the VBE buffer pointer (it was written in memory by the second stage loader)
-    vbe_buffer = (color24_t*)(*(int*)(0x8FC00));
+    vbe_buffer = (color32_t*)(*(int*)(0x8FC00));
     //Read the display resolution
     uint32_t res = *(uint32_t*)(0x8FC04);
     res_y = res & 0xFFFF;
     res_x = (res >> 16) & 0xFFFF;
     //Allocate the second buffer based on the screen size
-    sec_buffer = (color24_t*)malloc(res_x * res_y * sizeof(color24_t));
+    sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
     //Reset the virtual text mode position
     vterm_y = 0;
 }
@@ -59,10 +59,9 @@ void gfx_init(void){
  */
 void gfx_flip(void){
     //Choose the source and destination buffers
-    color24_t* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
-    color24_t* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
-    //Transfer the data
-    memcpy(buf_dst, buf_src, res_x * res_y * sizeof(color24_t));
+    color32_t* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
+    color32_t* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+    memcpy(buf_dst, buf_src, res_x * res_y * sizeof(color32_t));
 }
 
 /*
@@ -88,10 +87,10 @@ void gfx_set_buf(unsigned char buf){
  */
 void gfx_fill(color32_t color){
     //Get the video buffer
-    color24_t* buf = gfx_buffer();
+    color32_t* buf = gfx_buffer();
     //Draw each pixel
     for(uint32_t i = 0; i < res_x * res_y; i++)
-        buf[i] = COLOR24(color);
+        buf[i] = color;
 }
 
 /*
@@ -120,12 +119,12 @@ void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c){
  */
 void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c){
     //Get the video buffer
-    color24_t* buf = gfx_buffer();
+    color32_t* buf = gfx_buffer();
     //Calculate the scanline start
     uint32_t st = pos.y * res_x;
     //Draw each pixel in the line
     for(uint16_t x = pos.x; x < pos.x + w; x++)
-        buf[st + x] = COLOR24(c);
+        buf[st + x] = c;
 }
 
 /*
@@ -133,12 +132,12 @@ void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c){
  */
 void gfx_draw_vert_line(p2d_t pos, uint16_t h, color32_t c){
     //Get the video buffer
-    color24_t* buf = gfx_buffer();
+    color32_t* buf = gfx_buffer();
     //Calculate the scanline start
     uint32_t st = (pos.y * res_x) + pos.x;
     //Draw each pixel in the line
     for(uint32_t o = 0; o <= h * res_x; o += res_x)
-        buf[st + o] = COLOR24(c);
+        buf[st + o] = c;
 }
 
 /*
@@ -148,7 +147,7 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t co
     //Create some local variables
     uint8_t* ptr = xbm_ptr;
     p2d_t pos = position;
-    color24_t* buffer = gfx_buffer();
+    color32_t* buffer = gfx_buffer();
     while(1){
         //Fetch a byte
         uint8_t data = *(ptr++);
@@ -158,9 +157,9 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t co
             if(pos.x - position.x < xbm_size.x){
                 //If it is in bounds, draw the pixel
                 if(((data >> x) & 1) && color_h.a != 0)
-                    buffer[(pos.y * res_x) + pos.x] = COLOR24(color_h);
+                    buffer[(pos.y * res_x) + pos.x] = color_h;
                 else if(color_l.a != 0)
-                    buffer[(pos.y * res_x) + pos.x] = COLOR24(color_l);
+                    buffer[(pos.y * res_x) + pos.x] = color_l;
             }
             //Increment the position
             pos.x++;
@@ -177,11 +176,32 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t co
 }
 
 /*
+ * Draw a raw image
+ */
+void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
+    //Get the buffer
+    color32_t* buf = gfx_buffer();
+    //Create a counter
+    uint32_t pos = 0;
+    //Go through each pixel
+    for(uint32_t y = position.y; y <= position.y + raw_size.y; y++){
+        for(uint32_t x = position.x; x <= position.x + raw_size.x; x++){
+            //Fetch the data
+            uint8_t r = raw_ptr[pos++];
+            uint8_t g = raw_ptr[pos++];
+            uint8_t b = raw_ptr[pos++];
+            //Draw the pixel
+            buf[(y * res_x) + x] = COLOR32(255, r, g, b);
+        }
+    }
+}
+
+/*
  * Put a char with backgrund color in video buffer
  */
 void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
     //Get the video buffer
-    color24_t* buf = gfx_buffer();
+    color32_t* buf = gfx_buffer();
     //Calculate the video buffer offset
     unsigned int buf_offset = (pos.y * res_x) + pos.x - 6;
     //Calculate the font offset
@@ -193,9 +213,9 @@ void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
         //And for each pixel in that column
         for(unsigned char j = 0; j < 8; j++){
             if((font_col >> j) & 1)
-                buf[buf_offset + i + (j * res_x)] = COLOR24(color); //Draw it
+                buf[buf_offset + i + (j * res_x)] = color; //Draw it
             else if(bcolor.a != 0)
-                buf[buf_offset + i + (j * res_x)] = COLOR24(bcolor); //Or clear it
+                buf[buf_offset + i + (j * res_x)] = bcolor; //Or clear it
         }
     }
 }

@@ -2,8 +2,6 @@
 ;Muon - second stage loader
 
 %define nfs_buffer   0x800
-%define kbd_buf      0x105
-%define app_segment  0x175
 
 org 0x0000
 use16
@@ -11,6 +9,9 @@ use16
 dw 0xEBA1					;signature for the 1st stage loader
 
 entry:
+	mov ax, 0x600			;load 0x600 into SS
+	mov ss, ax				;
+	mov sp, 0xFFFF			;set the stack pointer
 	cli						;disable interrupts
 	mov al, 0x80			;disable non-maskable interrupts
 	out 0x70, al			;
@@ -79,7 +80,7 @@ krnl_load:
 	xor di, di				;clear DI
 krnl_load_cycle:
 	cmp dx, 0				;check if the entire file was read
-	jle krnl_load_ret		;return if so
+	jbe krnl_load_ret		;return if so
 	pop bx
 	push dx
 	push cx
@@ -96,6 +97,8 @@ krnl_load_cycle:
 	mov si, nfs_buffer		;set SI to the nFS buffer
 	rep movsb				;copy the bytes
 	inc ax					;increment the sector number
+	cmp dx, 512				;if less than a sector is remaining
+	jbe krnl_load_ret		;return
 	sub dx, 512				;subtract the sector size from the file size
 	jmp krnl_load_cycle		;looping
 krnl_load_ret_err:

@@ -5,18 +5,13 @@
 
 //Structure defining a 2D point
 typedef struct {
-    signed short x;
-    signed short y;
+    uint32_t x;
+    uint32_t y;
 } p2d_t;
-
-//Structure defining a 24bpp color
-typedef struct {
-    uint8_t b, g, r;
-} __attribute__((packed)) color24_t;
 
 //Structure defining a 32bpp color
 typedef struct {
-    uint8_t a, r, g, b;
+    uint8_t b, g, r, a;
 } __attribute__((packed)) color32_t;
 
 #define GFX_BUF_VBE 1
@@ -24,17 +19,10 @@ typedef struct {
 
 //Macro for converting R, G and B values to color32_t
 #define COLOR32(A, R, G, B) ((color32_t){.a = A, .r = R, .g = G, .b = B})
-//Macro for dropping the alpha channel of color32_t
-#define COLOR24(C) ((color24_t){.r = C.r, .g = C.g, .b = C.b})
 
-//GFX VBE function call errors
-
-#define GFX_VBE_OK                              0
-#define GFX_VBE_ERR_NO_PMIB                     1
-
-uint16_t gfx_res_x(void);
-uint16_t gfx_res_y(void);
-color24_t* gfx_buffer(void);
+uint32_t gfx_res_x(void);
+uint32_t gfx_res_y(void);
+color32_t* gfx_buffer(void);
 
 void gfx_init(void);
 void gfx_flip(void);
@@ -47,6 +35,7 @@ void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c);
 void gfx_draw_vert_line(p2d_t pos, uint16_t h, color32_t c);
 void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
+void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size);
 
 void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c);
 void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s);

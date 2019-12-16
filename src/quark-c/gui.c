@@ -8,7 +8,6 @@
 #include "./drivers/diskio.h"
 #include "./drivers/pit.h"
 
-#include "./images/neutron_logo.xbm"
 #include "./images/power.xbm"
 
 //Mouse position on the screen
@@ -60,6 +59,8 @@ void gui_example_button_callback(ui_event_args_t* args){
  * Performs some GUI initialization
  */
 void gui_init(void){
+    //Disable focus monopoly
+    focus_monopoly = 0;
     //Initialize the PS/2 controller
     gui_init_ps2();
     //Reset mouse state
@@ -103,8 +104,6 @@ void gui_init(void){
                                                                                           COLOR32(255, 0, 255, 0),
                                                                                           COLOR32(255, 255, 255, 255),
                                                                                           100, 0)->extended;
-    gui_create_image(ex_win, (p2d_t){.x = 1, .y = 110}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, GUI_IMAGE_FORMAT_XBM,
-                             neutron_logo_bits, COLOR32(0, 0, 0, 0), COLOR32(255, 0, 0, 0));
 }
 
 /*
@@ -260,6 +259,8 @@ void gui_init_ps2(){
  */
 void gui_update(void){
 
+    uint32_t render_start = pit_ticks();
+
     //Poll the PS/2 controller
     gui_poll_ps2();
     //Draw the desktop
@@ -301,7 +302,21 @@ void gui_update(void){
     //Draw the cursor
     gui_draw_cursor(mx, my);
     //Flip the buffers
+    uint32_t flip_start = pit_ticks();
     gfx_flip();
+    uint32_t all_end = pit_ticks();
+
+    /*
+    char temp[50];
+    temp[0] = 0;
+    char temp2[25];
+    strcat(temp, sprintu(temp2, flip_start - render_start, 1));
+    strcat(temp, "\n");
+    strcat(temp, sprintu(temp2, all_end - flip_start, 1));
+    gfx_set_buf(GFX_BUF_VBE);
+    gfx_puts((p2d_t){.x = 0, .y = 0}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), temp);
+    gfx_set_buf(GFX_BUF_SEC);
+    */
 
     //Record the mouse state
     last_frame_ml = ml;
@@ -359,11 +374,13 @@ void gui_render_windows(void){
     }
     //If focus monopoly is enabled, darken the background
     if(focus_monopoly){
-        color24_t* buf = gfx_buffer();
-        for(uint32_t y = 0; y < gfx_res_y(); y++){
-            for(uint32_t x = 0; x < gfx_res_x(); x++){
-                color24_t orig = buf[(y * gfx_res_x()) + x];
-                buf[(y * gfx_res_x()) + x] = (color24_t){.r = orig.r / 4, .g = orig.g / 4, .b = orig.b / 4};
+        color32_t* buf = gfx_buffer();
+        uint32_t res_x = gfx_res_x();
+        uint32_t res_y = gfx_res_y();
+        for(uint32_t y = 0; y < res_y; y++){
+            for(uint32_t x = 0; x < res_x; x++){
+                color32_t orig = buf[(y * res_x) + x];
+                buf[(y * res_x) + x] = (color32_t){.a = orig.a / 4, .r = orig.r / 4, .g = orig.g / 4, .b = orig.b / 4};
             }
         }
     }
@@ -500,6 +517,10 @@ void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointe
                 gfx_draw_xbm((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                                      .y = ptr->position.y + win_ptr->position.y + 12},
                              (uint8_t*)image->image, ptr->size, image->color_hi, image->color_lo);
+            if(image->image_format == GUI_IMAGE_FORMAT_RAW)
+                gfx_draw_raw((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                     .y = ptr->position.y + win_ptr->position.y + 12},
+                             (uint8_t*)image->image, ptr->size);
         }
         break;
     }
@@ -610,19 +631,19 @@ void gui_poll_ps2(){
  */
 void gui_draw_cursor(uint16_t x, uint16_t y){
     //Retrieve the graphics buffer; draw directly on it
-    color24_t* buf = gfx_buffer();
+    color32_t* buf = gfx_buffer();
     //Retrieve the X resolution
     uint16_t res_x = gfx_res_x();
     //Draw!
-    buf[(y * res_x) + x] = COLOR24(color_scheme.cursor);
-    buf[(y * res_x) + x + 1] = COLOR24(color_scheme.cursor);
-    buf[(y * res_x) + x + 2] = COLOR24(color_scheme.cursor);
-    buf[((y + 1) * res_x) + x] = COLOR24(color_scheme.cursor);
-    buf[((y + 2) * res_x) + x] = COLOR24(color_scheme.cursor);
-    buf[((y + 1) * res_x) + x + 1] = COLOR24(color_scheme.cursor);
-    buf[((y + 2) * res_x) + x + 2] = COLOR24(color_scheme.cursor);
-    buf[((y + 3) * res_x) + x + 3] = COLOR24(color_scheme.cursor);
-    buf[((y + 4) * res_x) + x + 4] = COLOR24(color_scheme.cursor);
+    buf[(y * res_x) + x] = color_scheme.cursor;
+    buf[(y * res_x) + x + 1] = color_scheme.cursor;
+    buf[(y * res_x) + x + 2] = color_scheme.cursor;
+    buf[((y + 1) * res_x) + x] = color_scheme.cursor;
+    buf[((y + 2) * res_x) + x] = color_scheme.cursor;
+    buf[((y + 1) * res_x) + x + 1] = color_scheme.cursor;
+    buf[((y + 2) * res_x) + x + 2] = color_scheme.cursor;
+    buf[((y + 3) * res_x) + x + 3] = color_scheme.cursor;
+    buf[((y + 4) * res_x) + x + 4] = color_scheme.cursor;
 }
 
 /*

@@ -4,34 +4,32 @@
 gfx_go_best:						;switches the video mode to the best available one
 									;  Saves video buffer linear address into ECX,
 									;  resolution into EDX, bpp in AH
-	mov si, gfx_res_db				;point SI to the video database
-	push bx							;save the position on screen
+	call gfx_get_mode_list			;get mode list pointer in ES:DI
 	gfx_go_best_loop:				;
-	mov ax, word [cs:si]			;load the resolution
-	shl eax, 16						;
-	mov ax, word [cs:si + 2]		;
-	cmp eax, 0						;EAX=0 indicates the end of the list
-	je gfx_go_best_fail				;fail in this case
-	mov cl, 24						;try 24bpp
-	call gfx_try_mode				;
-	cmp al, 0						;check the success
-	jne gfx_go_best_ret				;
-	pop bx							;print the . character
-	push cx							;
-	mov ch, 0x0F					;
-	mov cl, '.'						;
-	call print_char					;
-	pop cx							;
-	push bx							;
-	add si, 4						;point SI to the next entry
-	jmp gfx_go_best_loop			;loop
+		mov dx, word [es:di]		;load a mode number
+		cmp dx, 0xffff				;0xffff = the end of the list
+		je gfx_go_best_ret			;
+		or dh, 1 << 6				;set the linear framebuffer flag
+		push dx						;save DX
+		call gfx_get_mode			;get mode parameters
+		cmp ah, 32					;only try 32bpp modes
+		jne gfx_go_best_skip		;
+		test al, 1 << 0				;check if mode is supported
+		jz gfx_go_best_skip			;
+		test al, 1 << 4				;check if mode is a graphical one
+		jz gfx_go_best_skip			;
+		cmp edx, [ds:gfx_best_res]	;compare the resolution with the best currently discovered one
+		jbe gfx_go_best_skip		;
+		mov [ds:gfx_best_res], edx	;if we hadn't skipped yet, store resolution and number
+		pop word [ds:gfx_best_mod]	;
+		push word [ds:gfx_best_mod]	;
+		gfx_go_best_skip:			;
+		pop dx						;restore DX
+		add di, 4					;move on to the next mode
+		jmp gfx_go_best_loop		;
 	gfx_go_best_ret:				;
-	pop bx							;restore position on screen
-	ret								;return from subrountine
-	gfx_go_best_fail:				;in case of a failure
-	pop bx							;restore screen position
-	mov dx, 115h					;try mode 115h - 800x600x16M
-	call gfx_go_mode				;
+	mov dx, [ds:gfx_best_mod]		;load the best mode
+	call gfx_go_mode				;go to it
 	ret								;return from subroutine
 
 gfx_go_mode:						;switches the video mode to one which number is stored in DX
@@ -48,45 +46,17 @@ gfx_go_mode:						;switches the video mode to one which number is stored in DX
 	pop bx							;
 	ret								;return from subroutine
 
-gfx_try_mode:						;try to find a VBE mode with resolution stored in EAX and bpp in CL
-									;returns AL != 0 on success
-	mov dx, 100h					;start with mode 100h
-	gfx_try_mode_loop:				;
-	push dx							;save DX
-	push ax							;     AX
-	push cx							;     CX
-	call gfx_get_mode				;get mode information
-	pop cx							;restore CX
-	cmp ah, cl						;compare mode bpp with the desired one
-	pop ax							;restore AX
-	je gfx_try_mode_found_1			;make a resolution check if they are equal
-	gfx_try_mode_false_alarm:		;
-	pop dx							;restore DX
-	inc dx							;try another mode number
-	cmp dx, 301h					;but don't exceed mode 301h
-	ja gfx_try_mode_not_found		;
-	jmp gfx_try_mode_loop			;loop
-	gfx_try_mode_found_1:			;jump occurs when bpp's are equal
-	cmp eax, edx					;compare the mode resolutions
-	je gfx_try_mode_found			;we found the one we've benn looking for if they are equal
-	jmp gfx_try_mode_false_alarm	;if they aren't, continue searching
-	gfx_try_mode_found:				;
-	pop dx							;restore DX
-	call gfx_go_mode				;go to that mode
-	mov al, 1						;indicate the success
-	ret								;return
-	gfx_try_mode_not_found:			;
-	xor al, al						;indicate an error
-	ret								;return
-
 gfx_get_mode:						;returns information about a VBE mode
 									;input: DX = mode number
 									;output: ECX = linear framebuffer address
 									;        EDX = resolution
 									;        AH = bits per pixel
+									;        AL = lower bits of mode attributes
+	push di							;save DI
+	push es							;save ES
 	mov ax, 4f01h					;set BIOS function: get VBE mode properties
 	mov cx, dx						;VBE mode
-	push 0x1050						;load info into 0x1050:0x0000
+	push 0xf50						;load info into 0xf50:0x0000
 	pop es							;
 	xor di, di						;
 	int 10h							;call BIOS routine
@@ -95,25 +65,23 @@ gfx_get_mode:						;returns information about a VBE mode
 	shl edx, 16						;
 	mov dx, word [es:0x14]			;load height
 	mov ah, byte [es:0x19]			;load bits per pixel
+	mov al, byte [es:0x00]			;load mode attributes
+	pop es							;restore ES
+	pop di							;restore DI
 	ret								;return from subroutine
 
-gfx_go_80x25x16t:					;switches the video mode to 80x25x16c text
-	push ax							;save AX
-	xor ah, ah						;set BIOS func.: change video mode
-	mov al, 3h						;set video mode: 80x25x16c text
-	int 10h							;call BIOS routine
-	pop ax							;restore AX
+gfx_get_mode_list:					;reads VBE mode list
+									;output: list pointer in ES:DI
+	push 0x1050						;load controller info into 0x1050:0x0000
+	pop es							;
+	xor di, di						;
+	mov ax, 0x4f00					;
+	int 10h							;
+	mov eax, dword [es:di+0xe]		;load the list pointer into EAX
+	mov di, ax						;AX[15:0] = DI
+	shr eax, 16						;
+	mov es, ax						;AX[31:16] = ES
 	ret								;return from subroutine
 
-gfx_res_db:							;Graphics Resolutions Database
-									;Each database entry is 4 bytes long and has the following structure:
-									;  word res_x
-									;  word res_y
-	dw 1600, 900
-	dw 1600, 200
-	dw 1280, 720
-	dw 1024, 768
-	dw 1280, 720
-	dw 800, 600
-	dw 640, 480
-	dw 0, 0							;end
+gfx_best_res: dd 0					;the best resolution currently found by gfx_go_best
+gfx_best_mod: dw 0					;the number of the best resolution currently found by gfx_go_best

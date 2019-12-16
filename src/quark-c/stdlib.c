@@ -2,6 +2,7 @@
 //C Standard Library
 
 #include "./stdlib.h"
+#include "./drivers/gfx.h"
 
 struct _mem_block _mem_blocks[STDLIB_DRAM_MEMBLOCKS];
 uint32_t bad_ram_size = 0;
@@ -95,7 +96,7 @@ void* malloc(unsigned int size){
     }
     //If no such blocks were found, return NULL
     if(best_blk_id == -1)
-        return NULL;
+        gfx_panic(0, 0x1A73ABAD);
     //If such block was found, split it into used and unused space
     struct _mem_block free = _mem_blocks[best_blk_id];
     struct _mem_block used;
@@ -184,12 +185,16 @@ void* memset(void* dst, int ch, unsigned int size){
  * Copy a block of memory
  */
 void* memcpy(void* destination, const void* source, uint32_t num){
-    __asm__ volatile("push %ecx; push %ebx; push %esi; push %edi");
-    __asm__ volatile("mov 20(%esp), %edi");
-    __asm__ volatile("mov 24(%esp), %esi");
-    __asm__ volatile("mov 28(%esp), %ecx");
-    __asm__ volatile("rep movsb;");
-    __asm__ volatile("pop %edi; pop %esi; pop %ebx; pop %ecx");
+    //We can use the REP MOVx instruction to perform a blazing-fast memory-to-memory data transfer
+    //D = 4 bytes at a time
+    //W = 2 bytes at a time
+    //B = 1 byte at a time
+    if(num % 4 == 0)
+        __asm__ volatile("rep movsd" : : "D" (destination), "S" (source), "c" (num / 4));
+    else if(num % 2 == 0)
+        __asm__ volatile("rep movsw" : : "D" (destination), "S" (source), "c" (num / 2));
+    else
+        __asm__ volatile("rep movsb" : : "D" (destination), "S" (source), "c" (num));
     return destination;
 }
 
