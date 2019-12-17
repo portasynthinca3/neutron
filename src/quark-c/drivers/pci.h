@@ -1,8 +1,10 @@
 #ifndef PCI_H
 #define PCI_H
 
-short pci_read_config_16(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offs);
-short pci_read_config_32(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offs);
+#include "../stdlib.h"
+
+uint16_t pci_read_config_16(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offs);
+uint16_t pci_read_config_32(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offs);
 
 void pci_enumerate(void);
 

@@ -4,6 +4,7 @@
 #include "./acpi.h"
 #include "./pit.h"
 #include "../stdlib.h"
+#include "./gfx.h"
 
 uint32_t acpi_smi_cmd;
 uint8_t acpi_en;
@@ -20,26 +21,35 @@ uint8_t acpi_pm1_ctl_len;
  * Initializes ACPI
  */
 uint32_t acpi_init(void){
+    gfx_verbose_println("Initializing ACPI");
     //Find the RSDP
     acpi_rsdp_t* rsdp = acpi_find_rsdp();
     //If no RSDP was found, return
-    if(rsdp == NULL)
+    if(rsdp == NULL){
+        gfx_verbose_println("Error: RSDP not found");
         return 0;
+    }
 
     //Fetch RSDT from RSDP
     acpi_rsdt_t* rsdt = (acpi_rsdt_t*)rsdp->rsdt_ptr;
     //Check if it's valid
-    if(!acpi_sdt_checksum(&rsdt->hdr))
+    if(!acpi_sdt_checksum(&rsdt->hdr)){
+        gfx_verbose_println("Error: RSDP is not valid");
         return 0;
+    }
 
     //Find FADT
     acpi_fadt_t* fadt = rsdt_find(rsdt, "FACP");
-    if(fadt == NULL)
+    if(fadt == NULL){
+        gfx_verbose_println("Error: FADT not found");
         return 0;
+    }
 
     //Check the DSDT
-    if(!acpi_sdt_checksum((acpi_sdt_hdr_t*)fadt->dsdt))
+    if(!acpi_sdt_checksum((acpi_sdt_hdr_t*)fadt->dsdt)){
+        gfx_verbose_println("Error: DSDT is not valid");
         return 0;
+    }
     //Search for the \_S5 package in DSDT
     char* s5_addr = (char*)fadt->dsdt + sizeof(acpi_sdt_hdr_t);
     uint32_t dsdt_len = *((uint32_t*)fadt->dsdt + 1) - sizeof(acpi_sdt_hdr_t);
@@ -80,6 +90,7 @@ uint32_t acpi_init(void){
         }
     }
 
+    gfx_verbose_println("Sending enable commands...");
     //Enable ACPI
     outb(acpi_smi_cmd, acpi_en);
     uint32_t start = pit_ticks();
@@ -90,6 +101,8 @@ uint32_t acpi_init(void){
         while((pit_ticks() - start <= 1500) &&
               ((inw(acpi_pm1b_ctl) & acpi_sci_en) == 0));
     }
+
+    gfx_verbose_println("ACPI successfully initialized");
     
     return 1;
 }

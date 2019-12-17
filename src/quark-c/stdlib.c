@@ -55,7 +55,7 @@ void dram_init(void){
         uint32_t size_upper = *(uint32_t*)(block_base + 12);
         //Only record the block if it's marked as type 1 (usable RAM)
         //  and its base doesn't exceed 4 GB (upper bits are clear)
-        if(blk_type == 1 && size > 0 && base_upper == 0){
+        if(blk_type == 1 && size > 0 && base_upper == 0 && cur_blk == 0){
             //If size upper bytes are not zero, set the lower ones to the maximum value
             if(size_upper > 0)
                 size = 0xFFFFFFFF;

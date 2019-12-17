@@ -40,6 +40,8 @@ extern void irq13_wrap(void);
 extern void irq14_wrap(void);
 extern void irq15_wrap(void);
 
+uint8_t quark_verbose;
+
 /*
  * This function is called whenever the user presses the shutdown button
  */
@@ -80,16 +82,19 @@ void quark_gui_callback_power_pressed(void){
  * Display a boot progress bar
  */
 void quark_boot_status(char* str, uint32_t progress){
-    //Draw the screen
-    gfx_draw_filled_rect((p2d_t){.x = 0, .y = gfx_res_y() / 2},
-                         (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 0, 0, 0));
-    gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(str).x) / 2, .y = gfx_res_y() / 2},
-             COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), str);
-    gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4}, 
-                         (p2d_t){.x = gfx_res_x() / 3, .y = 2}, COLOR32(255, 64, 64, 64));
-    gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
-                         (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 255, 255, 255));
-    gfx_flip();
+    //Only if we're not in verbose mode
+    if(!quark_verbose){
+        //Draw the screen
+        gfx_draw_filled_rect((p2d_t){.x = 0, .y = gfx_res_y() / 2},
+                            (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 0, 0, 0));
+        gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(str).x) / 2, .y = gfx_res_y() / 2},
+                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), str);
+        gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4}, 
+                             (p2d_t){.x = gfx_res_x() / 3, .y = 2}, COLOR32(255, 64, 64, 64));
+        gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
+                             (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 255, 255, 255));
+        gfx_flip();
+    }
 }
 
 /*
@@ -101,8 +106,13 @@ void main(void){
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
+    gui_reset_ps2_kbd();
     enable_a20();
     dram_init();
+
+    //Set verbose mode
+    quark_verbose = *(uint8_t*)(0x8FC10);
+    gfx_set_verbose(quark_verbose);
 
     //Initialize PICs
     pic_init(32, 40); //Remap IRQs
@@ -154,8 +164,9 @@ void main(void){
     gfx_set_font(font_neutral);
 
     //Print the quark version
-    gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
-             COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
+    if(!quark_verbose)
+        gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
+                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
     //Draw the neutron logo
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));

@@ -11,9 +11,11 @@ color32_t* sec_buffer;
 uint32_t res_x;
 uint32_t res_y;
 //The font
-const unsigned char* font;
+const uint8_t* font;
 //The buffer selected for operations
-unsigned char buf_sel;
+uint8_t buf_sel;
+//Is gfx_verbose_println() enabled or not?
+uint8_t verbose_enabled;
 
 /*
  * Retrieve the horizontal resolution
@@ -348,4 +350,50 @@ uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz){
            p.y >= pos.y &&
            p.x <= pos.x + sz.x &&
            p.y <= pos.y + sz.y;
+}
+
+/*
+ * Shift the entire screen up by a number of lines
+ */
+void gfx_shift_up(uint32_t lines){
+    color32_t* buf = gfx_buffer();
+    for(uint32_t i = 0; i < lines; i++){
+        //From top to bottom
+        for(uint32_t l = 1; l < res_x; l++){
+            uint32_t offs = l * res_x;
+            //Shift one line
+            memcpy(&buf[offs - res_x], &buf[offs], res_x * sizeof(color32_t));
+        }
+    }
+}
+
+//Position on screen in verbose logging mode
+uint32_t verbose_position = 0;
+
+/*
+ * Prints a string while in verbose logging mode
+ */
+void gfx_verbose_println(char* msg){
+    if(!verbose_enabled)
+        return;
+    //Calculate the bounds of the text
+    p2d_t text_bounds = gfx_text_bounds(msg);
+    //If it will be printed off screen, shift it up
+    if(verbose_position + text_bounds.y >= res_y){
+        gfx_shift_up(text_bounds.y);
+        verbose_position -= text_bounds.y;
+    }
+    //Print the string
+    gfx_puts((p2d_t){.x = 0, .y = verbose_position}, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), msg);
+    //Go to the next position
+    verbose_position += text_bounds.y;
+    //Flip the buffers
+    gfx_flip();
+}
+
+/*
+ * Enable/disable gfx_verbose_println() function
+ */
+void gfx_set_verbose(uint8_t v){
+    verbose_enabled = v;
 }

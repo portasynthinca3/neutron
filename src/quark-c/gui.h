@@ -139,6 +139,7 @@ void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointe
 
 void gui_init_ps2(void);
 void gui_poll_ps2(void);
+void gui_reset_ps2_kbd(void);
 
 void gui_draw_cursor(unsigned short x, unsigned short y);
 

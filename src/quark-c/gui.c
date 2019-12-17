@@ -11,15 +11,15 @@
 #include "./images/power.xbm"
 
 //Mouse position on the screen
-signed short mx, my;
+int32_t mx, my;
 //Mouse buttons state
 uint8_t ml, mr;
 //Keyboard buffer
-unsigned char* kbd_buffer;
-unsigned short kbd_buffer_head, kbd_buffer_tail;
+uint8_t* kbd_buffer;
+uint16_t kbd_buffer_head, kbd_buffer_tail;
 //Mouse buffer
-unsigned char* ms_buffer;
-unsigned short ms_buffer_head, ms_buffer_tail;
+uint8_t* ms_buffer;
+uint16_t ms_buffer_head, ms_buffer_tail;
 //Current color scheme
 color_scheme_t color_scheme;
 
@@ -62,11 +62,14 @@ void gui_init(void){
     //Disable focus monopoly
     focus_monopoly = 0;
     //Initialize the PS/2 controller
+    gfx_verbose_println("Initializing PS/2");
     gui_init_ps2();
     //Reset mouse state
+    gfx_verbose_println("Resetting mouse state");
     mx = my = ml = mr = 0;
     //Reset some variables
     window_dragging = NULL;
+    gfx_verbose_println("Initializing color scheme");
     //Set the default color scheme
     color_scheme.desktop =                  COLOR32(255, 40, 40, 40);           //Very dark grey
     color_scheme.top_bar =                  COLOR32(255, 70, 70, 70);           //Dark grey
@@ -82,9 +85,11 @@ void gui_init(void){
     color_scheme.win_unavailable_btn =      COLOR32(255, 40, 40, 40);           //Very dark grey
     
     //Allocate some space for the windows
+    gfx_verbose_println("Allocating memory for windows");
     windows = (window_t*)malloc(32 * sizeof(window_t));
     windows[0].title = NULL;
 
+    gfx_verbose_println("Creating an example window");
     //Set up an example window
     window_t* ex_win = gui_create_window("Hello, World", GUI_WIN_FLAGS_STANDARD,
                                          (p2d_t){.x = 200, .y = 200}, (p2d_t){.x = 250, .y = 250});
@@ -104,6 +109,7 @@ void gui_init(void){
                                                                                           COLOR32(255, 0, 255, 0),
                                                                                           COLOR32(255, 255, 255, 255),
                                                                                           100, 0)->extended;
+    gfx_verbose_println("GUI init done");
 }
 
 /*
@@ -242,16 +248,32 @@ void gui_init_ps2(){
     //Reset FIFO head and tail pointers
     kbd_buffer_head = kbd_buffer_tail = 0;
     ms_buffer_head = ms_buffer_tail = 0;
+
     while(inb(0x64) & 2); //Wait for input acceptability
     outb(0x64, 0xAE); //Issue command 0xAE (enable first PS/2 port)
+
     while(inb(0x64) & 2); //Wait for input acceptability
     outb(0x64, 0xA8); //Issue command 0xA8 (enable second PS/2 port)
+
     while(inb(0x64) & 2); //Wait for input acceptability
     outb(0x64, 0xD4); //Issue command 0xD4 (write to second PS/2 port)
     while(inb(0x64) & 2); //Wait for input acceptability
     outb(0x60, 0xF4); //Issue mouse command 0xF4 (enable packet streaming)
     while(!(inb(0x64) & 1)); //Wait for the mouse to send an ACK byte
     inb(0x60); //Read and discard the ACK byte
+    
+}
+
+/*
+ * Resets PS/2 keyboard
+ */
+void gui_reset_ps2_kbd(void){
+    while(inb(0x64) & 2); //Wait for input acceptability
+    outb(0x64, 0xD1); //Issue command 0xD1 (write to first PS/2 port)
+    while(inb(0x64) & 2); //Wait for input acceptability
+    outb(0x60, 0xFF); //Issue keyboard command 0xFF (reset and self-test)
+    while(!(inb(0x64) & 1)); //Wait for the keyboard to send a byte
+    inb(0x60); //Read and discard the byte
 }
 
 /*
@@ -584,7 +606,7 @@ void gui_process_window(window_t* ptr){
  */
 void gui_poll_ps2(){
     //Variable holding the I/O port 64h data
-    unsigned char p64d;
+    uint8_t p64d;
     //While data is available for reading
     while((p64d = inb(0x64)) & 1){
         //If bit 5 is set, it's a mouse data byte
@@ -596,20 +618,20 @@ void gui_poll_ps2(){
     //If at least three bytes are available for reading in the mouse buffer
     if(fifo_av(&ms_buffer_head, &ms_buffer_tail) >= 3){
         //Read the packet
-        unsigned char ms_flags = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
-        unsigned char ms_x = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
-        unsigned char ms_y = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
+        uint8_t ms_flags = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
+        uint8_t ms_x = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
+        uint8_t ms_y = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
         //Bit 3 of flags should always be set
         if(ms_flags & 8){
             //Process it
             if(ms_flags & 0x20) //Bit 5 in flags means delta Y is negative
-                my -= (signed short)((signed short)ms_y) | 0xFF00; //We subtract because PS/2 assumes that the Y axis is looking up, but it's the opposite in graphics
+                my -= (int32_t)((int32_t)ms_y) | 0xFFFFFFFF00; //We subtract because PS/2 assumes that the Y axis is looking up, but it's the opposite in graphics
             else
-                my -= (signed short)ms_y;
+                my -= (int32_t)ms_y;
             if(ms_flags & 0x10) //Bit 4 in flags means delta X is negative
-                mx += (signed short)((signed short)ms_x) | 0xFF00;
+                mx += (int32_t)((int32_t)ms_x) | 0xFFFFFFFF00;
             else
-                mx += (signed short)ms_x;
+                mx += (int32_t)ms_x;
         }
         //Constrain the coordinates
         if(mx < 0)

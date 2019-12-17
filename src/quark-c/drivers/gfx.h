@@ -36,6 +36,7 @@ void gfx_draw_vert_line(p2d_t pos, uint16_t h, color32_t c);
 void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
 void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size);
+void gfx_shift_up(uint32_t lines);
 
 void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c);
 void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s);
@@ -45,5 +46,8 @@ void gfx_panic(int ip, int code);
 void gfx_memdump(unsigned int addr, int amount);
 
 uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz);
+
+void gfx_verbose_println(char* msg);
+void gfx_set_verbose(uint8_t v);
 
 #endif

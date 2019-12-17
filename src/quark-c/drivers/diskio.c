@@ -4,6 +4,7 @@
 #include "./diskio.h"
 #include "../stdlib.h"
 #include "./ata.h"
+#include "./gfx.h"
 
 disk_part_t* partitions;
 uint8_t* buffer;
@@ -19,6 +20,10 @@ void diskio_init(void){
     buffer = (uint8_t*)malloc(sizeof(uint8_t) * DISK_IO_BUFFER_SIZE);
     //Firstly, go through the ATA devices
     for(uint8_t i = 0; i < 4; i++){
+        char temp[50] = "Detecting partitions on ATA drive ";
+        char temp2[15];
+        strcat(temp, sprintu(temp2, i, 1));
+        gfx_verbose_println(temp);
         //Get the device type
         uint8_t ata_type = ata_get_type(i >> 1, i & 1);
         //We only support PATA for now
@@ -43,6 +48,8 @@ void diskio_init(void){
                 //Increment the partition pointer
                 cur_part++;
             }
+        } else {
+            gfx_verbose_println("Unsupported or non-existent drive, skipping");
         }
     }
 }

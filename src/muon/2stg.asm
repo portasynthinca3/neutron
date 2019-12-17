@@ -36,6 +36,29 @@ krnl:
 	mov ch, 0x0F			;print the debug message
 	mov dx, krnl_debug_run	;
 	call print_str_line		;
+	push es					;
+	push ax					;
+	verbose_prompt:			;
+	mov ch, 0x0D			;print the verbose mode prompt
+	mov dx, krnl_verbose_prompt
+	call print_str_line		;
+	xor ah, ah				;input a character
+	int 16h					;
+	cmp al, 'v'				;check if V was pressed
+	jne v_prompt_not_v		;
+	push 0x8FC0				;load 0x8C0
+	pop es					;into ES
+	mov byte [es:16], 1		;indicate the verbose mode
+	jmp v_prompt_escape		;escape
+	v_prompt_not_v:			;
+	cmp al, 'n'				;check if N was pressed
+	jne verbose_prompt		;
+	push 0x8FC0				;load 0x8C0
+	pop es					;into ES
+	mov byte [es:16], 0		;indicate the normal mode
+	v_prompt_escape:		;
+	pop ax					;
+	pop es					;
 	mov ch, 0x0F			;print another debug message
 	mov dx, krnl_debug_video;
 	call print_str			;
@@ -177,6 +200,7 @@ krnl_debug_ldstart: db "Loading Quark", 0
 krnl_debug_ld: db ".", 0
 krnl_debug_run: db "done", 0
 krnl_debug_video: db "Choosing video mode", 0
+krnl_verbose_prompt: db "[v]erbose or [n]ormal mode?", 0
 
 gdt:                    ;Global Descriptor Table
 gdt_null:               ;null segment
