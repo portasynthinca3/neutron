@@ -3,12 +3,12 @@
 //Built on top of the GFX library (src/quark-c/c/gfx.c)
 
 #include "./gui.h"
-#include "./stdlib.h"
-#include "./drivers/gfx.h"
-#include "./drivers/diskio.h"
-#include "./drivers/pit.h"
+#include "../stdlib.h"
+#include "../drivers/gfx.h"
+#include "../drivers/diskio.h"
+#include "../drivers/pit.h"
 
-#include "./images/power.xbm"
+#include "../images/power.xbm"
 
 //Mouse position on the screen
 int32_t mx, my;

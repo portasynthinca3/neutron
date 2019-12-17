@@ -18,31 +18,32 @@ config_section = ''
 config_lines = config_contents.split('\n')
 for line_no in range(len(config_lines)):
 	line = config_lines[line_no]
-	if not line.startswith('#'):
-		if line.startswith('.'):
-			config_section = line[1:]
-			if not config_section in ['asm', 'c', 'fs', 'crawout']:
-				print('Error at ' + config_file + ':' + str(line_no + 1) + ': invalid section "' + config_section + '"')
-				sys.exit()
-		else:
-			if config_section == 'asm':
-				if line.endswith(' --no-append'):
-					asm_files.append(line[:-len(' --no-append')])
-				else:
-					asm_stack_files.append(line)
-			elif config_section == 'c':
-				c_files.append(line)
-			elif config_section == 'fs':
-				fs_files.append(line)
-			elif config_section == 'crawout':
-				if crawout != '<undefined>':
-					print('Error at ' + config_file + ':' + str(line_no + 1) + ': section "' + config_section + '" can only contain one entry')
+	if line != "":
+		if not line.startswith('#'):
+			if line.startswith('.'):
+				config_section = line[1:]
+				if not config_section in ['asm', 'c', 'fs', 'crawout']:
+					print('Error at ' + config_file + ':' + str(line_no + 1) + ': invalid section "' + config_section + '"')
 					sys.exit()
-				else:
-					crawout = line
 			else:
-				print('Error at ' + config_file + ':' + str(line_no + 1) + ': data in invalid section "' + config_section + '"')
-				sys.exit()
+				if config_section == 'asm':
+					if line.endswith(' --no-append'):
+						asm_files.append(line[:-len(' --no-append')])
+					else:
+						asm_stack_files.append(line)
+				elif config_section == 'c':
+					c_files.append(line)
+				elif config_section == 'fs':
+					fs_files.append(line)
+				elif config_section == 'crawout':
+					if crawout != '<undefined>':
+						print('Error at ' + config_file + ':' + str(line_no + 1) + ': section "' + config_section + '" can only contain one entry')
+						sys.exit()
+					else:
+						crawout = line
+				else:
+					print('Error at ' + config_file + ':' + str(line_no + 1) + ': data in invalid section "' + config_section + '"')
+					sys.exit()
 
 print('Assembling stacking binaries')
 stack_pos = 0

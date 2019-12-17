@@ -1,7 +1,7 @@
 #ifndef GUI_H
 #define GUI_H
 
-#include "./drivers/gfx.h"
+#include "../drivers/gfx.h"
 
 //Structure defining the GUI color scheme
 typedef struct {
