@@ -41,6 +41,7 @@ void dram_init(void){
     //Parse the memory map
     //It was put in memory as a result of a
     //  collaboration between Muon-2 and BIOS
+    /*
     uint32_t cur_blk = 0;
     uint32_t blk_type = 0;
     volatile void* volatile block_base = (void*)(0x93C00);
@@ -78,6 +79,10 @@ void dram_init(void){
         //Move on to the next block
         block_base += 24;
     }
+    */
+   _mem_blocks[0].ptr = (void*)STDLIB_DRAM_START;
+   _mem_blocks[0].size = 32 * 1024 * 1024;
+   _mem_blocks[0].used = 0;
 }
 
 /*
@@ -438,6 +443,36 @@ char* sprintu(char* str, uint32_t i, uint8_t min){
             str[pos++] = digit + '0';
         //Move to the next digit
         div /= 10;
+    }
+    //Mark the end of the string
+    str[pos] = 0;
+    //Return the string
+    return str;
+}
+
+char* hex_const = "0123456789ABCDEF";
+
+/*
+ * Print an uint32_t with base 16 to the string
+ */
+char* sprintub16(char* str, uint32_t i, uint8_t min){
+    //Create some variables
+    uint8_t pos = 0;
+    uint32_t div = 268435456; //Start with the leftmost digit
+    uint8_t started = 0;
+    for(int j = 1; j <= 8; j++){
+        //Fetch the next digit
+        uint8_t digit = (i / div) % 16;
+        //If the conversion hasn't started already and the current digit
+        //  is greater than zero OR we exceeded the maximum amount of dropped
+        //  digits, assume that the conversion has started
+        if((!started && digit > 0) || (8 - j < min))
+            started = 1;
+        //If the conversion has started, write a digit to the string
+        if(started)
+            str[pos++] = hex_const[digit];
+        //Move to the next digit
+        div /= 16;
     }
     //Mark the end of the string
     str[pos] = 0;

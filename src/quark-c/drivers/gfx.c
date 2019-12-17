@@ -320,16 +320,18 @@ void gfx_panic(int ip, int code){
     char* panic_msg = NULL;
     if(code == QUARK_PANIC_NOMEM_CODE)
         panic_msg = QUARK_PANIC_NOMEM_MSG;
-    if(code == QUARK_PANIC_PANTEST_CODE)
+    else if(code == QUARK_PANIC_PANTEST_CODE)
         panic_msg = QUARK_PANIC_PANTEST_MSG;
-    if(code == QUARK_PANIC_CPUEXC_CODE)
+    else if(code == QUARK_PANIC_CPUEXC_CODE)
         panic_msg = QUARK_PANIC_CPUEXC_MSG;
+    else
+        panic_msg = QUARK_PANIC_UNKNOWN_MSG;
     //Construct the error message
     char text[250];
     char temp[15];
     text[0] = 0;
-    strcat(text, "Quark panic occured at\n  dec. address: ");
-    strcat(text, sprintu(temp, ip, 1));
+    strcat(text, "Quark panic occured at\n  address: 0x");
+    strcat(text, sprintub16(temp, ip, 8));
     strcat(text, "\n  errcode ");
     strcat(text, sprintu(temp, code, 1));
     strcat(text, ": ");

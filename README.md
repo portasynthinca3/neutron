@@ -17,14 +17,14 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 5. The custom builder. Written in Python.
 # Where does it work?
 In theory, it should work on any modern system. Here are the minimal requirements:
-* CPU: Pentium I or later
-* RAM: 8 MB
+* CPU: Pentium 4 or later
+* RAM: 32 MB
 * Buses: PCI, ATA
-* An internal empty hard drive to boot from. You may be able to boot from external USB sticks, disk drives, floppies, etc., but
+* An empty internal hard drive to boot from. You will be able to boot from external USB sticks, disk drives, floppies, etc., but
 as the kernel only has ATA support right now, it woudn't be able to read any data from any drives except ATA drives or SATA
 drives in ATA compatibility mode (can almost certainly be enabled in the BIOS)
 * Legacy BIOS system or an UEFI system with legacy emulation mode
-* A video card supporting VESA 1.0 standard (integrated CPU graphics should also work)\
+* A video card supporting VESA 1.2 standard (integrated CPU graphics should also work)\
 \
 Also, there are some detected problems:
 * Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.

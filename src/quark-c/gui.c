@@ -76,9 +76,10 @@ void gui_init(void){
     color_scheme.cursor =                   COLOR32(255, 255, 255, 255);        //White
     color_scheme.selection =                COLOR32(255, 0, 128, 255);          //Light blue
     color_scheme.time =                     COLOR32(255, 0, 128, 255);          //Light blue
-    color_scheme.win_bg =                   COLOR32(255, 127, 127, 127);        //Grey
-    color_scheme.win_border =               COLOR32(255, 0, 255, 128);          //Green-blue-ish
-    color_scheme.win_title =                COLOR32(255, 255, 255, 255);        //White
+    color_scheme.win_bg =                   COLOR32(255, 200, 200, 200);        //Grey
+    color_scheme.win_shade =                COLOR32(255, 20, 20, 20);           //Very-very dark grey
+    color_scheme.win_title =                COLOR32(255, 0, 0, 0);              //Black
+    color_scheme.win_border =               COLOR32(255, 0, 116, 255);          //Blue-ish
     color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);            //Red
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);          //Yellow
     color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);            //Lime
@@ -88,27 +89,6 @@ void gui_init(void){
     gfx_verbose_println("Allocating memory for windows");
     windows = (window_t*)malloc(32 * sizeof(window_t));
     windows[0].title = NULL;
-
-    gfx_verbose_println("Creating an example window");
-    //Set up an example window
-    window_t* ex_win = gui_create_window("Hello, World", GUI_WIN_FLAGS_STANDARD,
-                                         (p2d_t){.x = 200, .y = 200}, (p2d_t){.x = 250, .y = 250});
-    window_focused = ex_win;
-    //Create an example control
-    gui_create_label(ex_win, (p2d_t){.x = 1, .y = 1},
-                             (p2d_t){.x = 100, .y = 100}, "Hello-o", COLOR32(255, 255, 255, 255),
-                                                                     COLOR32(0, 0, 0, 0));
-    gui_create_button(ex_win, (p2d_t){.x = 1, .y = 20},
-                              (p2d_t){.x = 100, .y = 50}, "Click me", gui_example_button_callback,
-                      COLOR32(255, 0, 0, 0),
-                      COLOR32(255, 128, 128, 128),
-                      COLOR32(255, 64, 64, 64),
-                      COLOR32(255, 64, 64, 64));
-    example_progress_bar = (control_ext_progress_t*)
-    gui_create_progress_bar(ex_win, (p2d_t){.x = 1, .y = 90}, (p2d_t){.x = 150, .y = 15}, COLOR32(255, 127, 127, 127),
-                                                                                          COLOR32(255, 0, 255, 0),
-                                                                                          COLOR32(255, 255, 255, 255),
-                                                                                          100, 0)->extended;
     gfx_verbose_println("GUI init done");
 }
 
@@ -394,18 +374,7 @@ void gui_render_windows(void){
         //Increment the window counter
         win_cnt++;
     }
-    //If focus monopoly is enabled, darken the background
-    if(focus_monopoly){
-        color32_t* buf = gfx_buffer();
-        uint32_t res_x = gfx_res_x();
-        uint32_t res_y = gfx_res_y();
-        for(uint32_t y = 0; y < res_y; y++){
-            for(uint32_t x = 0; x < res_x; x++){
-                color32_t orig = buf[(y * res_x) + x];
-                buf[(y * res_x) + x] = COLOR32(orig.a >> 2, orig.r >> 2, orig.g >> 2, orig.b >> 2);
-            }
-        }
-    }
+
     //If the window in focus is valid
     if(window_focused != NULL) //Render the window in focus last
         gui_render_window(window_focused);
@@ -422,17 +391,22 @@ void gui_render_windows(void){
 void gui_render_window(window_t* ptr){
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
+        //Draw the shade
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x + 2,
+                                     .y = ptr->position.y + 4}, (p2d_t){.x = 4, .y = ptr->size.y + 2}, color_scheme.win_shade);
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + 4,
+                                     .y = ptr->position.y + ptr->size.y + 2}, (p2d_t){.x = ptr->size.x + 2, .y = 4}, color_scheme.win_shade);
         //Fill a rectangle with a window background color
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                              (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_bg);
         //Draw a border around it
         gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                       (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_border);
+        //Draw a background for the title
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
+                             (p2d_t){.x = ptr->size.x, .y = 11}, color_scheme.win_border);
         //Print its title
         gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
-        //Draw a border arount the title
-        gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
-                      (p2d_t){.x = ptr->size.x, .y = 11}, color_scheme.win_border);
 
         //Draw the close button 
         if(ptr->flags & GUI_WIN_FLAG_CLOSABLE)
@@ -651,20 +625,33 @@ void gui_poll_ps2(){
 /*
  * Draws the cursor on screen
  */
-void gui_draw_cursor(uint16_t x, uint16_t y){
+void gui_draw_cursor(uint32_t x, uint32_t y){
     //Retrieve the graphics buffer; draw directly on it
     color32_t* buf = gfx_buffer();
-    //Retrieve the X resolution
-    uint16_t res_x = gfx_res_x();
+    //Retrieve the resolution
+    uint32_t res_x = gfx_res_x();
+    uint32_t res_y = gfx_res_y();
     //Draw!
+    if(x + 3 >= res_x)
+        return;
+    if(y >= res_y)
+        return;
     buf[(y * res_x) + x] = color_scheme.cursor;
     buf[(y * res_x) + x + 1] = color_scheme.cursor;
     buf[(y * res_x) + x + 2] = color_scheme.cursor;
-    buf[((y + 1) * res_x) + x] = color_scheme.cursor;
-    buf[((y + 2) * res_x) + x] = color_scheme.cursor;
+    if(y + 1 >= res_y)
+        return;
     buf[((y + 1) * res_x) + x + 1] = color_scheme.cursor;
+    buf[((y + 1) * res_x) + x] = color_scheme.cursor;
+    if(y + 2 >= res_y)
+        return;
+    buf[((y + 2) * res_x) + x] = color_scheme.cursor;
     buf[((y + 2) * res_x) + x + 2] = color_scheme.cursor;
+    if(y + 3 >= res_y)
+        return;
     buf[((y + 3) * res_x) + x + 3] = color_scheme.cursor;
+    if(y + 4 >= res_y)
+        return;
     buf[((y + 4) * res_x) + x + 4] = color_scheme.cursor;
 }
 

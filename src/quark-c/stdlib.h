@@ -9,7 +9,7 @@
 #define STDLIB_DRAM_START 0x500000
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "Quark v0.1.4"
+#define QUARK_VERSION_STR "Quark v0.1.5"
 
 //Standard type definitions
 
@@ -77,6 +77,7 @@ struct idt_entry {
 #define QUARK_PANIC_PANTEST_MSG             "not an error: called gfx_panic() for testing purposes"
 #define QUARK_PANIC_CPUEXC_CODE             3
 #define QUARK_PANIC_CPUEXC_MSG              "CPU-generated exception"
+#define QUARK_PANIC_UNKNOWN_MSG             "<unknown code>"
 
 //Debug functions
 
@@ -130,6 +131,7 @@ void* list_get_at_idx(list_node_t* first, uint32_t idx);
 
 size_t strlen(const char* str);
 char* sprintu(char* str, uint32_t i, uint8_t min);
+char* sprintub16(char* str, uint32_t i, uint8_t min);
 char* strcat(char* dest, char* src);
 int strcmp(const char* str1, const char* str2);
 

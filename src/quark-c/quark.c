@@ -62,18 +62,18 @@ void quark_restart(ui_event_args_t* args){
 void quark_gui_callback_power_pressed(void){
     p2d_t shutdown_win_size = (p2d_t){.x = 300, .y = 150};
     //Create a window
-    window_t* shutdown_window = gui_create_window("Shutdown", GUI_WIN_FLAG_VISIBLE,
+    window_t* shutdown_window = gui_create_window("Shutdown", GUI_WIN_FLAGS_STANDARD,
                                                   (p2d_t){.x = (gfx_res_x() - shutdown_win_size.x) / 2,
                                                           .y = (gfx_res_y() - shutdown_win_size.y) / 2}, shutdown_win_size);
     //Create a label and two buttons
     char* msg = "What do you want to do?";
     p2d_t msg_bounds = gfx_text_bounds(msg);
     gui_create_label(shutdown_window, (p2d_t){.x = (shutdown_win_size.x - msg_bounds.x) / 2,
-                                              .y = (shutdown_win_size.y - msg_bounds.y - 25) / 2}, msg_bounds, msg, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0));
+                                              .y = (shutdown_win_size.y - msg_bounds.y - 25) / 2}, msg_bounds, msg, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0));
     gui_create_button(shutdown_window, (p2d_t){.x = 0, .y = shutdown_win_size.y - 25 - 13}, (p2d_t){.x = shutdown_win_size.x / 2, .y = 25}, "Shutdown", quark_shutdown,
-                      COLOR32(255, 255, 255, 255), COLOR32(255, 128, 0, 0), COLOR32(255, 64, 0, 0), COLOR32(255, 255, 255, 255));
+                      COLOR32(255, 255, 255, 255), COLOR32(255, 0, 116, 255), COLOR32(255, 0, 116, 255), COLOR32(255, 0, 53, 128));
     gui_create_button(shutdown_window, (p2d_t){.x = shutdown_win_size.x / 2 - 2, .y = shutdown_win_size.y - 25 - 13}, (p2d_t){.x = shutdown_win_size.x / 2, .y = 25}, "Restart", quark_restart,
-                      COLOR32(255, 255, 255, 255), COLOR32(255, 128, 0, 0), COLOR32(255, 64, 0, 0), COLOR32(255, 255, 255, 255));
+                      COLOR32(255, 255, 255, 255), COLOR32(255, 0, 116, 255), COLOR32(255, 0, 116, 255), COLOR32(255, 0, 53, 128));
     //Enable focus monopoly
     gui_set_focus_monopoly(1);
 }
@@ -162,6 +162,9 @@ void main(void){
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
     gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_set_font(font_neutral);
+
+    gfx_verbose_println(QUARK_VERSION_STR);
+    gfx_verbose_println("Verbose mode is on");
 
     //Print the quark version
     if(!quark_verbose)

@@ -11,8 +11,9 @@ typedef struct {
     color32_t cursor;
     color32_t selection;
     color32_t win_bg;
-    color32_t win_border;
+    color32_t win_shade;
     color32_t win_title;
+    color32_t win_border;
     color32_t win_exit_btn;
     color32_t win_state_btn;
     color32_t win_minimize_btn;
@@ -141,7 +142,7 @@ void gui_init_ps2(void);
 void gui_poll_ps2(void);
 void gui_reset_ps2_kbd(void);
 
-void gui_draw_cursor(unsigned short x, unsigned short y);
+void gui_draw_cursor(uint32_t x, uint32_t y);
 
 void gui_set_focus_monopoly(uint8_t val);
 
