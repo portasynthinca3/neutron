@@ -182,8 +182,8 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
     //Create a counter
     uint32_t pos = 0;
     //Go through each pixel
-    for(uint32_t y = position.y; y <= position.y + raw_size.y; y++){
-        for(uint32_t x = position.x; x <= position.x + raw_size.x; x++){
+    for(uint32_t y = position.y; y < position.y + raw_size.y; y++){
+        for(uint32_t x = position.x; x < position.x + raw_size.x; x++){
             //Fetch the data
             uint8_t r = raw_ptr[pos++];
             uint8_t g = raw_ptr[pos++];

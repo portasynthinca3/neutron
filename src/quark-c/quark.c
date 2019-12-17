@@ -44,6 +44,10 @@ extern void irq15_wrap(void);
 
 uint8_t quark_verbose;
 
+void test(ui_event_args_t* args){
+    gui_get_color_scheme()->win_border = stdgui_cpick_get_color();
+}
+
 /*
  * This function is called whenever someone requests to shutdown
  */
@@ -175,6 +179,7 @@ void main(void){
     //Configure GUI
     quark_boot_status("Configuring GUI", 90);
     gui_init();
+    stdgui_create_color_picker(test, gui_get_color_scheme()->win_border);
     //The loading process is done!
     quark_boot_status("Done!", 100);
 

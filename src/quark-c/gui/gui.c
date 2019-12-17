@@ -79,7 +79,7 @@ void gui_init(void){
     color_scheme.win_bg =                   COLOR32(255, 200, 200, 200);        //Grey
     color_scheme.win_shade =                COLOR32(255, 20, 20, 20);           //Very-very dark grey
     color_scheme.win_title =                COLOR32(255, 0, 0, 0);              //Black
-    color_scheme.win_border =               COLOR32(255, 0, 116, 255);          //Blue-ish
+    color_scheme.win_border =               COLOR32(255, 0, 116, 53);           //Dark green
     color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);            //Red
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);          //Yellow
     color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);            //Lime
@@ -218,6 +218,24 @@ control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t forma
 }
 
 /*
+ * Creates a track bar and adds it to the window
+ */
+control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
+                                color32_t border_color, uint32_t max_val, uint32_t val, void(*callback)(ui_event_args_t*)){
+    //Create the "extended control" of progress bar type
+    control_ext_track_bar_t* track = (control_ext_track_bar_t*)malloc(sizeof(control_ext_track_bar_t));
+    //Assign the parameters
+    track->bg_color = bg_color;
+    track->border_color = border_color;
+    track->fill_color = fill_color;
+    track->max_val = max_val;
+    track->val = val;
+    track->callback = callback;
+    //Create a normal control with this extension
+    return gui_create_control(win, GUI_WIN_CTRL_TRACK_BAR, (void*)track, pos, size);
+}
+
+/*
  * Initializes the PS/2 controller
  */
 void gui_init_ps2(){
@@ -325,7 +343,7 @@ void gui_update(void){
 }
 
 /*
- * Calls gui_render_window() according to the window order
+ * Calls gui_process_window() and gui_render_window() according to the window order
  */
 void gui_render_windows(void){
     //Some local variables
@@ -392,10 +410,10 @@ void gui_render_window(window_t* ptr){
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Draw the shade
-        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x + 2,
-                                     .y = ptr->position.y + 4}, (p2d_t){.x = 4, .y = ptr->size.y + 2}, color_scheme.win_shade);
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x + 1,
+                                     .y = ptr->position.y + 4}, (p2d_t){.x = 4, .y = ptr->size.y + 1}, color_scheme.win_shade);
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + 4,
-                                     .y = ptr->position.y + ptr->size.y + 2}, (p2d_t){.x = ptr->size.x + 2, .y = 4}, color_scheme.win_shade);
+                                     .y = ptr->position.y + ptr->size.y + 1}, (p2d_t){.x = ptr->size.x + 1, .y = 4}, color_scheme.win_shade);
         //Fill a rectangle with a window background color
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                              (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_bg);
@@ -427,98 +445,10 @@ void gui_render_window(window_t* ptr){
             gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
 
         //Now draw its controls
-        uint8_t process_ptr = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, ptr->position, ptr->size);
         uint32_t i = 0;
         control_t* control;
         while((control = &ptr->controls[i++])->type)
-            gui_render_control(ptr, control, process_ptr);
-    }
-}
-
-/*
- * Renders a control
- */
-void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer){
-    //Check control's type
-    switch(ptr->type){
-        case GUI_WIN_CTRL_LABEL: {
-            //Fetch the extended data
-            control_ext_label_t* label = (control_ext_label_t*)ptr->extended;
-            //Draw the label
-            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1, .y = ptr->position.y + win_ptr->position.y + 12},
-                     label->text_color, label->bg_color, label->text);
-        }
-        break;
-        case GUI_WIN_CTRL_BUTTON: {
-            //Fetch the extended data
-            control_ext_button_t* button = (control_ext_button_t*)ptr->extended;
-            //Check if the button is pressed
-            uint8_t pressed = 0;
-            if(handle_pointer)
-                pressed = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, 
-                                            (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                                    .y = ptr->position.y + win_ptr->position.y + 12},
-                                            ptr->size) && ml;
-            //Check if the button is clicked (pressed for the first frame)
-            uint8_t clicked = 0;
-            if(pressed && !button->pressed_last_frame)
-                clicked = 1;
-            button->pressed_last_frame = pressed;
-            //Draw the rectangles
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                         .y = ptr->position.y + win_ptr->position.y + 12},
-                                 ptr->size, pressed ? button->pressed_bg_color : button->bg_color);
-            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                  .y = ptr->position.y + win_ptr->position.y + 12},
-                          ptr->size, button->border_color);
-            //Calculate text bounds
-            p2d_t t_bounds = gfx_text_bounds(button->text);
-            //Draw the text
-            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1  + ((ptr->size.x - t_bounds.x) / 2),
-                             .y = ptr->position.y + win_ptr->position.y + 12 + ((ptr->size.y - t_bounds.y) / 2)},
-                     button->text_color, COLOR32(0, 0, 0, 0), button->text);
-            //Call the event handler in case of a click
-            if(clicked && button->event_handler != NULL){
-                ui_event_args_t event;
-                event.control = ptr;
-                event.win = win_ptr;
-                event.type = GUI_EVENT_CLICK;
-                event.mouse_pos = (p2d_t){.x = mx, .y = my};
-                button->event_handler(&event);
-            }
-        }
-        break;
-        case GUI_WIN_CTRL_PROGRESS_BAR: {
-            //Fetch the extended data
-            control_ext_progress_t* progress = (control_ext_progress_t*)ptr->extended;
-            //Draw the rectangles
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                         .y = ptr->position.y + win_ptr->position.y + 12},
-                                 ptr->size, progress->bg_color);
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                         .y = ptr->position.y + win_ptr->position.y + 12},
-                                 (p2d_t){.x = ptr->size.x * progress->val / progress->max_val,
-                                         .y = ptr->size.y},
-                                 progress->fill_color);
-            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                  .y = ptr->position.y + win_ptr->position.y + 12},
-                          ptr->size, progress->border_color);
-        }
-        break;
-        case GUI_WIN_CTRL_IMAGE: {
-            //Fetch the extended data
-            control_ext_image_t* image = (control_ext_image_t*)ptr->extended;
-            //Draw the image
-            if(image->image_format == GUI_IMAGE_FORMAT_XBM)
-                gfx_draw_xbm((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                     .y = ptr->position.y + win_ptr->position.y + 12},
-                             (uint8_t*)image->image, ptr->size, image->color_hi, image->color_lo);
-            if(image->image_format == GUI_IMAGE_FORMAT_RAW)
-                gfx_draw_raw((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
-                                     .y = ptr->position.y + win_ptr->position.y + 12},
-                             (uint8_t*)image->image, ptr->size);
-        }
-        break;
+            gui_render_control(ptr, control);
     }
 }
 
@@ -572,6 +502,173 @@ void gui_process_window(window_t* ptr){
             focus_processed = 1;
             window_focused = ptr;
         }
+
+        //Now process its controls
+        uint8_t process_ptr = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, ptr->position, ptr->size);
+        uint32_t i = 0;
+        control_t* control;
+        while((control = &ptr->controls[i++])->type)
+            gui_process_control(ptr, control, process_ptr);
+    }
+}
+
+/*
+ * Renders a control
+ */
+void gui_render_control(window_t* win_ptr, control_t* ptr){
+    //Check control's type
+    switch(ptr->type){
+        case GUI_WIN_CTRL_LABEL: {
+            //Fetch the extended data
+            control_ext_label_t* label = (control_ext_label_t*)ptr->extended;
+            //Draw the label
+            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1, .y = ptr->position.y + win_ptr->position.y + 12},
+                     label->text_color, label->bg_color, label->text);
+        }
+        break;
+        case GUI_WIN_CTRL_BUTTON: {
+            //Fetch the extended data
+            control_ext_button_t* button = (control_ext_button_t*)ptr->extended;
+            //Full transparency = we choose the color on our own
+            if(button->bg_color.a == 0)
+                button->bg_color = COLOR32(0, color_scheme.win_border.r, color_scheme.win_border.g, color_scheme.win_border.b);
+            if(button->border_color.a == 0)
+                button->border_color = COLOR32(0, color_scheme.win_border.r, color_scheme.win_border.g, color_scheme.win_border.b);
+            if(button->pressed_bg_color.a == 0)
+                button->pressed_bg_color = COLOR32(0, color_scheme.win_border.r >> 1, color_scheme.win_border.g >> 1, color_scheme.win_border.b >> 1);
+            //Draw the rectangles
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 ptr->size, button->pressed_last_frame ? button->pressed_bg_color : button->bg_color);
+            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                  .y = ptr->position.y + win_ptr->position.y + 12},
+                          ptr->size, button->border_color);
+            //Calculate text bounds
+            p2d_t t_bounds = gfx_text_bounds(button->text);
+            //Draw the text
+            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1  + ((ptr->size.x - t_bounds.x) / 2),
+                             .y = ptr->position.y + win_ptr->position.y + 12 + ((ptr->size.y - t_bounds.y) / 2)},
+                     button->text_color, COLOR32(0, 0, 0, 0), button->text);
+        }
+        break;
+        case GUI_WIN_CTRL_PROGRESS_BAR: {
+            //Fetch the extended data
+            control_ext_progress_t* progress = (control_ext_progress_t*)ptr->extended;
+            //Draw the rectangles
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 ptr->size, progress->bg_color);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 (p2d_t){.x = ptr->size.x * progress->val / progress->max_val,
+                                         .y = ptr->size.y},
+                                 progress->fill_color);
+            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                  .y = ptr->position.y + win_ptr->position.y + 12},
+                          ptr->size, progress->border_color);
+        }
+        break;
+        case GUI_WIN_CTRL_IMAGE: {
+            //Fetch the extended data
+            control_ext_image_t* image = (control_ext_image_t*)ptr->extended;
+            //Draw the image
+            if(image->image_format == GUI_IMAGE_FORMAT_XBM)
+                gfx_draw_xbm((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                     .y = ptr->position.y + win_ptr->position.y + 12},
+                             (uint8_t*)image->image, ptr->size, image->color_hi, image->color_lo);
+            if(image->image_format == GUI_IMAGE_FORMAT_RAW)
+                gfx_draw_raw((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                     .y = ptr->position.y + win_ptr->position.y + 12},
+                             (uint8_t*)image->image, ptr->size);
+        }
+        break;
+        case GUI_WIN_CTRL_TRACK_BAR: {
+            //Fetch the extended data
+            control_ext_track_bar_t* track = (control_ext_track_bar_t*)ptr->extended;
+            //Draw the rectangles
+            uint32_t fill_width = ptr->size.x * track->val / track->max_val;
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12}, ptr->size, track->bg_color);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                         .y = ptr->position.y + win_ptr->position.y + 12},
+                                 (p2d_t){.x = fill_width, .y = ptr->size.y}, track->fill_color);
+            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                  .y = ptr->position.y + win_ptr->position.y + 12}, ptr->size, track->border_color);
+            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + fill_width + 1 - 3,
+                                         .y = ptr->position.y + win_ptr->position.y + ptr->size.y + 3},
+                                 (p2d_t){.x = 6, .y = ptr->size.y + 6}, track->bg_color);
+            gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + fill_width + 1 - 3,
+                                  .y = ptr->position.y + win_ptr->position.y + ptr->size.y + 3},
+                          (p2d_t){.x = 6, .y = ptr->size.y + 6}, track->border_color);
+        }
+        break;
+    }
+}
+
+/*
+ * Processes control's interaction with the mouse
+ */
+void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer){
+    //Check control's type
+    switch(ptr->type){
+        case GUI_WIN_CTRL_LABEL: {}
+        break;
+        case GUI_WIN_CTRL_BUTTON: {
+            //Fetch the extended data
+            control_ext_button_t* button = (control_ext_button_t*)ptr->extended;
+            //Check if the button is pressed
+            uint8_t pressed = 0;
+            if(handle_pointer)
+                pressed = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, 
+                                            (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                                    .y = ptr->position.y + win_ptr->position.y + 12},
+                                            ptr->size) && ml;
+            //Check if the button is clicked (pressed for the first frame)
+            uint8_t clicked = 0;
+            if(pressed && !button->pressed_last_frame)
+                clicked = 1;
+            button->pressed_last_frame = pressed;
+            //Call the event handler in case of a click
+            if(clicked && button->event_handler != NULL){
+                ui_event_args_t event;
+                event.control = ptr;
+                event.win = win_ptr;
+                event.type = GUI_EVENT_CLICK;
+                event.mouse_pos = (p2d_t){.x = mx, .y = my};
+                button->event_handler(&event);
+            }
+        }
+        break;
+        case GUI_WIN_CTRL_PROGRESS_BAR: {}
+        break;
+        case GUI_WIN_CTRL_IMAGE: {}
+        break;
+        case GUI_WIN_CTRL_TRACK_BAR: {
+            //Fetch the extended data
+            control_ext_track_bar_t* track = (control_ext_track_bar_t*)ptr->extended;
+            //If the pointer is in bounds of the window
+            if(handle_pointer){
+                //The left mouse button is pressed and the cursor is in bounds
+                if(ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                                           (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                                   .y = ptr->position.y + win_ptr->position.y + 12},
+                                           ptr->size)){
+                    //Calculate the new value
+                    uint32_t new_val = (mx - (ptr->position.x + win_ptr->position.x + 1)) * track->max_val / ptr->size.x;
+                    if(new_val != track->val){
+                        //If the value has changed, assign it and call the callback function
+                        track->val = new_val;
+                        ui_event_args_t args;
+                        args.control = ptr;
+                        args.mouse_pos = (p2d_t){.x = mx, .y = my};
+                        args.type = GUI_EVENT_TRACK_BAR_CHANGE;
+                        args.win = win_ptr;
+                        track->callback(&args);
+                    }
+                }
+            }
+        }
+        break;
     }
 }
 
@@ -660,4 +757,11 @@ void gui_draw_cursor(uint32_t x, uint32_t y){
  */
 void gui_set_focus_monopoly(uint8_t val){
     focus_monopoly = val;
+}
+
+/*
+ * Returns a pointer to the color scheme that's being used by the GUI system
+ */
+color_scheme_t* gui_get_color_scheme(void){
+    return &color_scheme;
 }

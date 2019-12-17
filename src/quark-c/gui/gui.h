@@ -87,10 +87,21 @@ typedef struct {
     color32_t color_lo;
 } control_ext_image_t;
 
+//Structure defining a track bar
+typedef struct {
+    color32_t bg_color;
+    color32_t fill_color;
+    color32_t border_color;
+    uint32_t max_val;
+    uint32_t val;
+    void(*callback)(ui_event_args_t*);
+} control_ext_track_bar_t;
+
 //UI event types
 
 #define GUI_EVENT_UNDEFINED                         0
 #define GUI_EVENT_CLICK                             1
+#define GUI_EVENT_TRACK_BAR_CHANGE                  2
 
 //Image formats
 
@@ -120,6 +131,7 @@ typedef struct {
 #define GUI_WIN_CTRL_BUTTON                         2
 #define GUI_WIN_CTRL_PROGRESS_BAR                   3
 #define GUI_WIN_CTRL_IMAGE                          4
+#define GUI_WIN_CTRL_TRACK_BAR                      5
 
 void gui_init(void);
 void gui_update(void);
@@ -132,11 +144,14 @@ control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, v
 control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
                                    color32_t border_color, uint32_t max_val, uint32_t val);
 control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi);
+control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
+                                color32_t border_color, uint32_t max_val, uint32_t val, void(*callback)(ui_event_args_t*));
 
 void gui_render_windows(void);
 void gui_process_window(window_t* ptr);
 void gui_render_window(window_t* ptr);
-void gui_render_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer);
+void gui_render_control(window_t* win_ptr, control_t* ptr);
+void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer);
 
 void gui_init_ps2(void);
 void gui_poll_ps2(void);
@@ -145,5 +160,6 @@ void gui_reset_ps2_kbd(void);
 void gui_draw_cursor(uint32_t x, uint32_t y);
 
 void gui_set_focus_monopoly(uint8_t val);
+color_scheme_t* gui_get_color_scheme(void);
 
 #endif
