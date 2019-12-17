@@ -130,7 +130,7 @@ void free(void* ptr){
             break;
         }
     }
-    //If no such blocks were found, the callee is a LIAR!
+    //If no such blocks were found, the caller is a LIAR!
     if(blk == -1)
         return;
     //Mark the found block as unused
@@ -144,7 +144,7 @@ void free(void* ptr){
             blk_new.used = 0;
             _mem_blocks[blk] = blk_new;
             //Mark the previous block as invalid
-            _mem_blocks[blk -1 ].ptr = NULL;
+            _mem_blocks[blk - 1].ptr = NULL;
         }
     }
     //If this isn't the last block, merge it with the next one if it's unused too

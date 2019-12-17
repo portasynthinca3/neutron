@@ -9,7 +9,7 @@
 #define STDLIB_DRAM_START 0x500000
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "Quark v0.1.6"
+#define QUARK_VERSION_STR "v0.1.7"
 
 //Standard type definitions
 

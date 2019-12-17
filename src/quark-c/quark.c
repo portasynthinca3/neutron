@@ -44,8 +44,21 @@ extern void irq15_wrap(void);
 
 uint8_t quark_verbose;
 
-void test(ui_event_args_t* args){
+/*
+ * This function is called whenever the user chooses the system color
+ */
+void sys_color_change(ui_event_args_t* args){
+    //Get and assign the color
     gui_get_color_scheme()->win_border = stdgui_cpick_get_color();
+    //Close the window
+    gui_destroy_window(args->win);
+}
+
+/*
+ * This function is caled whenever the user requests the system color picker
+ */
+void quark_open_sys_color_picker(ui_event_args_t* args){
+    stdgui_create_color_picker(sys_color_change, gui_get_color_scheme()->win_border);
 }
 
 /*
@@ -67,6 +80,13 @@ void quark_reboot(void){
  */
 void quark_gui_callback_power_pressed(void){
     stdgui_create_shutdown_prompt();
+}
+
+/*
+ * This function is called whenewer the user presses a GUI system button
+ */
+void quark_gui_callback_system_pressed(void){
+    stdgui_create_system_win();
 }
 
 /*
@@ -179,7 +199,6 @@ void main(void){
     //Configure GUI
     quark_boot_status("Configuring GUI", 90);
     gui_init();
-    stdgui_create_color_picker(test, gui_get_color_scheme()->win_border);
     //The loading process is done!
     quark_boot_status("Done!", 100);
 

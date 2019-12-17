@@ -137,6 +137,7 @@ void gui_init(void);
 void gui_update(void);
 
 window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size);
+void gui_destroy_window(window_t* win);
 control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size);
 control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color);
 control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, void (*event_handler)(ui_event_args_t*),

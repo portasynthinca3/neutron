@@ -9,6 +9,7 @@
 #include "../drivers/pit.h"
 
 #include "../images/power.xbm"
+#include "../images/system.xbm"
 
 //Mouse position on the screen
 int32_t mx, my;
@@ -43,6 +44,7 @@ uint8_t focus_monopoly = 0;
 
 uint8_t last_frame_ml = 0;
 void quark_gui_callback_power_pressed(void);
+void quark_gui_callback_system_pressed(void);
 
 control_ext_progress_t* example_progress_bar;
 
@@ -120,6 +122,39 @@ window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size){
     window_focused = &windows[i];
     //Return the window
     return &windows[i];
+}
+
+/*
+ * Removes the window from the window list and frees all memory used by it
+ */
+void gui_destroy_window(window_t* win){
+    //If the window we're destroying was in focus, reset it
+    if(win == window_focused)
+        window_focused = NULL;
+    //Free up the memory used by its controls
+    control_t* control;
+    uint32_t i = 0;
+    while((control = &win->controls[i++])->type){
+        //free(control->extended);
+        //free(control);
+    }
+    //Free up the memory used by the window title
+    //free(win->title);
+    //Free up the memory used by the window itself
+    //free(win);
+    //Scan through the window list to determine its end
+    window_t* last;
+    i = 0;
+    while((last = &windows[i++])->title);
+    i--;
+    //Calculate index of the deleted window in the window list
+    uint32_t idx = ((uint32_t)win - (uint32_t)windows) / sizeof(window_t);
+    //Move the windows that stand after one that we just deleted, one to the left
+    for(uint32_t j = idx + 1; j < i; j++){
+        windows[j - 1] = windows[j];
+    }
+    //Mark the last window as the last one
+    windows[i - 1].title = NULL;
 }
 
 /*
@@ -312,10 +347,16 @@ void gui_update(void){
     //Draw the power icon
     gfx_draw_xbm((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, power_bits, (p2d_t){.x = power_width, .y = power_height},
                  COLOR32(255, 255, 0, 0), COLOR32(0, 0, 0, 0));
-
     //Call the callback if it was pressed
     if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
         quark_gui_callback_power_pressed();
+    //Draw the system icon
+    gfx_draw_xbm((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, system_bits, (p2d_t){.x = system_width, .y = system_height},
+                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0));
+
+    //Call the callback if it was pressed
+    if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
+        quark_gui_callback_system_pressed();
 
     //Render the windows
     gui_render_windows();
@@ -501,6 +542,13 @@ void gui_process_window(window_t* ptr){
                              (p2d_t){.x = ptr->size.x - 2, .y = ptr->size.y - 2})){
             focus_processed = 1;
             window_focused = ptr;
+        }
+
+        //Process the top-right buttons
+        if(gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8})
+           && (ptr->flags & GUI_WIN_FLAG_CLOSABLE) && ml){
+            //Destroy this window
+            gui_destroy_window(ptr);
         }
 
         //Now process its controls

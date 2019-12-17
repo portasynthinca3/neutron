@@ -5,9 +5,12 @@
 #include "../drivers/gfx.h"
 #include "./gui.h"
 
-//Are defined in Quark
+#include "../images/neutron_logo.xbm"
+
+//These are defined in Quark
 void quark_shutdown(void);
 void quark_reboot(void);
+void quark_open_sys_color_picker(ui_event_args_t* args);
 
 void _stdgui_cb_shutdown_pressed(ui_event_args_t* args){
     quark_shutdown();
@@ -62,6 +65,34 @@ void stdgui_create_shutdown_prompt(void){
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0));
     gui_create_button(shutdown_window, (p2d_t){.x = shutdown_win_size.x / 2 - 2, .y = shutdown_win_size.y - 25 - 13}, (p2d_t){.x = shutdown_win_size.x / 2, .y = 25}, "Reboot", _stdgui_cb_reboot_pressed,
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0));
+}
+
+/*
+ * Creates a system control window
+ */
+void stdgui_create_system_win(void){
+    p2d_t system_win_size = (p2d_t){.x = 300, .y = 300};
+    //Create the window itself
+    window_t* window = gui_create_window("System", GUI_WIN_FLAGS_STANDARD,
+                                         (p2d_t){.x = (gfx_res_x() - system_win_size.x) / 2,
+                                                 .y = (gfx_res_y() - system_win_size.y) / 2}, system_win_size);
+    //Add the Neutron logo to it
+    gui_create_image(window,
+                     (p2d_t){.x = (system_win_size.x - neutron_logo_width) / 2, .y = 13}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height},
+                     GUI_IMAGE_FORMAT_XBM, neutron_logo_bits, COLOR32(0, 0, 0, 0), COLOR32(255, 0, 0, 0));
+    //Add the name label to it
+    char* name_label_text = "Neutron Project. 2019, Andrey Antonenko";
+    uint32_t name_label_width = gfx_text_bounds(name_label_text).x;
+    gui_create_label(window, (p2d_t){.x = (system_win_size.x - name_label_width) / 2, .y = 13 + neutron_logo_height + 2}, 
+                             (p2d_t){.x = name_label_width, .y = 8}, name_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0));
+    //Add the version label to it
+    char* ver_label_text = QUARK_VERSION_STR;
+    uint32_t ver_label_width = gfx_text_bounds(ver_label_text).x;
+    gui_create_label(window, (p2d_t){.x = (system_win_size.x - ver_label_width) / 2, .y = 13 + neutron_logo_height + 2 + 8 + 2}, 
+                             (p2d_t){.x = ver_label_width, .y = 8}, ver_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0));
+    //Add the system color change button to it
+    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 12 + 8 + 2}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
+                      quark_open_sys_color_picker, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0));
 }
 
 /*
