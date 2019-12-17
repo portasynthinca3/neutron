@@ -190,7 +190,7 @@ void quark_exc(void){
     //Print some info
     unsigned int ip;
     __asm__ volatile("mov %0, %%edx" : "=r" (ip));
-    gfx_panic(ip, 0);
+    gfx_panic(ip, QUARK_PANIC_CPUEXC_CODE);
 
     //Hang
     while(1);

@@ -32,7 +32,7 @@ krnl:
 	push 0x93C0				;segment 0x93C0 - this is where the map is stored
 	pop es					;
 	xor di, di				;clear DI
-	call map_memory			;map the memory while we didn't overwrite the IVT
+	call map_memory			;map the memory
 	mov ch, 0x0F			;print the debug message
 	mov dx, krnl_debug_run	;
 	call print_str_line		;

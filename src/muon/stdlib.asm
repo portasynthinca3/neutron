@@ -40,6 +40,19 @@ print_str:					;prints a string
 	jmp print_str			;it's a loop after all
 print_ret:
 	ret						;return from subroutine
+
+print_32b_hex:
+	xor dx, dx
+	print_32b_hex_loop:
+	movzx si, al
+	and si, 0xf
+	mov cl, [ds:si+hex_num_const]
+	call print_char
+	shr eax, 4
+	inc dx
+	cmp dx, 8
+	jb print_32b_hex_loop
+	ret
 	
 print_str_line:				;prints a string and then goes to a new line
 							;
@@ -149,3 +162,5 @@ map_memory_done:			;
 	mov dword [ds:di], 0	;to indicate the end
 	popad					;restore the registers
 	ret						;return from subroutine
+
+hex_num_const: db '0123456789ABCDEF'

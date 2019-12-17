@@ -96,7 +96,7 @@ void* malloc(unsigned int size){
     }
     //If no such blocks were found, return NULL
     if(best_blk_id == -1)
-        gfx_panic(0, 0x1A73ABAD);
+        gfx_panic(0, QUARK_PANIC_NOMEM_CODE);
     //If such block was found, split it into used and unused space
     struct _mem_block free = _mem_blocks[best_blk_id];
     struct _mem_block used;

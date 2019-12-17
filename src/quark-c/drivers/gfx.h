@@ -41,8 +41,6 @@ void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c);
 void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s);
 p2d_t gfx_text_bounds(char* s);
 
-void gfx_vterm_println(char* s, color32_t color);
-void gfx_vterm_println_hex(int value, color32_t color);
 void gfx_panic(int ip, int code);
 void gfx_memdump(unsigned int addr, int amount);
 

@@ -14,8 +14,6 @@ uint32_t res_y;
 const unsigned char* font;
 //The buffer selected for operations
 unsigned char buf_sel;
-//Virtual text mode position
-unsigned short vterm_y = 0;
 
 /*
  * Retrieve the horizontal resolution
@@ -50,8 +48,6 @@ void gfx_init(void){
     res_x = (res >> 16) & 0xFFFF;
     //Allocate the second buffer based on the screen size
     sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
-    //Reset the virtual text mode position
-    vterm_y = 0;
 }
 
 /*
@@ -300,82 +296,48 @@ p2d_t gfx_text_bounds(char* s){
 }
 
 /*
- * Put a string in virtual text mode
- */
-void gfx_vterm_println(char* s, color32_t color){
-    //Normally put a string
-    gfx_puts((p2d_t){.x = 0, .y = vterm_y}, color, COLOR32(0, 0, 0, 0), s);
-    //Increment the position
-    vterm_y += 8;
-}
-
-//4-bit value to its hexadecimal symbol conversion table
-const char hex_conv_const[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-/*
- * Put a string representing a 32-bit hexadecimal value in virtual text mode
- */
-void gfx_vterm_println_hex(int value, color32_t color){
-    //Convert the value into string
-    char* hex = "  PLACEHLD";
-    hex[2] = hex_conv_const[(value >> 28) & 0xF];
-    hex[3] = hex_conv_const[(value >> 24) & 0xF];
-    hex[4] = hex_conv_const[(value >> 20) & 0xF];
-    hex[5] = hex_conv_const[(value >> 16) & 0xF];
-    hex[6] = hex_conv_const[(value >> 12) & 0xF];
-    hex[7] = hex_conv_const[(value >> 8) & 0xF];
-    hex[8] = hex_conv_const[(value >> 4) & 0xF];
-    hex[9] = hex_conv_const[value & 0xF];
-    //Normally print the string
-    gfx_vterm_println(hex, color);
-}
-
-/*
  * Draw a panic screen
  */
 void gfx_panic(int ip, int code){
-    //Do not print the panic message outside of the screen bounds
-    if(vterm_y > res_y - (8 * 4))
-        vterm_y = res_y - (8 * 4);
-    //Draw directly onto VBE memory
+    //Flip the main buffer to the working one
     gfx_set_buf(GFX_BUF_VBE);
-    //Print the header message
-    gfx_vterm_println("QUARK PANIC @", COLOR32(0, 255, 0, 0));
-    //Print error IP
-    gfx_vterm_println_hex(ip, COLOR32(0, 255, 0, 0));
-    //Print error code
-    gfx_vterm_println("Error code:", COLOR32(0, 255, 0, 0));
-    gfx_vterm_println_hex(code, COLOR32(0, 255, 0, 0));
-}
-
-/*
- * Dump memory on screen
- */
-void gfx_memdump(unsigned int addr, int amount){
-    //Print the header
-    gfx_vterm_println("Dumping memory at", COLOR32(0, 255, 255, 255));
-    gfx_vterm_println_hex(addr, COLOR32(0, 255, 255, 255));
-    gfx_vterm_println("         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", COLOR32(0, 255, 0, 255));
-    //Calculate some stuff
-    unsigned int ad = addr - (addr % 16);
-    unsigned int am = amount + 16 - (addr % 16);
-    for(unsigned int pos = 0; pos < am; pos += 16){
-        //Construct one line as a string
-        unsigned int ptr = ad + pos;
-        char msg[57];
-        for(int i = 0; i < 8; i++)
-            msg[i] = hex_conv_const[(ptr >> ((7 - i) * 4)) & 0xF];
-        msg[8] = ' ';
-        for(int o = 0; o < 16; o++){
-            unsigned char val = *(unsigned char*)(ptr + o);
-            msg[9 + (o * 3)] = hex_conv_const[(val >> 4) & 0x0F];
-            msg[9 + (o * 3) + 1] = hex_conv_const[val & 0x0F];
-            msg[9 + (o * 3) + 2] = ' ';
+    gfx_flip();
+    gfx_set_buf(GFX_BUF_SEC);
+    //Darken the screen
+    color32_t* buf = gfx_buffer();
+    uint32_t res_x = gfx_res_x();
+    uint32_t res_y = gfx_res_y();
+    for(uint32_t y = 0; y < res_y; y++){
+        for(uint32_t x = 0; x < res_x; x++){
+            color32_t orig = buf[(y * res_x) + x];
+            //But while giving a small red tint to it
+            buf[(y * res_x) + x] = COLOR32(orig.a >> 2, orig.r >> 1, orig.g >> 2, orig.b >> 2);
         }
-        msg[56] = 0;
-        //Print it
-        gfx_vterm_println(msg, COLOR32(0, 255, 255, 255));
     }
+    //Determine the error message that needs to be printed
+    char* panic_msg = NULL;
+    if(code == QUARK_PANIC_NOMEM_CODE)
+        panic_msg = QUARK_PANIC_NOMEM_MSG;
+    if(code == QUARK_PANIC_PANTEST_CODE)
+        panic_msg = QUARK_PANIC_PANTEST_MSG;
+    if(code == QUARK_PANIC_CPUEXC_CODE)
+        panic_msg = QUARK_PANIC_CPUEXC_MSG;
+    //Construct the error message
+    char text[250];
+    char temp[15];
+    text[0] = 0;
+    strcat(text, "Quark panic occured at\n  dec. address: ");
+    strcat(text, sprintu(temp, ip, 1));
+    strcat(text, "\n  errcode ");
+    strcat(text, sprintu(temp, code, 1));
+    strcat(text, ": ");
+    strcat(text, panic_msg);
+    //Print it
+    gfx_puts((p2d_t){.x = 0, .y = 0}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), text);
+    //Display it
+    gfx_flip();
+    //Hang
+    while(1);
 }
 
 /*

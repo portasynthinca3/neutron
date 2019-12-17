@@ -380,7 +380,7 @@ void gui_render_windows(void){
         for(uint32_t y = 0; y < res_y; y++){
             for(uint32_t x = 0; x < res_x; x++){
                 color32_t orig = buf[(y * res_x) + x];
-                buf[(y * res_x) + x] = (color32_t){.a = orig.a / 4, .r = orig.r / 4, .g = orig.g / 4, .b = orig.b / 4};
+                buf[(y * res_x) + x] = COLOR32(orig.a >> 2, orig.r >> 2, orig.g >> 2, orig.b >> 2);
             }
         }
     }
