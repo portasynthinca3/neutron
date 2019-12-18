@@ -50,9 +50,9 @@ void pci_enumerate(void){
                 uint16_t if_rev = pci_read_config_16(b, d, 0, 8); //Read interface and revision
                 char temp[100] = "Found PCI device VID=";
                 char temp2[15];
-                strcat(temp, sprintu(temp2, vendor, 1));
+                strcat(temp, sprintub16(temp2, vendor, 4));
                 strcat(temp, " PID=");
-                strcat(temp, sprintu(temp2, product, 1));
+                strcat(temp, sprintub16(temp2, product, 4));
                 gfx_verbose_println(temp);
                 //Try to detect a known device
                 //Firstly, USB controllers (C=0C, S=03)

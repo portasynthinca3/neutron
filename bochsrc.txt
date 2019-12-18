@@ -7,7 +7,7 @@ romimage: file="/usr/share/bochs/BIOS-bochs-latest", address=0x0, options=none
 vgaromimage: file="/usr/share/bochs/VGABIOS-lgpl-latest"
 boot: floppy
 floppy_bootsig_check: disabled=0
-floppya: 1_44=build/neutron.img, status=inserted, write_protected=0
+floppya: type=1_44, 1_44="build/neutron.img", status=inserted, write_protected=0
 # no floppyb
 ata0: enabled=0
 ata1: enabled=0
@@ -49,7 +49,7 @@ sound: waveoutdrv=alsa, waveout=none, waveindrv=alsa, wavein=none, midioutdrv=al
 speaker: enabled=1, mode=sound
 parport1: enabled=1, file=none
 parport2: enabled=0
-com1: enabled=1, mode=null
+com1: enabled=0
 com2: enabled=0
 com3: enabled=0
 com4: enabled=0

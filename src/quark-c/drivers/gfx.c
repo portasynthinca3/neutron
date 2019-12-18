@@ -330,7 +330,7 @@ void gfx_panic(int ip, int code){
     char text[250];
     char temp[15];
     text[0] = 0;
-    strcat(text, "Quark panic occured at\n  address: 0x");
+    strcat(text, "Quark panic occured at address 0x");
     strcat(text, sprintub16(temp, ip, 8));
     strcat(text, "\n  errcode ");
     strcat(text, sprintu(temp, code, 1));

@@ -3,13 +3,11 @@
 
 //Null pointer
 #define NULL 0
-//The amount of memory blocks for dynamic memory allocation functions to use
-#define STDLIB_DRAM_MEMBLOCKS 2048
 //The address that dynamic memory allocation starts from
 #define STDLIB_DRAM_START 0x500000
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "v0.1.7"
+#define QUARK_VERSION_STR "v0.1.8"
 
 //Standard type definitions
 
@@ -35,15 +33,17 @@ struct list_node {
 typedef struct list_node list_node_t;
 
 /*
- * Structure defining a memory block
- * A lot of them are stored in a specific location in memory
- *   for malloc(), free(), realloc() and others to use
+ * Structure defining a free memory block
  */
-struct _mem_block {
-    uint8_t used;
-    void* ptr;
-    uint32_t size;
-};
+typedef struct _free_block_s {
+    char signature[4];
+    struct _free_block_s* next;
+    struct _free_block_s* prev;
+    size_t size;
+} free_block_t;
+
+//Don't forget to comment this on a release version :)
+#define STDLIB_CARSH_ON_ALLOC_ERR
 
 /*
  * Structure describing the Interrupt Descripotor Table Descriptor

@@ -89,8 +89,7 @@ void gui_init(void){
     
     //Allocate some space for the windows
     gfx_verbose_println("Allocating memory for windows");
-    windows = (window_t*)malloc(32 * sizeof(window_t));
-    windows[0].title = NULL;
+    windows = (window_t*)calloc(32, sizeof(window_t));
     gfx_verbose_println("GUI init done");
 }
 
@@ -108,7 +107,7 @@ window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size){
     win.position = pos;
     win.size_real = size;
     //Allocate some space for window controls
-    win.controls = (control_t*)malloc(32 * sizeof(control_t));
+    win.controls = (control_t*)calloc(32, sizeof(control_t));
     win.controls[0].type = 0;
     //Scan through the window list to determine its end
     uint32_t i = 0;

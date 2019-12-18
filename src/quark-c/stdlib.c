@@ -4,8 +4,12 @@
 #include "./stdlib.h"
 #include "./drivers/gfx.h"
 
-struct _mem_block _mem_blocks[STDLIB_DRAM_MEMBLOCKS];
+free_block_t* first_free_block;
+void* gen_free_base;
+void* gen_free_top;
 uint32_t bad_ram_size = 0;
+uint64_t total_ram_size = 0;
+uint32_t usable_ram_size = 0;
 
 /*
  * Trigger bochs magic breakpoint
@@ -35,17 +39,17 @@ void puts_e9(char* str){
  * Initialize the dynamic memory allocator
  */
 void dram_init(void){
-    //Clear the blocks
-    memset(_mem_blocks, 0, sizeof(struct _mem_block) * STDLIB_DRAM_MEMBLOCKS);
-
+    first_free_block = NULL;
     //Parse the memory map
     //It was put in memory as a result of a
     //  collaboration between Muon-2 and BIOS
-    /*
-    uint32_t cur_blk = 0;
     uint32_t blk_type = 0;
     volatile void* volatile block_base = (void*)(0x93C00);
-    while((blk_type = *(uint32_t*)(block_base + 16)) != 0){ //Type=0 marks the end
+    //Keep track of the block with the most size
+    size_t largest_blk_size = 0;
+    void* largset_blk_ptr = NULL;
+    //Type=0 marks the end
+    while((blk_type = *(uint32_t*)(block_base + 16)) != 0){
         //Fetch block base
         uint32_t base = *(uint32_t*)(block_base);
         //Fetch block base upper bits
@@ -54,24 +58,21 @@ void dram_init(void){
         uint32_t size = *(uint32_t*)(block_base + 8);
         //Fetch block length upper bits
         uint32_t size_upper = *(uint32_t*)(block_base + 12);
+        //Record the total amount of available RAM
+        total_ram_size += ((uint64_t)size_upper << 32) | ((uint64_t)size << 32);
         //Only record the block if it's marked as type 1 (usable RAM)
         //  and its base doesn't exceed 4 GB (upper bits are clear)
-        if(blk_type == 1 && size > 0 && base_upper == 0 && cur_blk == 0){
+        if(blk_type == 1 && size > 0 && base_upper == 0){
             //If size upper bytes are not zero, set the lower ones to the maximum value
             if(size_upper > 0)
                 size = 0xFFFFFFFF;
-            //Only record the block if it starts from a certain location
-            if(base + size > STDLIB_DRAM_START){
-                if(base < STDLIB_DRAM_START){
-                    size -= STDLIB_DRAM_START - base;
-                    base = STDLIB_DRAM_START;
-                }
-                //Save block information
-                _mem_blocks[cur_blk].ptr = (void*)base;
-                _mem_blocks[cur_blk].size = size;
-                _mem_blocks[cur_blk].used = 0;
-                //Increment the counter
-                cur_blk++;
+            //Only record the block if it stretches over the fifth megabyte
+            //  and its size is larger than the currently found one
+            if(size + base >= 5 * 1024 * 1024 && size > largest_blk_size){
+                size_t shrink = (5 * 1024 * 1025) - base;
+                size -= shrink;
+                largest_blk_size = size;
+                largset_blk_ptr = (void*)base + shrink;
             }
         } else if(blk_type == 5){ //Type 5 means bad RAM (used to tell the user)
             bad_ram_size += size;
@@ -79,49 +80,58 @@ void dram_init(void){
         //Move on to the next block
         block_base += 24;
     }
-    */
-   _mem_blocks[0].ptr = (void*)STDLIB_DRAM_START;
-   _mem_blocks[0].size = 32 * 1024 * 1024;
-   _mem_blocks[0].used = 0;
+    //Save the information
+    gen_free_base = largset_blk_ptr;
+    gen_free_top = largset_blk_ptr + largest_blk_size;
+    usable_ram_size = largest_blk_size;
 }
 
 /*
  * Allocate a block of memory
  */
-void* malloc(unsigned int size){
-    //Find the best block
-    //The best block is a one with the minimal size satisfying the requirement that's also free
-    int best_blk_id = -1;
-    unsigned int best_blk_size = 0xFFFFFFFF;
-    for(unsigned int i = 0; i < STDLIB_DRAM_MEMBLOCKS; i++){
-        if(!_mem_blocks[i].used && _mem_blocks[i].size >= size && _mem_blocks[i].size < best_blk_size && _mem_blocks[i].ptr != NULL){
-            best_blk_id = i;
-            best_blk_size = _mem_blocks[i].size;
+void* malloc(size_t size){
+    //If we have enough memory in the general
+    //  free memory "heap", allocate it there
+    if(gen_free_top - gen_free_base >= size){
+        void* saved_base = gen_free_base;
+        gen_free_base += size;
+        return saved_base;
+    }
+    
+    //If we didn't return by this point, we
+    //  need to go and find a non-general free block
+    //But if there are no such blocks, we do not
+    //  have enough memory and need to crash
+    if(first_free_block == NULL){
+        #ifdef STDLIB_CARSH_ON_ALLOC_ERR
+            crash_label_2: gfx_panic((uint32_t)&&crash_label_2, QUARK_PANIC_NOMEM_CODE);
+        #else
+            return NULL;
+        #endif
+    }
+    free_block_t* current = &(free_block_t){.next = first_free_block};
+    while(current = current->next){
+        if(current->size + 16 >= size){
+            //Link the previous block to the next one
+            //  as the current one will not be free soon
+            current->prev = current->next;
+            //Return the pointer to the block
+            return current;
         }
     }
-    //If no such blocks were found, return NULL
-    if(best_blk_id == -1)
-        gfx_panic(0, QUARK_PANIC_NOMEM_CODE);
-    //If such block was found, split it into used and unused space
-    struct _mem_block free = _mem_blocks[best_blk_id];
-    struct _mem_block used;
-    used.ptr = free.ptr;
-    used.size = size;
-    used.used = 1;
-    free.ptr += size;
-    free.size -= size;
-    free.used = 0;
-    //Save the freshly generated blocks
-    _mem_blocks[best_blk_id] = used;
-    _mem_blocks[best_blk_id + 1] = free;
-    //Return the pointer
-    return used.ptr;
+    //If we still didn't find free space, we defenitely don't have enough RAM
+    #ifdef STDLIB_CARSH_ON_ALLOC_ERR
+        crash_label_3: gfx_panic((uint32_t)&&crash_label_3, QUARK_PANIC_NOMEM_CODE);
+    #else
+        return NULL;
+    #endif
 }
 
 /*
  * Free a memory block allocated by malloc(), calloc() and others
  */
 void free(void* ptr){
+    /*
     //Find a used block with a pointer equal to the provided one
     int32_t blk = -1;
     for(uint32_t i = 0; i < STDLIB_DRAM_MEMBLOCKS; i++){
@@ -159,6 +169,7 @@ void free(void* ptr){
             _mem_blocks[blk + 1].ptr = NULL;
         }
     }
+    */
 }
 
 /*

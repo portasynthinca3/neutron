@@ -5,8 +5,8 @@
 
 //Structure defining a 2D point
 typedef struct {
-    uint32_t x;
-    uint32_t y;
+    int32_t x;
+    int32_t y;
 } p2d_t;
 
 //Structure defining a 32bpp color

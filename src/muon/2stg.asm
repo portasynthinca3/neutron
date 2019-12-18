@@ -153,6 +153,9 @@ krnl_run:
 	cli						;disable interrupts
 	mov al, 0x80			;disable non-maskable interrupts
 	out 0x70, al			;
+	mov ax, 0xEC00			;notify the BIOS about us switching to the 32-bit protected mode
+	mov bl, 1				;
+	int 15h					;
 	push 0x050				;load 0x050
 	pop ds					;into the data segment
 	mov ecx, gdt_end - gdt	;copy the entire GDT
@@ -171,11 +174,9 @@ krnl_run:
 	push cs					;load CS into DS
 	pop ds					;
 	mov eax, cr0			;load the control register 0 into EAX
-	or eax, 1				;set its last bit
+	or eax, 0x00000001		;enable protected mode
 	mov cr0, eax			;load the EAX the control register 0
 	;YAAY! we're in Protected Mode now!
-	cli						;disable interrupts
-	;jmp $
 	mov ax, 0x10			;load 0x10
 	mov ds, ax				;into DS
 	mov ss, ax				;and SS
