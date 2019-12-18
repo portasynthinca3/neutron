@@ -14,6 +14,7 @@
 #include "./drivers/ata.h"
 #include "./drivers/pic.h"
 #include "./drivers/pit.h"
+#include "./drivers/ps2.h"
 #include "./drivers/acpi.h"
 
 #include "./fonts/font_neutral.h"
@@ -117,7 +118,7 @@ void main(void){
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
-    gui_reset_ps2_kbd();
+    ps2_init();
     enable_a20();
     dram_init();
 
@@ -187,14 +188,17 @@ void main(void){
     //Print the boot process
     quark_boot_status("Loading...", 0);
 
+    //Allocate buffers for the PS/2 system
+    quark_boot_status("Detecting drive partitions", 15);
+    ps2_alloc_buf();
     //Enumerate PCI devices
-    quark_boot_status("Detecting PCI devices", 15);
+    quark_boot_status("Detecting PCI devices", 30);
     pci_enumerate();
     //Enumerate partitions
-    quark_boot_status("Detecting drive partitions", 30);
+    quark_boot_status("Detecting drive partitions", 45);
     diskio_init();
     //Initialize ACPI
-    quark_boot_status("Initializing ACPI", 45);
+    quark_boot_status("Initializing ACPI", 60);
     acpi_init();
     //Configure GUI
     quark_boot_status("Configuring GUI", 90);

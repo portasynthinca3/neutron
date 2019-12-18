@@ -108,11 +108,6 @@ typedef struct {
 #define GUI_IMAGE_FORMAT_XBM                        1
 #define GUI_IMAGE_FORMAT_RAW                        2
 
-//Keyboard buffer size in bytes
-#define GUI_KEYBOARD_BUFFER_SIZE 128
-//Mouse buffer size in bytes
-#define GUI_MOUSE_BUFFER_SIZE 128
-
 //Window flags
 
 #define GUI_WIN_FLAG_CLOSABLE                       (1 << 1)
@@ -156,7 +151,7 @@ void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_point
 
 void gui_init_ps2(void);
 void gui_poll_ps2(void);
-void gui_reset_ps2_kbd(void);
+void gui_reset_ps2(void);
 
 void gui_draw_cursor(uint32_t x, uint32_t y);
 

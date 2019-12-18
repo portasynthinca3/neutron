@@ -17,6 +17,7 @@ src/quark-c/drivers/pci.c
 src/quark-c/drivers/ata.c
 src/quark-c/drivers/pic.c
 src/quark-c/drivers/pit.c
+src/quark-c/drivers/ps2.c
 src/quark-c/drivers/acpi.c
 .crawout
 build/quark.bin
