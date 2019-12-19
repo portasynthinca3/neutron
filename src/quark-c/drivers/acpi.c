@@ -90,7 +90,7 @@ uint32_t acpi_init(void){
         }
     }
 
-    gfx_verbose_println("Sending enable commands...");
+    gfx_verbose_println("Sending enable commands (this might take a while)");
     //Enable ACPI
     outb(acpi_smi_cmd, acpi_en);
     uint32_t start = pit_ticks();

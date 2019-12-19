@@ -19,6 +19,7 @@ src/quark-c/drivers/pic.c
 src/quark-c/drivers/pit.c
 src/quark-c/drivers/ps2.c
 src/quark-c/drivers/acpi.c
+src/quark-c/drivers/ps2_kbd.c
 .crawout
 build/quark.bin
 .fs

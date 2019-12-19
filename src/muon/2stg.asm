@@ -2,6 +2,7 @@
 ;Muon - second stage loader
 
 %define nfs_buffer   0x800
+;%define use_verbose_selection
 
 org 0x0000
 use16
@@ -36,6 +37,7 @@ krnl:
 	mov ch, 0x0F			;print the debug message
 	mov dx, krnl_debug_run	;
 	call print_str_line		;
+%ifdef use_verbose_selection
 	push es					;
 	push ax					;
 	verbose_prompt:			;
@@ -59,6 +61,13 @@ krnl:
 	v_prompt_escape:		;
 	pop ax					;
 	pop es					;
+%else
+	push es					;
+	push 0x8FC0				;load 0x8C0
+	pop es					;into ES
+	mov byte [es:16], 1		;indicate the verbose mode
+	pop es					;
+%endif
 	mov ch, 0x0F			;print another debug message
 	mov dx, krnl_debug_video;
 	call print_str			;

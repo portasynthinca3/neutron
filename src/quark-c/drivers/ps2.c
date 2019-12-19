@@ -2,6 +2,7 @@
 //PS/2 driver
 
 #include "./ps2.h"
+#include "./ps2_kbd.h"
 #include "../stdlib.h"
 #include "../gui/gui.h"
 #include "../drivers/gfx.h"
@@ -59,24 +60,21 @@ void ps2_send(uint8_t d){
 }
 
 /*
- * Initializes the PS/2 controller, keyboard and mouse
+ * Initializes the PS/2 system
  */
 void ps2_init(void){
-    ps2_command(0xAD);          //Disable first port
-    ps2_command(0xA7);          //Disable second port
-    inb(PS2_CONT_DATA);         //Flush the output buffer (from the device's perspective)
-    ps2_command(0x20);          //Read configuration byte
-    uint8_t config = ps2_read();
-    config &= (1 << 0) | (1 << 1) | (1 << 6);  //Disable translation and IRQs
-    ps2_command(0xAA);          //Reset the controller
-    ps2_read();                 //Read and discard the response
-    ps2_command(0x60);          //Write config byte
-    ps2_send(config);
-    ps2_command(0xAE);          //Enable first port
-    ps2_command(0xA8);          //Enable second port
-    ps2_command(0xD4);          //Send command 0xF4 (enable data reporting) to the mouse
-    ps2_send(0xF4);
-    ps2_read();                 //Read and discard the response
+    ps2_alloc_buf();
+    while(inb(0x64) & 2); //Wait for input acceptability
+    outb(0x64, 0xAE); //Issue command 0xAE (enable first PS/2 port)
+    while(inb(0x64) & 2); //Wait for input acceptability
+    outb(0x64, 0xA8); //Issue command 0xA8 (enable second PS/2 port)
+    while(inb(0x64) & 2); //Wait for input acceptability
+    outb(0x64, 0xD4); //Issue command 0xD4 (write to second PS/2 port)
+    while(inb(0x64) & 2); //Wait for input acceptability
+    outb(0x60, 0xF4); //Issue mouse command 0xF4 (enable packet streaming)
+    while(!(inb(0x64) & 1)); //Wait for the mouse to send an ACK byte
+    inb(0x60); //Read and discard the ACK byte
+    ps2_kbd_init(); //Initialize the PS/2 keyboard
 }
 
 /*
@@ -88,6 +86,12 @@ void ps2_alloc_buf(void){
     kbd_buffer = (unsigned char*)malloc(KEYBOARD_BUFFER_SIZE);
     //Allocate the mouse buffer
     ms_buffer = (unsigned char*)malloc(MOUSE_BUFFER_SIZE);
+    //Reset head and tail of keyboard FIFO
+    kbd_buffer_head = 0;
+    kbd_buffer_tail = 0;
+    //Reset head and tail of mouse FIFO
+    ms_buffer_head = 0;
+    ms_buffer_tail = 0;
 }
 
 /*

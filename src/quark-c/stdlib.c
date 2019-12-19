@@ -11,6 +11,10 @@ uint32_t bad_ram_size = 0;
 uint64_t total_ram_size = 0;
 uint32_t usable_ram_size = 0;
 
+uint32_t stdlib_usable_ram(void){
+    return usable_ram_size;
+}
+
 /*
  * Trigger bochs magic breakpoint
  */

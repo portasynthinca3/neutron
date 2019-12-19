@@ -59,7 +59,10 @@ void gui_init(void){
     focus_monopoly = 0;
     //Reset mouse state
     gfx_verbose_println("Resetting mouse state");
-    mx = my = ml = mr = 0;
+    ml = mr = 0;
+    //Move the cursor to the center of the screen
+    mx = gfx_res_x() / 2;
+    my = gfx_res_y() / 2;
     //Reset some variables
     window_dragging = NULL;
     gfx_verbose_println("Initializing color scheme");

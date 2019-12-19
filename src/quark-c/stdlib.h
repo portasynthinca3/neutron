@@ -7,7 +7,7 @@
 #define STDLIB_DRAM_START 0x500000
 
 //The quark version displayed on startup
-#define QUARK_VERSION_STR "v0.1.8"
+#define QUARK_VERSION_STR "v0.1.11"
 
 //Standard type definitions
 
@@ -96,6 +96,7 @@ int memcmp(const void* lhs, const void* rhs, size_t cnt);
 
 //Dynamic memory allocation functions
 
+uint32_t stdlib_usable_ram(void);
 void dram_init(void);
 void* malloc(size_t size);
 void free(void* ptr);

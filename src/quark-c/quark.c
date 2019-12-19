@@ -106,6 +106,9 @@ void quark_boot_status(char* str, uint32_t progress){
         gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
                              (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 255, 255, 255));
         gfx_flip();
+    } else {
+        //If we are, draw print the string using verbose mode
+        gfx_verbose_println(str);
     }
 }
 
@@ -118,7 +121,6 @@ void main(void){
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
-    ps2_init();
     enable_a20();
     dram_init();
 
@@ -186,25 +188,25 @@ void main(void){
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
     //Print the boot process
-    quark_boot_status("Loading...", 0);
+    quark_boot_status(">>> Loading... <<<", 0);
 
-    //Allocate buffers for the PS/2 system
-    quark_boot_status("Detecting drive partitions", 15);
-    ps2_alloc_buf();
+    //Initialize PS/2
+    quark_boot_status(">>> Initializing PS/2 <<<", 15);
+    ps2_init();
     //Enumerate PCI devices
-    quark_boot_status("Detecting PCI devices", 30);
+    quark_boot_status(">>> Detecting PCI devices <<<", 30);
     pci_enumerate();
     //Enumerate partitions
-    quark_boot_status("Detecting drive partitions", 45);
+    quark_boot_status(">>> Detecting drive partitions <<<", 45);
     diskio_init();
     //Initialize ACPI
-    quark_boot_status("Initializing ACPI", 60);
+    quark_boot_status(">>> Initializing ACPI <<<", 60);
     acpi_init();
     //Configure GUI
-    quark_boot_status("Configuring GUI", 90);
+    quark_boot_status(">>> Configuring GUI <<<", 90);
     gui_init();
     //The loading process is done!
-    quark_boot_status("Done!", 100);
+    quark_boot_status(">>> Done! <<<", 100);
 
     //Constantly update the GUI
     while(1){

@@ -90,8 +90,16 @@ void stdgui_create_system_win(void){
     uint32_t ver_label_width = gfx_text_bounds(ver_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - ver_label_width) / 2, .y = 13 + neutron_logo_height + 2 + 8 + 2}, 
                              (p2d_t){.x = ver_label_width, .y = 8}, ver_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0));
+    //Add the RAM label to it
+    char ram_label_text[50] = "RAM: ";
+    char temp[10];
+    strcat(ram_label_text, sprintu(temp, stdlib_usable_ram() / 1024 / 1024, 1));
+    strcat(ram_label_text, "MB usable by Neutron");
+    uint32_t ram_label_width = gfx_text_bounds(ram_label_text).x;
+    gui_create_label(window, (p2d_t){.x = (system_win_size.x - ram_label_width) / 2, .y = 13 + neutron_logo_height + 22}, 
+                             (p2d_t){.x = ram_label_width, .y = 8}, ram_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0));
     //Add the system color change button to it
-    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 12 + 8 + 2}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
+    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 32}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
                       quark_open_sys_color_picker, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0));
 }
 
