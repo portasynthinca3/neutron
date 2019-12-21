@@ -9,35 +9,16 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 # Who is involved?
 * Me, Andrey Antonenko, the creator, maintainer and programmer
 * Sasha Kulichkov, booted this on his PC several times; created the logo
-# What parts does this consist of?
-1. First stage loader, called Muon-1
-2. Second stage loader, called Muon-2
-3. The monolithic kernel. So monolithic in fact, that all the system processes, even the graphics, are integrated. It's called Quark.
-4. The font converter. Written in C#
-5. The custom builder. Written in Python.
 # Where does it work?
 In theory, it should work on any modern system. Here are the minimal requirements:
 * CPU: Pentium 4 or later
 * RAM: 32 MB
-* Buses: PCI, ATA
-* An empty internal hard drive to boot from. You will be able to boot from external USB sticks, disk drives, floppies, etc., but
-as the kernel only has ATA support right now, it woudn't be able to read any data from any drives except ATA drives or SATA
-drives in ATA compatibility mode (can almost certainly be enabled in the BIOS)
-* Legacy BIOS system or an UEFI system with legacy emulation mode
-* A video card supporting VESA 1.2 standard (integrated CPU graphics should also work)\
+* An UEFI system. Neutron up to version 0.1.11 was a legacy BIOS system, but I had switched over to UEFI for future expanadability.
 \
 Also, there are some detected problems:
 * Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
 # Show me the screenshots!
-Okay, there you go!\
-![boot1](https://github.com/portasynthinca3/neutron/blob/master/screens/boot_1.png "boot1")\
-*Boot screen 1*\
-![boot2](https://github.com/portasynthinca3/neutron/blob/master/screens/boot_2.png "boot2")\
-*Boot screen 2*\
-![desktop](https://github.com/portasynthinca3/neutron/blob/master/screens/desktop.png "desktop")\
-*Desktop*
-![shutdown](https://github.com/portasynthinca3/neutron/blob/master/screens/sdown.png "shutdown")\
-*Shutdown prompt*
+They are in the `screens` directory
 # Okay, what do I need to be aware of?
 Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
 However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
