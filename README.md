@@ -14,13 +14,10 @@ In theory, it should work on any modern system. Here are the minimal requirement
 * CPU: Pentium 4 or later
 * RAM: 32 MB
 * An UEFI system. Neutron up to version 0.1.11 was a legacy BIOS system, but I had switched over to UEFI for future expanadability.
-\
-Also, there are some detected problems:
-* Some very modern systems only have UEFI support, totally eliminating the legacy BIOS standard. Neutron can't be booted on those systems.
 # Show me the screenshots!
 They are in the `screens` directory
 # Okay, what do I need to be aware of?
 Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
 However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
 # Can I join the team?
-Sorry, I don't think so. I want to do this project entirely on my own, at least yet.
+No, I don't think so. I want to do this project entirely on my own, at least yet.
