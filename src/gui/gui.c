@@ -35,6 +35,10 @@ char time[64] = "??:??:??\0";
 //If this flag is set, focus can't be changed and the background below
 //  the window in focus is darkended
 uint8_t focus_monopoly = 0;
+//The amount of CPU cycles it took to render the last frame
+uint64_t gui_render_cyc = 0;
+//The amount of CPU cycles it took to transfer the last frame to the screen
+uint64_t gui_trans_cyc = 0;
 
 uint8_t last_frame_ml = 0;
 void quark_gui_callback_power_pressed(void);
@@ -274,7 +278,7 @@ void gui_poll_ps2(void){
  * Redraw the GUI
  */
 void gui_update(void){
-    uint32_t render_start = pit_ticks();
+    uint64_t render_start = rdtsc();
 
     //Poll the PS/2 controller
     gui_poll_ps2();
@@ -322,10 +326,18 @@ void gui_update(void){
     gui_render_windows();
     //Draw the cursor
     gui_draw_cursor(mx, my);
+
+    char temp[25];
+    gfx_puts((p2d_t){.x = 0, .y = 0}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc, 1));
+    gfx_puts((p2d_t){.x = 0, .y = 8}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc, 1));
+
     //Flip the buffers
-    uint32_t flip_start = pit_ticks();
+    uint64_t flip_start = rdtsc();
     gfx_flip();
-    uint32_t all_end = pit_ticks();
+    uint64_t all_end = rdtsc();
+
+    gui_render_cyc = flip_start - render_start;
+    gui_trans_cyc = all_end - flip_start;
 
     /*
     char temp[50];

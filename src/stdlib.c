@@ -214,7 +214,7 @@ void* memcpy(void* destination, const void* source, size_t num){
     //Q = 8 bytes at a time
     //D = 4 bytes at a time
     //W = 2 bytes at a time
-    //B = 1 byte at a time
+    //B = 1 byte  at a time
     if(num % 8 == 0)
         __asm__ volatile("rep movsq" : : "D" (destination), "S" (source), "c" (num / 4));
     else if(num % 4 == 0)

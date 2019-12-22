@@ -13,6 +13,9 @@ EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
 //The video buffer pointers
 color32_t* vbe_buffer;
 color32_t* sec_buffer;
+#ifdef GFX_TRIBUF
+color32_t* mid_buffer;
+#endif
 //The resolution
 uint32_t res_x;
 uint32_t res_y;
@@ -69,6 +72,10 @@ void gfx_init(void){
     vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
     //Allocate the second buffer based on the screen size
     sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
+    #ifdef GFX_TRIBUF
+    //Allocate the third buffer
+    mid_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
+    #endif
 }
 
 /*
@@ -184,7 +191,30 @@ void gfx_flip(void){
     //Choose the source and destination buffers
     color32_t* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
     color32_t* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+    #ifdef GFX_TRIBUF
+    //For each line in the source buffer
+    for(uint32_t y = 0; y < res_y; y++){
+        uint64_t offs_pix = y * res_x;
+        //Compare the lines
+        uint8_t need_transfer = memcmp(&buf_src[offs_pix], &mid_buffer[offs_pix], res_x * sizeof(color32_t)) != 0;
+        if(need_transfer){
+            //If the lines differ, copy them
+            memcpy(&mid_buffer[offs_pix], &buf_src[offs_pix],res_x * sizeof(color32_t));
+            #ifndef GFX_BLT
+            memcpy(&buf_dst[offs_pix], &buf_src[offs_pix], res_x * sizeof(color32_t));
+            #else
+            graphics_output->Blt(graphics_output, (EFI_GRAPHICS_OUTPUT_BLT_PIXEL*)&buf_src[offs_pix], EfiBltBufferToVideo, 0, y, 0, y, res_x, 1, 0);
+            #endif
+        }
+    }
+    #else
+    //Transfer the buffer
+    #ifndef GFX_BLT
     memcpy(buf_dst, buf_src, res_x * res_y * sizeof(color32_t));
+    #else
+    graphics_output->Blt(graphics_output, (EFI_GRAPHICS_OUTPUT_BLT_PIXEL*)sec_buffer, EfiBltBufferToVideo, 0, 0, 0, 0, res_x, res_y, 0);
+    #endif
+    #endif
 }
 
 /*

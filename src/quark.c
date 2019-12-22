@@ -227,9 +227,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     quark_boot_status(">>> Done <<<", 100);
 
     //Constantly update the GUI
-    while(1){
+    for(;;){
         gui_update();
     }
+
+    while(1);
 }
 
 /*

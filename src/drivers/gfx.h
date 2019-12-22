@@ -17,6 +17,11 @@ typedef struct {
 #define GFX_BUF_VBE 1
 #define GFX_BUF_SEC 2
 
+//Use triple-buffering
+//#define GFX_TRIBUF
+//Use experimental support for hardware blt (block transfer)
+#define GFX_BLT
+
 //Macro for converting R, G and B values to color32_t
 #define COLOR32(A, R, G, B) ((color32_t){.a = A, .r = R, .g = G, .b = B})
 
