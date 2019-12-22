@@ -25,6 +25,8 @@ uint32_t gfx_res_y(void);
 color32_t* gfx_buffer(void);
 
 void gfx_init(void);
+void gfx_find_gop(void);
+void gfx_choose_best(void);
 void gfx_flip(void);
 void gfx_set_font(const unsigned char* fnt);
 void gfx_set_buf(unsigned char buf);

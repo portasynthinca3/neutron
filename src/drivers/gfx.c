@@ -1,8 +1,14 @@
 //Neutron Project
 //Kernel graphics driver
 
+#include <efi.h>
+#include <efilib.h>
+#include <efiprot.h>
+
 #include "./gfx.h"
 #include "../stdlib.h"
+
+EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
 
 //The video buffer pointers
 color32_t* vbe_buffer;
@@ -16,6 +22,8 @@ const uint8_t* font;
 uint8_t buf_sel;
 //Is gfx_verbose_println() enabled or not?
 uint8_t verbose_enabled;
+//Pointer to the graphics output protocol
+EFI_GRAPHICS_OUTPUT_PROTOCOL* graphics_output;
 
 /*
  * Retrieve the horizontal resolution
@@ -42,14 +50,131 @@ color32_t* gfx_buffer(void){
  * Initialize the graphics driver
  */
 void gfx_init(void){
-    //Read the VBE buffer pointer (it was written in memory by the second stage loader)
-    vbe_buffer = (color32_t*)(*(uint64_t*)(0x8FC00UL));
-    //Read the display resolution
-    uint32_t res = *(uint32_t*)(0x8FC04);
-    res_y = res & 0xFFFF;
-    res_x = (res >> 16) & 0xFFFF;
+    //Find the graphics output protocol
+    gfx_find_gop();
+    //If it hadn't been found, print an error
+    if(graphics_output == NULL){
+        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+            (CHAR16*)L"Unable to find the graphics output protocol\r\n");
+        while(1);
+    } else {
+        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+            (CHAR16*)L"GOP found\r\n");
+    }
+    //Choose the best video mode
+    gfx_choose_best();
+    //Retrieve its parameters
+    res_x = graphics_output->Mode->Info->HorizontalResolution;
+    res_y = graphics_output->Mode->Info->VerticalResolution;
+    vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
     //Allocate the second buffer based on the screen size
-    sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
+    //sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
+}
+
+/*
+ * Finds the EFI Graphics Output Protocol
+ */
+void gfx_find_gop(void){
+    //Set the GOP to NULL
+    graphics_output = NULL;
+    //Handle the graphics output protocol
+    //Firstly, through the ConsoleOut handle
+    EFI_STATUS status;
+    status = quark_get_efi_systable()->BootServices->HandleProtocol(quark_get_efi_systable()->ConsoleOutHandle,
+        &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void**)&graphics_output);
+    if(!EFI_ERROR(status))
+        return;
+    //Then, directly
+    status = quark_get_efi_systable()->BootServices->LocateProtocol(&((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID),
+        NULL, (void**)graphics_output);
+    if(!EFI_ERROR(status))
+        return;
+    //Lastly, locate by handle
+    uint64_t handle_count = 0;
+    EFI_HANDLE* handle;
+    status = quark_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
+        &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), NULL, &handle_count, &handle);
+    if(EFI_ERROR(status))
+        return;
+    status = quark_get_efi_systable()->BootServices->HandleProtocol(handle,
+        &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void*)&graphics_output);
+}
+
+/*
+ * Chooses the best available video mode
+ */
+void gfx_choose_best(void){
+    EFI_STATUS status;
+
+    quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+        (CHAR16*)L"Probing video mode list\r\n");
+
+    //Get the EDID
+    uint64_t handle_count = 0;
+    EFI_HANDLE* handle;
+    EFI_EDID_DISCOVERED_PROTOCOL* edid;
+    status = quark_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
+        &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), NULL, &handle_count, &handle);
+    if(EFI_ERROR(status)){
+        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+            (CHAR16*)L"Error: unable to find EDID protocol handle\r\n");
+        while(1);
+    }
+    status = quark_get_efi_systable()->BootServices->HandleProtocol(handle,
+        &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
+    //Parse it
+    //To be specific, its detailed timing descriptors
+    uint32_t mon_best_res_x;
+    uint32_t mon_best_res_y;
+    //Go through advanced timing descriptors
+    for(uint32_t base = 54; base <= 108; base += 18){
+        uint32_t mon_res_x = *(uint8_t* volatile)(edid->Edid + base + 2) << 4;
+        uint32_t mon_res_y = *(uint8_t* volatile)(edid->Edid + base + 5) << 4;
+        if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
+            mon_best_res_x = mon_res_x;
+            mon_best_res_y = mon_res_y;
+        }
+    }
+
+    EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info;
+    uint64_t mode_info_size;
+    uint32_t best_res_x;
+    uint32_t best_res_y;
+    uint32_t best_mode_num;
+    //Go through each mode and query its properties
+    for(uint32_t i = 0; i < graphics_output->Mode->MaxMode; i++){
+        //Query mode information
+        status = graphics_output->QueryMode(graphics_output, i, &mode_info_size, &mode_info);
+        //If we encounter an error
+        if(EFI_ERROR(status)){
+            //If the error is "not started"
+            if(status == EFI_NOT_STARTED){
+                //Start it and query mode info once again
+                status = graphics_output->SetMode(graphics_output, graphics_output->Mode->Mode);
+                status = graphics_output->QueryMode(graphics_output, i, &mode_info_size, &mode_info);
+            } else {
+                //In case of any other error, skip this mode
+                continue;
+            }
+        }
+
+        //Only choose BGRReserved modes
+        if(mode_info->PixelFormat == PixelBlueGreenRedReserved8BitPerColor){
+            //Fetch mode resolution and compare it with the best one currently discovered
+            //Do not exceed the display resolution
+            uint32_t mode_res_x = mode_info->HorizontalResolution;
+            uint32_t mode_res_y = mode_info->VerticalResolution;
+            if((mode_res_x > best_res_x || mode_res_y > best_res_y)/* &&
+               mode_res_y <= mon_best_res_y && mode_res_x <= mon_best_res_x*/){
+                //Record the new best mode
+                best_res_y = mode_res_y;
+                best_res_x = mode_res_x;
+                best_mode_num = i;
+            }
+        }
+    }
+    //Set the mode
+    graphics_output->SetMode(graphics_output, best_mode_num);
 }
 
 /*

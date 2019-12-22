@@ -51,6 +51,13 @@ uint8_t quark_verbose;
 EFI_SYSTEM_TABLE* quark_efi_systable;
 
 /*
+ * Gets the EFI system table
+ */
+EFI_SYSTEM_TABLE* quark_get_efi_systable(void){
+    return quark_efi_systable;
+}
+
+/*
  * This function is called whenever the user chooses the system color
  */
 void sys_color_change(ui_event_args_t* args){
@@ -110,7 +117,7 @@ void quark_boot_status(char* str, uint32_t progress){
                              (p2d_t){.x = gfx_res_x() / 3, .y = 2}, COLOR32(255, 64, 64, 64));
         gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
                              (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 255, 255, 255));
-        gfx_flip();
+        //gfx_flip();
     } else {
         //If we are, draw print the string using verbose mode
         gfx_verbose_println(str);
@@ -121,28 +128,26 @@ void quark_boot_status(char* str, uint32_t progress){
  * The entry point for the kernel
  */
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable){
-    //Disable the watchdog timer
-    SystemTable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Save the system table pointer
     quark_efi_systable = SystemTable;
+    //Disable the watchdog timer
+    quark_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
-    SystemTable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron (UEFI version) is starting up");
-    while(1);
+    quark_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron (UEFI version) is starting up\r\n");
 
 	//Disable interrupts
 	__asm__ volatile("cli");
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
-    enable_a20();
-    dram_init();
+    //dram_init();
 
     //Set verbose mode
-    quark_verbose = *(uint8_t*)(0x8FC10);
+    quark_verbose = 0;
     gfx_set_verbose(quark_verbose);
 
     //Initialize PICs
-    pic_init(32, 40); //Remap IRQs
+    /*pic_init(32, 40); //Remap IRQs
     //Set up IDT
     struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
     //Set every exception IDT entry using the same pattern
@@ -182,11 +187,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Enable interrupts
     __asm__ volatile("sti");
     //Enable non-maskable interrupts
-    outb(0x70, 0);
+    outb(0x70, 0);*/
 
     //Do some graphics-related initialization stuff
     gfx_init();
-    gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
+    gfx_set_buf(GFX_BUF_VBE); //Enable doublebuffering
     gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_set_font(font_neutral);
 
@@ -202,6 +207,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
     //Print the boot process
     quark_boot_status(">>> Loading... <<<", 0);
+    while(1);
 
     //Initialize PS/2
     quark_boot_status(">>> Initializing PS/2 <<<", 15);

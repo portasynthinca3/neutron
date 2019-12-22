@@ -70,7 +70,7 @@ os.system('x86_64-w64-mingw32-gcc -m64 -nostdlib -Wl,-dll -shared -Wl,--subsyste
 
 print('Bulding system image')
 print('  Creating image file')
-os.system('dd if=/dev/zero of=build/neutron.img count=' + str(image_size_sectors) + ' > /dev/null')
+os.system('dd if=/dev/zero of=build/neutron.img count=' + str(image_size_sectors) + ' > /dev/null 2>&1')
 os.system('mformat -i build/neutron.img -f ' + str(image_size_sectors / 2))
 print('  Creating filesystem')
 os.system('mmd -i build/neutron.img ::/EFI')

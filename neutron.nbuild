@@ -1,7 +1,6 @@
 .c
 src/quark.c
 src/isr_wrapper.s
-src/a20.s
 src/stdlib.c
 
 src/gui/gui.c
