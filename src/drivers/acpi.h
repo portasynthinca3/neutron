@@ -19,7 +19,7 @@ typedef struct {
 //ACPI RSDT table
 typedef struct {
     acpi_sdt_hdr_t hdr;
-    acpi_sdt_hdr_t** ptrs;
+    uint32_t ptrs;
 } __attribute__((packed)) acpi_rsdt_t;
 
 //ACPI RSDP structure
@@ -28,7 +28,7 @@ typedef struct {
     uint8_t checksum;
     char oem[6];
     uint8_t rev;
-    acpi_sdt_hdr_t* rsdt_ptr;
+    uint32_t rsdt_ptr;
 } __attribute__((packed)) acpi_rsdp_t;
 
 //ACPI Generic Address Structure (GAS)

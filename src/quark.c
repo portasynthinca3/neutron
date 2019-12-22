@@ -140,10 +140,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
-    //dram_init();
+    dram_init();
 
     //Set verbose mode
-    quark_verbose = 0;
+    quark_verbose = 1;
     gfx_set_verbose(quark_verbose);
 
     //Initialize PICs
@@ -191,7 +191,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     //Do some graphics-related initialization stuff
     gfx_init();
-    gfx_set_buf(GFX_BUF_VBE); //Enable doublebuffering
+    gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
     gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_set_font(font_neutral);
 
@@ -206,8 +206,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
     //Print the boot process
-    quark_boot_status(">>> Loading... <<<", 0);
-    while(1);
+    quark_boot_status(">>> Loading <<<", 0);
 
     //Initialize PS/2
     quark_boot_status(">>> Initializing PS/2 <<<", 15);
@@ -225,7 +224,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     quark_boot_status(">>> Configuring GUI <<<", 90);
     gui_init();
     //The loading process is done!
-    quark_boot_status(">>> Done! <<<", 100);
+    quark_boot_status(">>> Done <<<", 100);
 
     //Constantly update the GUI
     while(1){
@@ -239,7 +238,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 void quark_exc(void){
     //Print some info
     unsigned int ip;
-    __asm__ volatile("mov %0, %%edx" : "=r" (ip));
+    __asm__ volatile("mov %%edx, %0" : "=r" (ip));
     gfx_panic(ip, QUARK_PANIC_CPUEXC_CODE);
 
     //Hang

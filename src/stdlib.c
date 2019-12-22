@@ -1,25 +1,22 @@
 //Neutron Project
 //C Standard Library
 
+#include <efi.h>
+#include <efilib.h>
+
 #include "./stdlib.h"
 #include "./drivers/gfx.h"
+
+EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
 
 free_block_t* first_free_block;
 void* gen_free_base;
 void* gen_free_top;
-uint32_t bad_ram_size = 0;
+uint64_t bad_ram_size = 0;
 uint64_t total_ram_size = 0;
-uint32_t usable_ram_size = 0;
 
 uint32_t stdlib_usable_ram(void){
-    return usable_ram_size;
-}
-
-/*
- * Trigger bochs magic breakpoint
- */
-volatile void breakpoint(){
-    __asm__("xchgw %bx, %bx;");
+    return total_ram_size;
 }
 
 /*
@@ -30,56 +27,72 @@ void abort(){
 }
 
 /*
- * Print a string through Bochs's E9 debug port if the port_e9_hack config setting is enabled
- */
-void puts_e9(char* str){
-    char c;
-    //Fetch the next character
-    while(c = *(str++))
-        outb(0xE9, c); //Write it
-}
-
-/*
  * Initialize the dynamic memory allocator
  */
 void dram_init(void){
-    first_free_block = NULL;
-    //Parse the memory map
-    //It was put in memory as a result of a
-    //  collaboration between Muon-2 and BIOS
-    uint32_t blk_type = 0;
-    volatile void* volatile block_base = (void*)(0x93C00);
-    //Keep track of the block with the most size
-    size_t largest_blk_size = 0;
-    void* largset_blk_ptr = NULL;
-    //Type=0 marks the end
-    while((blk_type = *(uint32_t*)(block_base + 16)) != 0){
-        //Fetch block base
-        uint64_t base = *(uint64_t*)(block_base);
-        //Fetch block length
-        uint64_t size = *(uint64_t*)(block_base + 8);
-        //Record the total amount of available RAM
-        total_ram_size += size;
-        //Only record the block if it's marked as type 1 (usable RAM)
-        if(blk_type == 1 && size > 0){
-            //Only record the block if it stretches over the fifth megabyte
-            //  and its size is larger than the currently found one
-            if(size + base >= 5 * 1024 * 1024 && size > largest_blk_size){
-                uint64_t shrink = (5 * 1024 * 1025) - base;
-                size -= shrink;
-                largest_blk_size = size;
-                largset_blk_ptr = (void*)base + shrink;
-            }
-        } else if(blk_type == 5){ //Type 5 means bad RAM (used to tell the user)
-            bad_ram_size += size;
-        }
-        //Move on to the next block
-        block_base += 24;
+    //Get the memory map from EFI
+    EFI_MEMORY_DESCRIPTOR* buf;
+    uint64_t desc_size;
+    uint32_t desc_ver;
+    uint64_t size, map_key, mapping_size;
+    EFI_MEMORY_DESCRIPTOR* desc;
+    EFI_STATUS status;
+    uint32_t i = 0;
+    //Allocate some memory
+    size = sizeof(EFI_MEMORY_DESCRIPTOR) * 31;
+    mem_map_retry:
+    size += sizeof(EFI_MEMORY_DESCRIPTOR) * 31;
+    status = quark_get_efi_systable()->BootServices->AllocatePool(EfiLoaderData, size, (void*)&buf);
+    if(EFI_ERROR(status)){
+        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+            (CHAR16*)L"Failed to allocate memory for the memory map\r\n");
+        while(1);
     }
-    //Save the information
-    gen_free_base = largset_blk_ptr;
-    gen_free_top = largset_blk_ptr + largest_blk_size;
-    usable_ram_size = largest_blk_size;
+    //Map the memory
+    status = quark_get_efi_systable()->BootServices->GetMemoryMap(&size, buf, &map_key, &desc_size, &desc_ver);
+    //Re-allocate the buffer with a different size if the current one isn't sufficient
+    if(EFI_ERROR(status)){
+        if(status == EFI_BUFFER_TOO_SMALL){
+            quark_get_efi_systable()->BootServices->FreePool(buf);
+            goto mem_map_retry;
+        } else {
+            quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+                (CHAR16*)L"Failed to get the memory map\r\n");
+            while(1);
+        }
+    }
+
+    desc = buf;
+    void* best_block_start = NULL;
+    uint64_t best_block_size = 0;
+    //Fetch the next descriptor
+    while((void*)desc < (void*)buf + size){
+        mapping_size = desc->NumberOfPages * EFI_PAGE_SIZE;
+
+        //If a new free memory block was found, record it
+        if(desc->Type == EfiConventionalMemory && mapping_size > best_block_size){
+            best_block_size = mapping_size;
+            best_block_start = (void*)desc->PhysicalStart;
+        }
+        //Record bad RAM
+        else if(desc->Type == EfiUnusableMemory){
+            bad_ram_size += mapping_size;
+        }
+
+        desc = (void*)desc + desc_size;
+        i++;
+    }
+
+    //Set up general free heap
+    gen_free_base = best_block_start;
+    gen_free_top = best_block_start + best_block_size;
+    total_ram_size += best_block_size;
+
+    if(gen_free_top == NULL){
+        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+            (CHAR16*)L"No usable memory was found\r\n");
+        while(1);
+    }
 }
 
 /*
@@ -198,10 +211,13 @@ void* memset(void* dst, int ch, size_t size){
  */
 void* memcpy(void* destination, const void* source, size_t num){
     //We can use the REP MOVx instruction to perform a blazing-fast memory-to-memory data transfer
+    //Q = 8 bytes at a time
     //D = 4 bytes at a time
     //W = 2 bytes at a time
     //B = 1 byte at a time
-    if(num % 4 == 0)
+    if(num % 8 == 0)
+        __asm__ volatile("rep movsq" : : "D" (destination), "S" (source), "c" (num / 4));
+    else if(num % 4 == 0)
         __asm__ volatile("rep movsd" : : "D" (destination), "S" (source), "c" (num / 4));
     else if(num % 2 == 0)
         __asm__ volatile("rep movsw" : : "D" (destination), "S" (source), "c" (num / 2));

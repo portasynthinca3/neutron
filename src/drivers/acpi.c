@@ -1,10 +1,15 @@
 //Neutron project
 //ACPI driver
 
+#include <efi.h>
+#include <efilib.h>
+
 #include "./acpi.h"
 #include "./pit.h"
 #include "../stdlib.h"
 #include "./gfx.h"
+
+EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
 
 uint32_t acpi_smi_cmd;
 uint8_t acpi_en;
@@ -21,7 +26,6 @@ uint8_t acpi_pm1_ctl_len;
  * Initializes ACPI
  */
 uint32_t acpi_init(void){
-    gfx_verbose_println("Initializing ACPI");
     //Find the RSDP
     acpi_rsdp_t* rsdp = acpi_find_rsdp();
     //If no RSDP was found, return
@@ -31,7 +35,7 @@ uint32_t acpi_init(void){
     }
 
     //Fetch RSDT from RSDP
-    acpi_rsdt_t* rsdt = (acpi_rsdt_t*)rsdp->rsdt_ptr;
+    acpi_rsdt_t* rsdt = (acpi_rsdt_t*)(uint64_t)rsdp->rsdt_ptr;
     //Check if it's valid
     if(!acpi_sdt_checksum(&rsdt->hdr)){
         gfx_verbose_println("Error: RSDP is not valid");
@@ -93,6 +97,7 @@ uint32_t acpi_init(void){
     gfx_verbose_println("Sending enable commands (this might take a while)");
     //Enable ACPI
     outb(acpi_smi_cmd, acpi_en);
+    /*
     uint32_t start = pit_ticks();
     while((pit_ticks() - start <= 1500) &&
           ((inw(acpi_pm1a_ctl) & acpi_sci_en) == 0));
@@ -101,6 +106,7 @@ uint32_t acpi_init(void){
         while((pit_ticks() - start <= 1500) &&
               ((inw(acpi_pm1b_ctl) & acpi_sci_en) == 0));
     }
+    */
 
     gfx_verbose_println("ACPI successfully initialized");
     
@@ -147,14 +153,13 @@ uint8_t acpi_sdt_checksum(acpi_sdt_hdr_t* rsdt){
  * Finds ACPI RSDT pointer (RSDP) in memory
  */
 acpi_rsdp_t* acpi_find_rsdp(void){
-    //Go through addresses 0xE0000 - 0xFFFFF
-    for(void* ptr = (void*)0xE0000; ptr <= (void*)0xFFFFF; ptr++){
-        //Check the signature
-        //Note that we use memcmp as the signature is not zero-terminated
-        if(memcmp(((acpi_rsdp_t*)ptr)->signature, "RSD PTR ", 8) == 0)
-            return ptr;
+    //Search for the pointer in the UEFI config table
+    EFI_CONFIGURATION_TABLE* config_table =  quark_get_efi_systable()->ConfigurationTable;
+    for(uint32_t i = 0; i < quark_get_efi_systable()->NumberOfTableEntries; i++){
+        //If the GUID is ACPI 1.0 RSDP pointer GUID, return it
+        if(memcmp(&(config_table[i].VendorGuid), &(EFI_GUID)ACPI_TABLE_GUID, sizeof(EFI_GUID)) == 0)
+            return config_table[i].VendorTable;
     }
-    //Return null if no RSDP was found
     return NULL;
 }
 
@@ -167,7 +172,7 @@ void* rsdt_find(acpi_rsdt_t* rsdt, char* table){
     //Cycle through each entry
     for(uint32_t e = 0; e < rsdt_entries; e++){
         //Get the SDT header
-        acpi_sdt_hdr_t* hdr = (acpi_sdt_hdr_t*)(rsdt->ptrs + e);
+        acpi_sdt_hdr_t* hdr = (acpi_sdt_hdr_t*)(uint64_t)(rsdt->ptrs + e);
         //Compare its signature with the desired one
         if(*(uint32_t*)(hdr) == *(uint32_t*)(table))
             return (void*)hdr;

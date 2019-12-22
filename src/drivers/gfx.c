@@ -55,7 +55,7 @@ void gfx_init(void){
     //If it hadn't been found, print an error
     if(graphics_output == NULL){
         quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
-            (CHAR16*)L"Unable to find the graphics output protocol\r\n");
+            (CHAR16*)L"Error: Unable to find the graphics output protocol\r\n");
         while(1);
     } else {
         quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
@@ -68,7 +68,7 @@ void gfx_init(void){
     res_y = graphics_output->Mode->Info->VerticalResolution;
     vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
     //Allocate the second buffer based on the screen size
-    //sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
+    sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
 }
 
 /*
@@ -164,8 +164,8 @@ void gfx_choose_best(void){
             //Do not exceed the display resolution
             uint32_t mode_res_x = mode_info->HorizontalResolution;
             uint32_t mode_res_y = mode_info->VerticalResolution;
-            if((mode_res_x > best_res_x || mode_res_y > best_res_y)/* &&
-               mode_res_y <= mon_best_res_y && mode_res_x <= mon_best_res_x*/){
+            if((mode_res_x > best_res_x || mode_res_y > best_res_y) &&
+               mode_res_y <= mon_best_res_y && mode_res_x <= mon_best_res_x){
                 //Record the new best mode
                 best_res_y = mode_res_y;
                 best_res_x = mode_res_x;
