@@ -3,6 +3,9 @@
 
 #include "../drivers/gfx.h"
 
+//Print the time it took to render things or not?
+//#define GUI_PRINT_RENDER_TIME
+
 //Structure defining the GUI color scheme
 typedef struct {
     color32_t top_bar;

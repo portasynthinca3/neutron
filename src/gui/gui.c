@@ -11,6 +11,8 @@
 
 #include "../images/power.xbm"
 #include "../images/system.xbm"
+#include "../images/cursor_white.xbm"
+#include "../images/cursor_black.xbm"
 
 //Mouse position on the screen
 int32_t mx, my;
@@ -71,6 +73,7 @@ void gui_init(void){
     window_dragging = NULL;
     gfx_verbose_println("Initializing color scheme");
     //Set the default color scheme
+    /*
     color_scheme.desktop =                  COLOR32(255, 40, 40, 40);           //Very dark grey
     color_scheme.top_bar =                  COLOR32(255, 70, 70, 70);           //Dark grey
     color_scheme.cursor =                   COLOR32(255, 255, 255, 255);        //White
@@ -84,6 +87,20 @@ void gui_init(void){
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);          //Yellow
     color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);            //Lime
     color_scheme.win_unavailable_btn =      COLOR32(255, 40, 40, 40);           //Very dark grey
+    */
+    color_scheme.desktop =                  COLOR32(255, 20, 20, 20);
+    color_scheme.top_bar =                  COLOR32(255, 30, 30, 30);
+    color_scheme.cursor =                   COLOR32(255, 255, 255, 255);
+    color_scheme.selection =                COLOR32(255, 0, 128, 255);
+    color_scheme.time =                     COLOR32(255, 0, 128, 255);
+    color_scheme.win_bg =                   COLOR32(255, 255, 255, 255);
+    color_scheme.win_shade =                COLOR32(255, 30, 30, 30);
+    color_scheme.win_title =                COLOR32(255, 255, 255, 255);
+    color_scheme.win_border =               COLOR32(255, 0, 0, 0);
+    color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);
+    color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);
+    color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);
+    color_scheme.win_unavailable_btn =      COLOR32(255, 10, 10, 10);
     
     //Allocate some space for the windows
     gfx_verbose_println("Allocating memory for windows");
@@ -327,9 +344,11 @@ void gui_update(void){
     //Draw the cursor
     gui_draw_cursor(mx, my);
 
+    #ifdef GUI_PRINT_RENDER_TIME
     char temp[25];
-    gfx_puts((p2d_t){.x = 0, .y = 0}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc, 1));
-    gfx_puts((p2d_t){.x = 0, .y = 8}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc, 1));
+    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc, 1));
+    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc, 1));
+    #endif
 
     //Flip the buffers
     uint64_t flip_start = rdtsc();
@@ -696,33 +715,11 @@ void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_point
  * Draws the cursor on screen
  */
 void gui_draw_cursor(uint32_t x, uint32_t y){
-    //Retrieve the graphics buffer; draw directly on it
-    color32_t* buf = gfx_buffer();
-    //Retrieve the resolution
-    uint32_t res_x = gfx_res_x();
-    uint32_t res_y = gfx_res_y();
-    //Draw!
-    if(x + 3 >= res_x)
-        return;
-    if(y >= res_y)
-        return;
-    buf[(y * res_x) + x] = color_scheme.cursor;
-    buf[(y * res_x) + x + 1] = color_scheme.cursor;
-    buf[(y * res_x) + x + 2] = color_scheme.cursor;
-    if(y + 1 >= res_y)
-        return;
-    buf[((y + 1) * res_x) + x + 1] = color_scheme.cursor;
-    buf[((y + 1) * res_x) + x] = color_scheme.cursor;
-    if(y + 2 >= res_y)
-        return;
-    buf[((y + 2) * res_x) + x] = color_scheme.cursor;
-    buf[((y + 2) * res_x) + x + 2] = color_scheme.cursor;
-    if(y + 3 >= res_y)
-        return;
-    buf[((y + 3) * res_x) + x + 3] = color_scheme.cursor;
-    if(y + 4 >= res_y)
-        return;
-    buf[((y + 4) * res_x) + x + 4] = color_scheme.cursor;
+    //Draw two XBM images: one white, and one black
+    gfx_draw_xbm((p2d_t){.x = mx, .y = my}, cursor_white_bits, (p2d_t){.x = cursor_white_width, .y = cursor_white_height},
+                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0));
+    gfx_draw_xbm((p2d_t){.x = mx, .y = my}, cursor_black_bits, (p2d_t){.x = cursor_black_width, .y = cursor_black_height},
+                 COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0));
 }
 
 /*

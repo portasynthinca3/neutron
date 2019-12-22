@@ -71,7 +71,8 @@ void gfx_init(void){
     res_y = graphics_output->Mode->Info->VerticalResolution;
     vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
     //Allocate the second buffer based on the screen size
-    sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
+    //  (actually, a little bit bigger than that)
+    sec_buffer = (color32_t*)malloc(res_x * (res_y + 16) * sizeof(color32_t));
     #ifdef GFX_TRIBUF
     //Allocate the third buffer
     mid_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
