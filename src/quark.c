@@ -61,8 +61,11 @@ EFI_SYSTEM_TABLE* quark_get_efi_systable(void){
  * This function is called whenever the user chooses the system color
  */
 void sys_color_change(ui_event_args_t* args){
+    color32_t color = stdgui_cpick_get_color();
     //Get and assign the color
-    gui_get_color_scheme()->win_border = stdgui_cpick_get_color();
+    gui_get_color_scheme()->win_border = color;
+    //Get and assign another color
+    gui_get_color_scheme()->win_border_inactive = COLOR32(color.a, color.r + 30, color.g + 30, color.b + 30);
     //Close the window
     gui_destroy_window(args->win);
 }

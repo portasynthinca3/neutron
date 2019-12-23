@@ -99,7 +99,8 @@ int memcmp(const void* lhs, const void* rhs, size_t cnt);
 
 //Dynamic memory allocation functions
 
-uint32_t stdlib_usable_ram(void);
+uint64_t stdlib_usable_ram(void);
+uint64_t stdlib_used_ram(void);
 void dram_init(void);
 void* malloc(size_t size);
 void free(void* ptr);

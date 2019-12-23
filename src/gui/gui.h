@@ -24,88 +24,125 @@ typedef struct {
     color32_t win_unavailable_btn;
 } color_scheme_t;
 
-//Structure defining a form control
-typedef struct {
-    p2d_t position;
-    p2d_t size;
-    void* extended;
-    unsigned short type;
-} control_t;
-
-//Structure defining a GUI window
-typedef struct {
-    uint32_t flags;
-    control_t* controls;
-    char* title;
-    p2d_t position;
-    p2d_t size;
-    p2d_t size_real;
-} window_t;
-
 //Structure defining parameters passed to the UI event handler
 typedef struct {
     //Event type
     uint32_t type;
     //Pointer to the window that contains the control that has issued the event
-    window_t* win;
+    void* win;
     //Pointer to the control that has issued the event
-    control_t* control;
+    void* control;
     //Mouse position on screen when the event occured
     p2d_t mouse_pos;
 } ui_event_args_t;
+
+//Structure defining a form control
+typedef struct {
+    //Position of the control
+    p2d_t position;
+    //Size of the control
+    p2d_t size;
+    //Pointer to the extended control
+    void* extended;
+    //Type of the control
+    uint16_t type;
+    //The event handler for the control
+    void(*event_handler)(ui_event_args_t*);
+} control_t;
+
+//Structure defining a GUI window
+typedef struct {
+    //Flags of the window
+    uint32_t flags;
+    //List of window's controls
+    control_t* controls;
+    //Title of the window
+    char* title;
+    //Position of the window
+    p2d_t position;
+    //Size of the window that it's rendered with
+    p2d_t size;
+    //The real (defined) size of the window
+    p2d_t size_real;
+    //The event handler for the window
+    void(*event_handler)(ui_event_args_t*);
+} window_t;
 
 //Structures defining extended controls
 
 //Structure defining a label
 typedef struct {
+    //Text of the label
     char* text;
+    //Color of the text of the label
     color32_t text_color;
+    //Color of the background of the label
     color32_t bg_color;
 } control_ext_label_t;
 
 //Structure defining a button
 typedef struct {
+    //Text of the button
     char* text;
-    void (*event_handler)(ui_event_args_t*);
+    //Color of the text of the button
     color32_t text_color;
+    //Color of the background of the button
     color32_t bg_color;
+    //Color of the background of the button while it's being pressed
     color32_t pressed_bg_color;
+    //Color of the border of the button
     color32_t border_color;
+    //Whether the button was being pressed last frame
     uint8_t pressed_last_frame;
 } control_ext_button_t;
 
 //Structure defining a progress bar
 typedef struct {
+    //Color of the background of the progress bar
     color32_t bg_color;
+    //Color of the fill of the progress bar
     color32_t fill_color;
+    //Color of the border of the progress bar
     color32_t border_color;
+    //Maximum value of the progress bar
     uint32_t max_val;
+    //Value of the progress bar
     uint32_t val;
 } control_ext_progress_t;
 
 //Structure defining an image
 typedef struct {
+    //Format of the image
     uint32_t image_format;
+    //Pointer to the image data
     void* image;
+    //High color for the XBM format
     color32_t color_hi;
+    //Low color for the XBM format
     color32_t color_lo;
 } control_ext_image_t;
 
 //Structure defining a track bar
 typedef struct {
+    //Background color of the trackbar
     color32_t bg_color;
+    //Fill color of the trackbar
     color32_t fill_color;
+    //Border color of the trackbar
     color32_t border_color;
+    //Maximum value of the trackbar
     uint32_t max_val;
+    //Value of the trackbar
     uint32_t val;
-    void(*callback)(ui_event_args_t*);
 } control_ext_track_bar_t;
 
 //UI event types
 
 #define GUI_EVENT_UNDEFINED                         0
-#define GUI_EVENT_CLICK                             1
-#define GUI_EVENT_TRACK_BAR_CHANGE                  2
+#define GUI_EVENT_RENDER_START                      1
+#define GUI_EVENT_RENDER_END                        2
+#define GUI_EVENT_CLICK                             3
+#define GUI_EVENT_TRACK_BAR_CHANGE                  4
 
 //Image formats
 
@@ -122,7 +159,7 @@ typedef struct {
 #define GUI_WIN_FLAG_CLOSED                         (1 << 7)
 #define GUI_WIN_FLAG_MAXIMIZED                      (1 << 8)
 #define GUI_WIN_FLAG_MINIMIZED                      (1 << 9)
-#define GUI_WIN_FLAGS_STANDARD (GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_MAXIMIZABLE | GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_VISIBLE | GUI_WIN_FLAG_DRAGGABLE)
+#define GUI_WIN_FLAGS_STANDARD (GUI_WIN_FLAG_CLOSABLE | GUI_WIN_FLAG_MINIMIZABLE | GUI_WIN_FLAG_VISIBLE | GUI_WIN_FLAG_DRAGGABLE)
 
 //Control types
 
@@ -135,17 +172,21 @@ typedef struct {
 void gui_init(void);
 void gui_update(void);
 
-window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size);
+window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size,
+                            void(*event_handler)(ui_event_args_t*));
 void gui_destroy_window(window_t* win);
-control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size);
-control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color);
-control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, void (*event_handler)(ui_event_args_t*),
-                             color32_t text_color, color32_t bg_color, color32_t pressed_bg_color, color32_t border_color);
+control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size,
+                              void(*event_handler)(ui_event_args_t*));
+control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color,
+                            void(*event_handler)(ui_event_args_t*));
+control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color,
+                             color32_t pressed_bg_color, color32_t border_color, void(*event_handler)(ui_event_args_t*));
 control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
-                                   color32_t border_color, uint32_t max_val, uint32_t val);
-control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi);
+                                   color32_t border_color, uint32_t max_val, uint32_t val, void(*event_handler)(ui_event_args_t*));
+control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi,
+                            void(*event_handler)(ui_event_args_t*));
 control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
-                                color32_t border_color, uint32_t max_val, uint32_t val, void(*callback)(ui_event_args_t*));
+                                color32_t border_color, uint32_t max_val, uint32_t val, void(*event_handler)(ui_event_args_t*));
 
 void gui_render_windows(void);
 void gui_process_window(window_t* ptr);

@@ -103,16 +103,17 @@ void gui_init(void){
 /*
  * Creates a window and adds it to the window list
  */
-window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size){
+window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size, void(*event_handler)(ui_event_args_t*)){
     window_t win;
     //Allocate memory for its title
     win.title = (char*)malloc(sizeof(char) * (strlen(title) + 1));
     //Copy the title over
     memcpy(win.title, title, strlen(title) + 1);
-    //Assign flags, position and size
+    //Assign flags, position, size and the event handler
     win.flags = flags;
     win.position = pos;
     win.size_real = size;
+    win.event_handler = event_handler;
     //Allocate some space for window controls
     win.controls = (control_t*)calloc(32, sizeof(control_t));
     win.controls[0].type = 0;
@@ -166,7 +167,7 @@ void gui_destroy_window(window_t* win){
 /*
  * Creates a control and adds it to the window
  */
-control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size){
+control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size, void(*event_handler)(ui_event_args_t*)){
     //Allocate memory for the control
     control_t cont;
     //Set its parameters
@@ -174,6 +175,7 @@ control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t
     cont.extended = ext_ptr;
     cont.position = pos;
     cont.size = size;
+    cont.event_handler = event_handler;
     //Scan through the control list to determine its end
     control_t* last;
     uint32_t i = 0;
@@ -190,7 +192,7 @@ control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t
 /*
  * Creates a label and adds it to the window
  */
-control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color){
+control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color, void(*event_handler)(ui_event_args_t*)){
     //Create the "extended control" of label type
     control_ext_label_t* label = (control_ext_label_t*)malloc(sizeof(control_ext_label_t));
     //Allocate memory for the label text
@@ -201,14 +203,14 @@ control_t* gui_create_label(window_t* win, p2d_t pos, p2d_t size, char* text, co
     label->bg_color = bg_color;
     label->text_color = text_color;
     //Create a normal control with this extension
-    return gui_create_control(win, GUI_WIN_CTRL_LABEL, (void*)label, pos, size);
+    return gui_create_control(win, GUI_WIN_CTRL_LABEL, (void*)label, pos, size, event_handler);
 }
 
 /*
  * Creates a button and adds it to the window
  */
-control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, void (*event_handler)(ui_event_args_t*),
-                             color32_t text_color, color32_t bg_color, color32_t pressed_bg_color, color32_t border_color){
+control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, color32_t text_color, color32_t bg_color,
+                             color32_t pressed_bg_color, color32_t border_color, void(*event_handler)(ui_event_args_t*)){
     //Create the "extended control" of button type
     control_ext_button_t* button = (control_ext_button_t*)malloc(sizeof(control_ext_button_t));
     //Allocate memory for the label text
@@ -219,18 +221,17 @@ control_t* gui_create_button(window_t* win, p2d_t pos, p2d_t size, char* text, v
     button->bg_color = bg_color;
     button->text_color = text_color;
     button->border_color = border_color;
-    button->event_handler = event_handler;
     button->pressed_bg_color = pressed_bg_color;
     button->pressed_last_frame = 0;
     //Create a normal control with this extension
-    return gui_create_control(win, GUI_WIN_CTRL_BUTTON, (void*)button, pos, size);
+    return gui_create_control(win, GUI_WIN_CTRL_BUTTON, (void*)button, pos, size, event_handler);
 }
 
 /*
  * Creates a progress bar and adds it to the window
  */
 control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
-                                   color32_t border_color, uint32_t max_val, uint32_t val){
+                                   color32_t border_color, uint32_t max_val, uint32_t val, void(*event_handler)(ui_event_args_t*)){
     //Create the "extended control" of progress bar type
     control_ext_progress_t* progress = (control_ext_progress_t*)malloc(sizeof(control_ext_progress_t));
     //Assign the parameters
@@ -240,13 +241,13 @@ control_t* gui_create_progress_bar(window_t* win, p2d_t pos, p2d_t size, color32
     progress->max_val = max_val;
     progress->val = val;
     //Create a normal control with this extension
-    return gui_create_control(win, GUI_WIN_CTRL_PROGRESS_BAR, (void*)progress, pos, size);
+    return gui_create_control(win, GUI_WIN_CTRL_PROGRESS_BAR, (void*)progress, pos, size, event_handler);
 }
 
 /*
  * Creates a progress bar and adds it to the window
  */
-control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi){
+control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t format, void* data, color32_t color_lo, color32_t color_hi, void(*event_handler)(ui_event_args_t*)){
     //Create the "extended control" of image type
     control_ext_image_t* image = (control_ext_image_t*)malloc(sizeof(control_ext_image_t));
     //Assign properties
@@ -255,14 +256,14 @@ control_t* gui_create_image(window_t* win, p2d_t pos, p2d_t size, uint32_t forma
     image->color_lo = color_lo;
     image->color_hi = color_hi;
     //Create a normal control with this extension
-    return gui_create_control(win, GUI_WIN_CTRL_IMAGE, (void*)image, pos, size);
+    return gui_create_control(win, GUI_WIN_CTRL_IMAGE, (void*)image, pos, size, event_handler);
 }
 
 /*
  * Creates a track bar and adds it to the window
  */
 control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t bg_color, color32_t fill_color,
-                                color32_t border_color, uint32_t max_val, uint32_t val, void(*callback)(ui_event_args_t*)){
+                                color32_t border_color, uint32_t max_val, uint32_t val, void(*event_handler)(ui_event_args_t*)){
     //Create the "extended control" of progress bar type
     control_ext_track_bar_t* track = (control_ext_track_bar_t*)malloc(sizeof(control_ext_track_bar_t));
     //Assign the parameters
@@ -271,9 +272,8 @@ control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t 
     track->fill_color = fill_color;
     track->max_val = max_val;
     track->val = val;
-    track->callback = callback;
     //Create a normal control with this extension
-    return gui_create_control(win, GUI_WIN_CTRL_TRACK_BAR, (void*)track, pos, size);
+    return gui_create_control(win, GUI_WIN_CTRL_TRACK_BAR, (void*)track, pos, size, event_handler);
 }
 
 /*
@@ -692,13 +692,13 @@ void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_point
                 clicked = 1;
             button->pressed_last_frame = pressed;
             //Call the event handler in case of a click
-            if(clicked && button->event_handler != NULL){
+            if(clicked && ptr->event_handler != NULL){
                 ui_event_args_t event;
                 event.control = ptr;
                 event.win = win_ptr;
                 event.type = GUI_EVENT_CLICK;
                 event.mouse_pos = (p2d_t){.x = mx, .y = my};
-                button->event_handler(&event);
+                ptr->event_handler(&event);
             }
         }
         break;
@@ -718,7 +718,7 @@ void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_point
                                            ptr->size)){
                     //Calculate the new value
                     uint32_t new_val = (mx - (ptr->position.x + win_ptr->position.x + 1)) * track->max_val / ptr->size.x;
-                    if(new_val != track->val){
+                    if(new_val != track->val && ptr->event_handler != NULL){
                         //If the value has changed, assign it and call the callback function
                         track->val = new_val;
                         ui_event_args_t args;
@@ -726,7 +726,7 @@ void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_point
                         args.mouse_pos = (p2d_t){.x = mx, .y = my};
                         args.type = GUI_EVENT_TRACK_BAR_CHANGE;
                         args.win = win_ptr;
-                        track->callback(&args);
+                        ptr->event_handler(&args);
                     }
                 }
             }

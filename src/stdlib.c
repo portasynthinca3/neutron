@@ -14,9 +14,20 @@ void* gen_free_base;
 void* gen_free_top;
 uint64_t bad_ram_size = 0;
 uint64_t total_ram_size = 0;
+uint64_t used_ram_size = 0;
 
-uint32_t stdlib_usable_ram(void){
+/*
+ * Returns the amount of RAM usable by Neutron
+ */
+uint64_t stdlib_usable_ram(void){
     return total_ram_size;
+}
+
+/*
+ * Returns the amount of RAM currently being used by Neutron
+ */
+uint64_t stdlib_used_ram(void){
+    return used_ram_size;
 }
 
 /*
