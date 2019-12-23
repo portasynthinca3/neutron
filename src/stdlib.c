@@ -210,7 +210,26 @@ void* memset(void* dst, int ch, size_t size){
  * Copy a block of memory
  */
 void* memcpy(void* destination, const void* source, size_t num){
-    //We can use the REP MOVx instruction to perform a blazing-fast memory-to-memory data transfer
+    if(num == 0)
+        return destination;
+    #ifdef STDLIB_MEMCPY_SSE2
+    //Chck if the data is 32-byte aligned
+    if(((uint64_t)destination % 32 == 0) && ((uint64_t)source % 32 == 0) && (num % 32 == 0)){
+        //Tell the CPU we're gonna access the data soon so it can prefetch it
+        __asm__ volatile("prefetchnta %0" : : "m" (source));
+        //Copy the data if it is
+        __asm__ volatile("_stdlib_memcpy_sse2:"
+                         "  movapd (%%rsi), %%xmm0;"
+                         "  movapd 16(%%rsi), %%xmm1;"
+                         "  movapd %%xmm0, (%%rdi);"
+                         "  movapd %%xmm1, 16(%%rdi);"
+                         "  add $32, %%rsi;"
+                         "  add $32, %%rdi;"
+                         "  loop _stdlib_memcpy_sse2;" : : "S" (source), "D" (destination), "c" (num / 16));
+        //Return
+        return destination;
+    }
+    #endif
     //Q = 8 bytes at a time
     //D = 4 bytes at a time
     //W = 2 bytes at a time
@@ -476,14 +495,14 @@ char* sprintu(char* str, uint32_t i, uint8_t min){
 char* hex_const = "0123456789ABCDEF";
 
 /*
- * Print an uint32_t with base 16 to the string
+ * Print an uint64_t with base 16 to the string
  */
-char* sprintub16(char* str, uint32_t i, uint8_t min){
+char* sprintub16(char* str, uint64_t i, uint8_t min){
     //Create some variables
     uint8_t pos = 0;
-    uint32_t div = 268435456; //Start with the leftmost digit
+    uint64_t div = 1ULL << 63; //Start with the leftmost digit
     uint8_t started = 0;
-    for(int j = 1; j <= 8; j++){
+    for(uint8_t j = 1; j <= 16; j++){
         //Fetch the next digit
         uint8_t digit = (i / div) % 16;
         //If the conversion hasn't started already and the current digit

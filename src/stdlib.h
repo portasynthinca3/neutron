@@ -7,8 +7,11 @@
 //The address that dynamic memory allocation starts from
 #define STDLIB_DRAM_START 0x500000
 
-//The quark version displayed on startup
-#define QUARK_VERSION_STR "v0.2.0"
+//The quark version
+#define QUARK_VERSION_STR "v0.2.1"
+
+//Use SSE2 for memcpy() transfers?
+#define STDLIB_MEMCPY_SSE2
 
 //Standard type definitions
 
@@ -132,7 +135,7 @@ void* list_get_at_idx(list_node_t* first, uint32_t idx);
 
 size_t strlen(const char* str);
 char* sprintu(char* str, uint32_t i, uint8_t min);
-char* sprintub16(char* str, uint32_t i, uint8_t min);
+char* sprintub16(char* str, uint64_t i, uint8_t min);
 char* strcat(char* dest, char* src);
 int strcmp(const char* str1, const char* str2);
 

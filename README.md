@@ -11,8 +11,9 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 * Sasha Kulichkov, booted this on his PC several times; created the logo
 # Where does it work?
 In theory, it should work on any modern system. Here are the minimal requirements:
-* CPU: Pentium 4 or later
-* RAM: 32 MB
+* CPU: x86-64 architecture
+* System: UEFI class 2 or 3
+* RAM: 256 MB
 * An UEFI system. Neutron up to version 0.1.11 was a legacy BIOS system, but I had switched over to UEFI for future expanadability.
 # Show me the screenshots!
 They are in the `screens` directory

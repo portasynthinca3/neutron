@@ -17,6 +17,7 @@ typedef struct {
     color32_t win_shade;
     color32_t win_title;
     color32_t win_border;
+    color32_t win_border_inactive;
     color32_t win_exit_btn;
     color32_t win_state_btn;
     color32_t win_minimize_btn;

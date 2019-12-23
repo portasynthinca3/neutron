@@ -49,6 +49,10 @@ color32_t* gfx_buffer(void){
     return (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
 }
 
+color32_t* gfx_buf_another(void){
+    return (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+}
+
 /*
  * Initialize the graphics driver
  */
@@ -211,6 +215,7 @@ void gfx_flip(void){
     #else
     //Transfer the buffer
     #ifndef GFX_BLT
+    //memcpy() the data
     memcpy(buf_dst, buf_src, res_x * res_y * sizeof(color32_t));
     #else
     graphics_output->Blt(graphics_output, (EFI_GRAPHICS_OUTPUT_BLT_PIXEL*)sec_buffer, EfiBltBufferToVideo, 0, 0, 0, 0, res_x, res_y, 0);

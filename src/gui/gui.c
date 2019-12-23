@@ -13,6 +13,9 @@
 #include "../images/system.xbm"
 #include "../images/cursor_white.xbm"
 #include "../images/cursor_black.xbm"
+#include "../images/win_close.xbm"
+#include "../images/win_state.xbm"
+#include "../images/win_minimize.xbm"
 
 //Mouse position on the screen
 int32_t mx, my;
@@ -41,6 +44,7 @@ uint8_t focus_monopoly = 0;
 uint64_t gui_render_cyc = 0;
 //The amount of CPU cycles it took to transfer the last frame to the screen
 uint64_t gui_trans_cyc = 0;
+uint64_t gui_render_cnt = 0;
 
 uint8_t last_frame_ml = 0;
 void quark_gui_callback_power_pressed(void);
@@ -73,39 +77,29 @@ void gui_init(void){
     window_dragging = NULL;
     gfx_verbose_println("Initializing color scheme");
     //Set the default color scheme
-    /*
-    color_scheme.desktop =                  COLOR32(255, 40, 40, 40);           //Very dark grey
-    color_scheme.top_bar =                  COLOR32(255, 70, 70, 70);           //Dark grey
-    color_scheme.cursor =                   COLOR32(255, 255, 255, 255);        //White
-    color_scheme.selection =                COLOR32(255, 0, 128, 255);          //Light blue
-    color_scheme.time =                     COLOR32(255, 0, 128, 255);          //Light blue
-    color_scheme.win_bg =                   COLOR32(255, 200, 200, 200);        //Grey
-    color_scheme.win_shade =                COLOR32(255, 20, 20, 20);           //Very-very dark grey
-    color_scheme.win_title =                COLOR32(255, 0, 0, 0);              //Black
-    color_scheme.win_border =               COLOR32(255, 0, 116, 53);           //Dark green
-    color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);            //Red
-    color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);          //Yellow
-    color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);            //Lime
-    color_scheme.win_unavailable_btn =      COLOR32(255, 40, 40, 40);           //Very dark grey
-    */
     color_scheme.desktop =                  COLOR32(255, 20, 20, 20);
     color_scheme.top_bar =                  COLOR32(255, 30, 30, 30);
     color_scheme.cursor =                   COLOR32(255, 255, 255, 255);
     color_scheme.selection =                COLOR32(255, 0, 128, 255);
-    color_scheme.time =                     COLOR32(255, 0, 128, 255);
+    color_scheme.time =                     COLOR32(255, 255, 255, 255);
     color_scheme.win_bg =                   COLOR32(255, 255, 255, 255);
     color_scheme.win_shade =                COLOR32(255, 30, 30, 30);
     color_scheme.win_title =                COLOR32(255, 255, 255, 255);
     color_scheme.win_border =               COLOR32(255, 0, 0, 0);
+    color_scheme.win_border_inactive =      COLOR32(255, 30, 30, 30);
     color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);
-    color_scheme.win_state_btn =            COLOR32(255, 255, 255, 0);
-    color_scheme.win_minimize_btn =         COLOR32(255, 0, 255, 0);
-    color_scheme.win_unavailable_btn =      COLOR32(255, 10, 10, 10);
+    color_scheme.win_state_btn =            COLOR32(255, 255, 255, 255);
+    color_scheme.win_minimize_btn =         COLOR32(255, 255, 255, 255);
+    color_scheme.win_unavailable_btn =      COLOR32(255, 128, 128, 128);
     
     //Allocate some space for the windows
     gfx_verbose_println("Allocating memory for windows");
     windows = (window_t*)calloc(32, sizeof(window_t));
     gfx_verbose_println("GUI init done");
+
+    gui_trans_cyc = 0;
+    gui_render_cyc = 0;
+    gui_render_cnt = 1;
 }
 
 /*
@@ -346,8 +340,10 @@ void gui_update(void){
 
     #ifdef GUI_PRINT_RENDER_TIME
     char temp[25];
-    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc, 1));
-    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc, 1));
+    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc / gui_render_cnt, 10));
+    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc / gui_render_cnt, 10));
+    gfx_puts((p2d_t){.x = 0, .y = 32}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintub16(temp, (uint64_t)gfx_buffer(), 16));
+    gfx_puts((p2d_t){.x = 0, .y = 40}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintub16(temp, (uint64_t)gfx_buf_another(), 16));
     #endif
 
     //Flip the buffers
@@ -355,8 +351,11 @@ void gui_update(void){
     gfx_flip();
     uint64_t all_end = rdtsc();
 
-    gui_render_cyc = flip_start - render_start;
-    gui_trans_cyc = all_end - flip_start;
+    if(gui_render_cnt > 1){
+        gui_render_cyc += flip_start - render_start;
+        gui_trans_cyc += all_end - flip_start;
+    }
+    gui_render_cnt++;
 
     /*
     char temp[50];
@@ -449,32 +448,41 @@ void gui_render_window(window_t* ptr){
         //Fill a rectangle with a window background color
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                              (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_bg);
-        //Draw a border around it
+        //Draw the top section background
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
+                             (p2d_t){.x = ptr->size.x, .y = 11}, (ptr == window_focused) ? color_scheme.win_border : color_scheme.win_border_inactive);
+        //Draw the border
         gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                       (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_border);
-        //Draw a background for the title
-        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
-                             (p2d_t){.x = ptr->size.x, .y = 11}, color_scheme.win_border);
+        //Draw the border... again... to achieve 2 px thickness
+        gfx_draw_rect((p2d_t){.x = ptr->position.x - 1, .y = ptr->position.y - 1},
+                      (p2d_t){.x = ptr->size.x + 2, .y = ptr->size.y + 2}, color_scheme.win_border);
         //Print its title
         gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
 
         //Draw the close button 
         if(ptr->flags & GUI_WIN_FLAG_CLOSABLE)
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_exit_btn);
+            gfx_draw_xbm((p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, win_close_bits, (p2d_t){.x = win_close_width, .y = win_close_height},
+                color_scheme.win_exit_btn, COLOR32(0, 0, 0, 0));
         else
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
+            gfx_draw_xbm((p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, win_close_bits, (p2d_t){.x = win_close_width, .y = win_close_height},
+                color_scheme.win_unavailable_btn, COLOR32(0, 0, 0, 0));
 
         //Draw the maximize (state change) button 
         if(ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE)
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_state_btn);
+            gfx_draw_xbm((p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2}, win_state_bits, (p2d_t){.x = win_state_width, .y = win_state_height},
+                color_scheme.win_state_btn, COLOR32(0, 0, 0, 0));
         else
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
+            gfx_draw_xbm((p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2}, win_state_bits, (p2d_t){.x = win_state_width, .y = win_state_height},
+                color_scheme.win_unavailable_btn, COLOR32(0, 0, 0, 0));
 
         //Draw the minimize button 
         if(ptr->flags & GUI_WIN_FLAG_MINIMIZABLE)
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_minimize_btn);
+            gfx_draw_xbm((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, win_minimize_bits, (p2d_t){.x = win_minimize_width, .y = win_minimize_height},
+                color_scheme.win_minimize_btn, COLOR32(0, 0, 0, 0));
         else
-            gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8}, color_scheme.win_unavailable_btn);
+            gfx_draw_xbm((p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2}, win_minimize_bits, (p2d_t){.x = win_minimize_width, .y = win_minimize_height},
+                color_scheme.win_unavailable_btn, COLOR32(0, 0, 0, 0));
 
         //Now draw its controls
         uint32_t i = 0;
