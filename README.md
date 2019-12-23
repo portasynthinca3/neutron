@@ -3,9 +3,8 @@
 *Neutron logo*\
 **So, you somehow got to this page.** I really appreciate it, thank you!
 # What's the purpose?
-Neutron is the result of me trying to get into the low-level stuff. That means, writing in assembly. This is quite a new
-experience for me as the lowest i've ever got was writing code in C++ for the AVR micro series.\
-This project is **not** intended to do some crazy stuff like replacing the giants like Windows, Linux and macOS. No-no, that's just not possible. However, it doesn't mean i don't have an end goal. **The end goal is to write a simple OS that can run in 32-bit protected mode, complete with GUI and 3rd party applications, while requiring as little disk space, RAM and processor resources as possible**
+Neutron is the result of me trying to get into the low-level stuff.
+This project is **not** intended to do some crazy stuff like replacing the giants like Windows, Linux and macOS. That's just not possible. However, it doesn't mean i don't have an end goal. **The end goal is to write a simple 64-bit UEFI-powered OS that can run 3rd party applications and its GUI system, while requiring as little disk space, RAM and processor resources as possible.** Oh, and also, I just want to have fun :)
 # Who is involved?
 * Me, Andrey Antonenko, the creator, maintainer and programmer
 * Sasha Kulichkov, booted this on his PC several times; created the logo
