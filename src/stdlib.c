@@ -309,11 +309,7 @@ unsigned short inw(unsigned short port){
  * Read a number of words from I/O port and store it in memory
  */
 void rep_insw(uint16_t port, uint32_t count, uint16_t* buf){
-    //Save the registers that we're gonna scrub
-    //__asm__ volatile("push %edx; push %ecx");
     __asm__ volatile("rep insw" : : "c" (count), "D" (buf), "d" (port));
-    //Restore the registers we've scrubbed
-    //__asm__ volatile("pop %ecx; pop %edx");
 }
 
 /*
@@ -350,7 +346,7 @@ unsigned char fifo_popb(unsigned char* buffer, unsigned short* head, unsigned sh
 }
 
 /*
- * Returns the count of bytes available for read in the FIFO buffer
+ * Returns the amount of bytes available for reading in the FIFO buffer
  */
 unsigned char fifo_av(unsigned short* head, unsigned short* tail){
     return *head - *tail;
@@ -398,7 +394,7 @@ void* list_get_at_idx(list_node_t* first, uint32_t idx){
 /*
  * Read the amount of cycles executed by the CPU
  */
-uint64_t rdtsc(){
+uint64_t rdtsc(void){
     uint32_t h, l;
     __asm__ volatile("rdtsc" : "=d" (h), "=a" (l));
     return (uint64_t)((uint64_t)h << 32) | l;
@@ -417,7 +413,7 @@ size_t strlen(const char* str){
  * Read RTC hour, minute and second registers
  * Returns 0 if the data is valid
  */
-int read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
+uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
     //Read CMOS Status Register A
     outb(0x70, 0x0A);
     uint8_t status_a = inb(0x71);

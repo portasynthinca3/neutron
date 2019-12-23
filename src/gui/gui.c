@@ -44,7 +44,6 @@ uint8_t focus_monopoly = 0;
 uint64_t gui_render_cyc = 0;
 //The amount of CPU cycles it took to transfer the last frame to the screen
 uint64_t gui_trans_cyc = 0;
-uint64_t gui_render_cnt = 0;
 
 uint8_t last_frame_ml = 0;
 void quark_gui_callback_power_pressed(void);
@@ -99,7 +98,6 @@ void gui_init(void){
 
     gui_trans_cyc = 0;
     gui_render_cyc = 0;
-    gui_render_cnt = 1;
 }
 
 /*
@@ -340,8 +338,8 @@ void gui_update(void){
 
     #ifdef GUI_PRINT_RENDER_TIME
     char temp[25];
-    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc / gui_render_cnt, 10));
-    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc / gui_render_cnt, 10));
+    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc, 10));
+    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc, 10));
     gfx_puts((p2d_t){.x = 0, .y = 32}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintub16(temp, (uint64_t)gfx_buffer(), 16));
     gfx_puts((p2d_t){.x = 0, .y = 40}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintub16(temp, (uint64_t)gfx_buf_another(), 16));
     #endif
@@ -351,23 +349,8 @@ void gui_update(void){
     gfx_flip();
     uint64_t all_end = rdtsc();
 
-    if(gui_render_cnt > 1){
-        gui_render_cyc += flip_start - render_start;
-        gui_trans_cyc += all_end - flip_start;
-    }
-    gui_render_cnt++;
-
-    /*
-    char temp[50];
-    temp[0] = 0;
-    char temp2[25];
-    strcat(temp, sprintu(temp2, flip_start - render_start, 1));
-    strcat(temp, "\n");
-    strcat(temp, sprintu(temp2, all_end - flip_start, 1));
-    gfx_set_buf(GFX_BUF_VBE);
-    gfx_puts((p2d_t){.x = 0, .y = 0}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), temp);
-    gfx_set_buf(GFX_BUF_SEC);
-    */
+    gui_render_cyc = flip_start - render_start;
+    gui_trans_cyc = all_end - flip_start;
 
     //Record the mouse state
     last_frame_ml = ml;
@@ -429,8 +412,10 @@ void gui_render_windows(void){
         gui_render_window(window_focused);
     
     //Set the window in focus according to the top bar clicks
-    if(ml && mx / 16 <= win_cnt && !focus_monopoly){
+    if(ml && (mx / 16 <= win_cnt) && !focus_monopoly){
         window_focused = &windows[mx / 16];
+        //Clear window minimized flag
+        window_focused->flags &= ~GUI_WIN_FLAG_MINIMIZED;
     }
 }
 
@@ -438,6 +423,8 @@ void gui_render_windows(void){
  * Renders a window
  */
 void gui_render_window(window_t* ptr){
+    if(ptr->flags & GUI_WIN_FLAG_MINIMIZED)
+        return; //Do not render the window if it's minimized
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Draw the shade
@@ -496,8 +483,13 @@ void gui_render_window(window_t* ptr){
  * Processes window's interaction with the mouse
  */
 void gui_process_window(window_t* ptr){
-    //Set the size to the real one as the proper processing hadn't been implemented yet
-    ptr->size = ptr->size_real;
+    //Set the size based on the real size and flags
+    if(ptr->flags & GUI_WIN_FLAG_MAXIMIZED)
+        ptr->size = (p2d_t){.x = gfx_res_x() - 1, .y = gfx_res_y() - 16 - 1};
+    else
+        ptr->size = ptr->size_real;
+    if(ptr->flags & GUI_WIN_FLAG_MINIMIZED)
+        return; //Do not process the window if it's minimized
     //Only process the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Process window dragging
@@ -544,10 +536,34 @@ void gui_process_window(window_t* ptr){
         }
 
         //Process the top-right buttons
-        if(gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2}, (p2d_t){.x = 8, .y = 8})
+        if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                             (p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2},
+                             (p2d_t){.x = 8, .y = 8})
            && (ptr->flags & GUI_WIN_FLAG_CLOSABLE) && ml){
             //Destroy this window
             gui_destroy_window(ptr);
+        } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                                    (p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2},
+                                    (p2d_t){.x = 8, .y = 8})
+                  && (ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE) && ml){
+            if(ptr->flags & GUI_WIN_FLAG_MAXIMIZED){
+                //If the window is already maximized, restore the normal size
+                ptr->flags &= ~GUI_WIN_FLAG_MAXIMIZED;
+            } else {
+                //Else, set window position to the top left corner
+                ptr->position = (p2d_t){.x = 0, .y = 16};
+                //Set the maximized flag
+                ptr->flags |= GUI_WIN_FLAG_MAXIMIZED;
+            }
+        } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                                    (p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2},
+                                    (p2d_t){.x = 8, .y = 8})
+                  && (ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE) && ml){
+            //Set the minimized flag
+            ptr->flags |= GUI_WIN_FLAG_MINIMIZED;
+            //If the window is in focus, reset the focus
+            if(ptr == window_focused)
+                window_focused = NULL;
         }
 
         //Now process its controls
