@@ -558,7 +558,7 @@ void gui_process_window(window_t* ptr){
         } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
                                     (p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2},
                                     (p2d_t){.x = 8, .y = 8})
-                  && (ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE) && ml){
+                  && (ptr->flags & GUI_WIN_FLAG_MINIMIZABLE) && ml){
             //Set the minimized flag
             ptr->flags |= GUI_WIN_FLAG_MINIMIZED;
             //If the window is in focus, reset the focus
