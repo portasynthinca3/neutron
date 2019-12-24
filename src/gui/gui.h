@@ -58,6 +58,8 @@ typedef struct {
     control_t* controls;
     //Title of the window
     char* title;
+    //Pointer to the 8x8 raw icon of the window
+    void* icon_8;
     //Position of the window
     p2d_t position;
     //Size of the window that it's rendered with
@@ -172,7 +174,7 @@ typedef struct {
 void gui_init(void);
 void gui_update(void);
 
-window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size,
+window_t* gui_create_window(char* title, void* icon_8, uint32_t flags, p2d_t pos, p2d_t size,
                             void(*event_handler)(ui_event_args_t*));
 void gui_destroy_window(window_t* win);
 control_t* gui_create_control(window_t* win, uint32_t type, void* ext_ptr, p2d_t pos, p2d_t size,

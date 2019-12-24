@@ -205,21 +205,12 @@ void gfx_flip(void){
         if(need_transfer){
             //If the lines differ, copy them
             memcpy(&mid_buffer[offs_pix], &buf_src[offs_pix],res_x * sizeof(color32_t));
-            #ifndef GFX_BLT
             memcpy(&buf_dst[offs_pix], &buf_src[offs_pix], res_x * sizeof(color32_t));
-            #else
-            graphics_output->Blt(graphics_output, (EFI_GRAPHICS_OUTPUT_BLT_PIXEL*)&buf_src[offs_pix], EfiBltBufferToVideo, 0, y, 0, y, res_x, 1, 0);
-            #endif
         }
     }
     #else
     //Transfer the buffer
-    #ifndef GFX_BLT
-    //memcpy() the data
     memcpy(buf_dst, buf_src, res_x * res_y * sizeof(color32_t));
-    #else
-    graphics_output->Blt(graphics_output, (EFI_GRAPHICS_OUTPUT_BLT_PIXEL*)sec_buffer, EfiBltBufferToVideo, 0, 0, 0, 0, res_x, res_y, 0);
-    #endif
     #endif
 }
 
@@ -257,7 +248,7 @@ void gfx_fill(color32_t color){
  */
 void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
     //Draw each horizontal line in the rectangle
-    for(uint16_t y = pos.y; y < pos.y + size.y; y++)
+    for(uint32_t y = pos.y; y < pos.y + size.y; y++)
         gfx_draw_hor_line((p2d_t){.x = pos.x, .y = y}, size.x, c);
 }
 
@@ -280,9 +271,9 @@ void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c){
     //Get the video buffer
     color32_t* buf = gfx_buffer();
     //Calculate the scanline start
-    uint32_t st = pos.y * res_x;
+    uint64_t st = pos.y * res_x;
     //Draw each pixel in the line
-    for(uint16_t x = pos.x; x < pos.x + w; x++)
+    for(uint64_t x = pos.x; x < pos.x + w; x++)
         buf[st + x] = c;
 }
 
@@ -349,8 +340,10 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
             uint8_t r = raw_ptr[pos++];
             uint8_t g = raw_ptr[pos++];
             uint8_t b = raw_ptr[pos++];
+            uint8_t a = raw_ptr[pos++];
             //Draw the pixel
-            buf[(y * res_x) + x] = COLOR32(255, r, g, b);
+            if(a != 0)
+                buf[(y * res_x) + x] = COLOR32(a, r, g, b);
         }
     }
 }
@@ -447,7 +440,7 @@ p2d_t gfx_text_bounds(char* s){
                 pos.x += 6;
                 break;
         }
-        //If the X position is greater than the X size, update the last one
+        //If the X position is greater than the X size, update the latter
         if(pos.x > sz.x)
             sz.x = pos.x;
         //The same thing with the Y position

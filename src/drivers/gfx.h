@@ -5,8 +5,8 @@
 
 //Structure defining a 2D point
 typedef struct {
-    int32_t x;
-    int32_t y;
+    int64_t x;
+    int64_t y;
 } p2d_t;
 
 //Structure defining a 32bpp color
@@ -19,8 +19,6 @@ typedef struct {
 
 //Use triple-buffering
 //#define GFX_TRIBUF
-//Use support for hardware blt (block transfer)
-//#define GFX_BLT
 
 //Macro for converting R, G and B values to color32_t
 #define COLOR32(A, R, G, B) ((color32_t){.a = A, .r = R, .g = G, .b = B})

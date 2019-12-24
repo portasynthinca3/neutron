@@ -16,6 +16,8 @@ src/drivers/pit.c
 src/drivers/ps2.c
 src/drivers/acpi.c
 src/drivers/ps2_kbd.c
+
+src/apps/calculator/calculator.c
 .fs
 build/quark.bin>quark
 neutron.nbuild>nbuild

@@ -4,6 +4,8 @@
 #include "../stdlib.h"
 #include "../drivers/gfx.h"
 #include "./gui.h"
+#include "../apps/app.h"
+#include "../apps/deficon.h"
 
 #include "../images/neutron_logo.xbm"
 
@@ -11,6 +13,15 @@
 void quark_shutdown(void);
 void quark_reboot(void);
 void quark_open_sys_color_picker(ui_event_args_t* args);
+
+//The list of loaded apps
+app_t loaded_apps[32];
+//The list of buttons for launching respective apps
+control_t* app_buttons[32];
+//Where to load the next app
+uint8_t next_app = 0;
+
+//The position the next app will be loaded into
 
 void _stdgui_cb_shutdown_pressed(ui_event_args_t* args){
     if(args->type == GUI_EVENT_CLICK)
@@ -61,7 +72,7 @@ void _stdgui_cb_color_b(ui_event_args_t* args){
 void stdgui_create_shutdown_prompt(void){
     p2d_t shutdown_win_size = (p2d_t){.x = 300, .y = 150};
     //Create a window
-    window_t* shutdown_window = gui_create_window("Shutdown", GUI_WIN_FLAGS_STANDARD,
+    window_t* shutdown_window = gui_create_window("Shutdown", NULL, GUI_WIN_FLAGS_STANDARD,
                                                   (p2d_t){.x = (gfx_res_x() - shutdown_win_size.x) / 2,
                                                           .y = (gfx_res_y() - shutdown_win_size.y) / 2}, shutdown_win_size, NULL);
     //Create a label and two buttons
@@ -81,7 +92,7 @@ void stdgui_create_shutdown_prompt(void){
 void stdgui_create_system_win(void){
     p2d_t system_win_size = (p2d_t){.x = 300, .y = 300};
     //Create the window itself
-    window_t* window = gui_create_window("System", GUI_WIN_FLAGS_STANDARD,
+    window_t* window = gui_create_window("System", NULL, GUI_WIN_FLAGS_STANDARD,
                                          (p2d_t){.x = (gfx_res_x() - system_win_size.x) / 2,
                                                  .y = (gfx_res_y() - system_win_size.y) / 2}, system_win_size, NULL);
     //Add the Neutron logo to it
@@ -98,16 +109,21 @@ void stdgui_create_system_win(void){
     uint32_t ver_label_width = gfx_text_bounds(ver_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - ver_label_width) / 2, .y = 13 + neutron_logo_height + 2 + 8 + 2}, 
                              (p2d_t){.x = ver_label_width, .y = 8}, ver_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+    //Add the RAM usage indicator to it
+    gui_create_progress_bar(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 22}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15},
+                            gui_get_color_scheme()->win_bg, COLOR32(255, 255, 0, 0), COLOR32(255, 0, 0, 0), stdlib_usable_ram(), stdlib_used_ram(), NULL);
     //Add the RAM label to it
     char ram_label_text[50] = "RAM: ";
     char temp[10];
+    strcat(ram_label_text, sprintu(temp, stdlib_used_ram() / 1024 / 1024, 1));
+    strcat(ram_label_text, "/");
     strcat(ram_label_text, sprintu(temp, stdlib_usable_ram() / 1024 / 1024, 1));
-    strcat(ram_label_text, "MB usable by Neutron");
+    strcat(ram_label_text, " MB used");
     uint32_t ram_label_width = gfx_text_bounds(ram_label_text).x;
-    gui_create_label(window, (p2d_t){.x = (system_win_size.x - ram_label_width) / 2, .y = 13 + neutron_logo_height + 22}, 
+    gui_create_label(window, (p2d_t){.x = (system_win_size.x - ram_label_width) / 2, .y = 13 + neutron_logo_height + 26}, 
                              (p2d_t){.x = ram_label_width, .y = 8}, ram_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
     //Add the system color change button to it
-    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 32}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
+    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 40}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), quark_open_sys_color_picker);
 }
 
@@ -118,8 +134,9 @@ uint8_t stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t
     p2d_t win_size = (p2d_t){.x = 157, 80};
     cpick_color = start;
     //Create the window
-    window_t* window = gui_create_window("Choose color", GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = (gfx_res_x() - win_size.x) / 2,
-                                                                                         .y = (gfx_res_y() - win_size.y) / 2}, win_size, NULL);
+    window_t* window = gui_create_window("Choose color", NULL, GUI_WIN_FLAGS_STANDARD,
+                                         (p2d_t){.x = (gfx_res_x() - win_size.x) / 2,
+                                                 .y = (gfx_res_y() - win_size.y) / 2}, win_size, NULL);
     //Create a buffer for the image
     cpick_img_buf = (uint8_t*)malloc(40 * 40 * 3);
     _stdgui_fill_img();
@@ -151,4 +168,80 @@ uint8_t stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t
  */
 color32_t stdgui_cpick_get_color(void){
     return cpick_color;
+}
+
+/*
+ * Registers an application
+ */
+void stdgui_register_app(app_t app){
+    //Print the information about the application we're loading
+    char temp[100];
+    char temp2[10];
+    temp[0] = 0;
+    strcat(temp, "Registering app \"");
+    strcat(temp, app.name);
+    strcat(temp, "\" ver. ");
+    strcat(temp, sprintu(temp2, app.ver_major, 1));
+    strcat(temp, ".");
+    strcat(temp, sprintu(temp2, app.ver_minor, 1));
+    strcat(temp, ".");
+    strcat(temp, sprintu(temp2, app.ver_patch, 1));
+    strcat(temp, " as ID ");
+    strcat(temp, sprintu(temp2, next_app, 1));
+    gfx_verbose_println(temp);
+    //Actually store the application data
+    loaded_apps[next_app++] = app;
+}
+
+/*
+ * Every app launch button event handler
+ */
+void _stdgui_cb_launch_app(ui_event_args_t* args){
+    //Only respond to clicking
+    if(args->type == GUI_EVENT_CLICK){
+        //Go through the button list
+        for(uint16_t app_idx = 0; app_idx < next_app; app_idx++)
+            if(app_buttons[app_idx] == args->control)
+                loaded_apps[app_idx].entry_point(); //Call the entry point of an app
+    }
+}
+
+/*
+ * Creates the program launcher
+ */
+void stdgui_create_program_launcher(void){
+    //Size of the program launcher
+    p2d_t pl_size = (p2d_t){.x = 400, .y = 300};
+    //Create the window
+    window_t* program_launcher =
+    gui_create_window("Applications", NULL, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = 32, .y = 32}, pl_size, NULL);
+    //Go through each app
+    p2d_t next_btn_pos = (p2d_t){.x = 1, .y = 1};
+    for(uint16_t app_idx = 0; app_idx < next_app; app_idx++){
+        //Fetch the app
+        app_t* app = &loaded_apps[app_idx];
+        //Create a button for it
+        control_t* btn = gui_create_button(program_launcher, next_btn_pos, (p2d_t){.x = 64, .y = 64}, "",
+            COLOR32(0, 0, 0, 0), gui_get_color_scheme()->win_bg, COLOR32(0, 0, 0, 0), COLOR32(255, 0, 0, 0), _stdgui_cb_launch_app);
+        //Save the button
+        app_buttons[app_idx] = btn;
+        //Create its icon
+        void* icon_ptr = deficon;
+        if(app->icon != NULL)
+            icon_ptr = app->icon;
+        gui_create_image(program_launcher, (p2d_t){.x = 8 + next_btn_pos.x, .y = next_btn_pos.y + 5}, (p2d_t){.x = 48, .y = 48}, GUI_IMAGE_FORMAT_RAW,
+            icon_ptr, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+        //Create its title
+        char* title = app->name;
+        p2d_t title_size = gfx_text_bounds(title);
+        gui_create_label(program_launcher, (p2d_t){.x = next_btn_pos.x + 32 - (title_size.x / 2),
+                                                   .y = next_btn_pos.y + 5 + 48 + 2}, title_size,
+                         title, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+        //Increment the position
+        next_btn_pos.x += 64 + 8;
+        if(next_btn_pos.x + 64 > pl_size.x){
+            next_btn_pos.x = 1;
+            next_btn_pos.y += 64 + 8;
+        }
+    }
 }

@@ -23,6 +23,9 @@
 
 #include "./images/neutron_logo.xbm"
 
+#include "./apps/app.h"
+#include "./apps/calculator/calculator.h"
+
 struct idt_desc idt_d;
 
 extern void enable_a20(void);
@@ -223,11 +226,18 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Initialize ACPI
     quark_boot_status(">>> Initializing ACPI <<<", 60);
     acpi_init();
+    //Register the apps
+    quark_boot_status(">>> Registering applications <<<", 90);
+    stdgui_register_app(CALCULATOR_APP);
     //Configure GUI
-    quark_boot_status(">>> Configuring GUI <<<", 90);
+    quark_boot_status(">>> Configuring GUI <<<", 95);
     gui_init();
+    stdgui_create_program_launcher();
     //The loading process is done!
     quark_boot_status(">>> Done <<<", 100);
+
+    //Exit UEFI boot services
+    SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
 
     //Constantly update the GUI
     for(;;){

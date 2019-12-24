@@ -110,6 +110,7 @@ void dram_init(void){
  * Allocate a block of memory
  */
 void* malloc(size_t size){
+    used_ram_size += size;
     //If we have enough memory in the general
     //  free memory "heap", allocate it there
     if(gen_free_top - gen_free_base >= size){
@@ -472,20 +473,20 @@ uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
 }
 
 /*
- * Print an uint32_t to the string
+ * Print an uint64_t to the string
  */
-char* sprintu(char* str, uint32_t i, uint8_t min){
+char* sprintu(char* str, uint64_t i, uint8_t min){
     //Create some variables
     uint8_t pos = 0;
-    uint32_t div = 1000000000; //Start with the leftmost digit
+    uint64_t div = 1000000000000000000; //Start with the leftmost digit
     uint8_t started = 0;
-    for(int j = 1; j <= 10; j++){
+    for(int j = 1; j <= 19; j++){
         //Fetch the next digit
         uint8_t digit = (i / div) % 10;
         //If the conversion hasn't started already and the current digit
         //  is greater than zero OR we exceeded the maximum amount of dropped
         //  digits, assume that the conversion has started
-        if((!started && digit > 0) || (10 - j < min))
+        if((!started && digit > 0) || (19 - j < min))
             started = 1;
         //If the conversion has started, write a digit to the string
         if(started)
@@ -515,7 +516,7 @@ char* sprintub16(char* str, uint64_t i, uint8_t min){
         //If the conversion hasn't started already and the current digit
         //  is greater than zero OR we exceeded the maximum amount of dropped
         //  digits, assume that the conversion has started
-        if((!started && digit > 0) || (8 - j < min))
+        if((!started && digit > 0) || (16 - j < min))
             started = 1;
         //If the conversion has started, write a digit to the string
         if(started)

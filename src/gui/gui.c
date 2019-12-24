@@ -1,6 +1,6 @@
 //Neutron Project
 //Graphical User interface
-//Built on top of the GFX library (src/quark-c/c/gfx.c)
+//Built on top of the GFX library (drivers/gfx.c)
 
 #include "./gui.h"
 #include "../stdlib.h"
@@ -93,7 +93,7 @@ void gui_init(void){
     
     //Allocate some space for the windows
     gfx_verbose_println("Allocating memory for windows");
-    windows = (window_t*)calloc(32, sizeof(window_t));
+    windows = (window_t*)calloc(256, sizeof(window_t));
     gfx_verbose_println("GUI init done");
 
     gui_trans_cyc = 0;
@@ -103,19 +103,20 @@ void gui_init(void){
 /*
  * Creates a window and adds it to the window list
  */
-window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size, void(*event_handler)(ui_event_args_t*)){
+window_t* gui_create_window(char* title, void* icon_8, uint32_t flags, p2d_t pos, p2d_t size, void(*event_handler)(ui_event_args_t*)){
     window_t win;
     //Allocate memory for its title
     win.title = (char*)malloc(sizeof(char) * (strlen(title) + 1));
     //Copy the title over
     memcpy(win.title, title, strlen(title) + 1);
-    //Assign flags, position, size and the event handler
+    //Assign the properties
+    win.icon_8 = icon_8;
     win.flags = flags;
     win.position = pos;
     win.size_real = size;
     win.event_handler = event_handler;
     //Allocate some space for window controls
-    win.controls = (control_t*)calloc(32, sizeof(control_t));
+    win.controls = (control_t*)calloc(128, sizeof(control_t));
     win.controls[0].type = 0;
     //Scan through the window list to determine its end
     uint32_t i = 0;
@@ -127,6 +128,7 @@ window_t* gui_create_window(char* title, uint32_t flags, p2d_t pos, p2d_t size, 
     windows[i + 1].title = NULL;
     //Mark it as focused
     window_focused = &windows[i];
+    focus_processed = 1;
     //Return the window
     return &windows[i];
 }
@@ -331,7 +333,7 @@ void gui_update(void){
     if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
         quark_gui_callback_system_pressed();
 
-    //Render the windows
+    //Render and process the windows
     gui_render_windows();
     //Draw the cursor
     gui_draw_cursor(mx, my);
@@ -391,11 +393,15 @@ void gui_render_windows(void){
             gfx_draw_filled_rect((p2d_t){.x = topb_win_pos, .y = 0},
                                  (p2d_t){.x = 16, .y = 16}, color_scheme.selection);
         //Draw the window icon in the top bar
-        gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 4, .y = 4},
-                             (p2d_t){.x = 8, .y = 8}, color_scheme.win_bg);
-        gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 5, .y = 5},
-                             (p2d_t){.x = 3, .y = 6}, COLOR32(255, 0, 64, 255));
-        gfx_draw_hor_line((p2d_t){.x = topb_win_pos + 9, .y = 5}, 2, color_scheme.win_title);
+        if(current_window->icon_8 == NULL){
+            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 4, .y = 4},
+                                 (p2d_t){.x = 8, .y = 8}, color_scheme.win_bg);
+            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 5, .y = 5},
+                                 (p2d_t){.x = 3, .y = 6}, COLOR32(255, 0, 64, 255));
+            gfx_draw_hor_line((p2d_t){.x = topb_win_pos + 9, .y = 5}, 2, color_scheme.win_title);
+        } else {
+            gfx_draw_raw((p2d_t){.x = topb_win_pos + 4, .y = 4}, current_window->icon_8, (p2d_t){.x = 8, .y = 8});
+        }
         //Advance the bar position
         topb_win_pos += 16;
 
@@ -441,11 +447,11 @@ void gui_render_window(window_t* ptr){
         //Draw the border
         gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                       (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_border);
-        //Draw the border... again... to achieve 2 px thickness
-        gfx_draw_rect((p2d_t){.x = ptr->position.x - 1, .y = ptr->position.y - 1},
-                      (p2d_t){.x = ptr->size.x + 2, .y = ptr->size.y + 2}, color_scheme.win_border);
         //Print its title
-        gfx_puts((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
+        gfx_puts((p2d_t){.x = ptr->position.x + 2 + 8 + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
+        //If there is an icon, draw it
+        if(ptr->icon_8 != NULL)
+            gfx_draw_raw((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 1}, ptr->icon_8, (p2d_t){.x = 8, .y = 8});
 
         //Draw the close button 
         if(ptr->flags & GUI_WIN_FLAG_CLOSABLE)
@@ -598,7 +604,7 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             if(button->border_color.a == 0)
                 button->border_color = COLOR32(0, color_scheme.win_border.r, color_scheme.win_border.g, color_scheme.win_border.b);
             if(button->pressed_bg_color.a == 0)
-                button->pressed_bg_color = COLOR32(0, color_scheme.win_border.r >> 1, color_scheme.win_border.g >> 1, color_scheme.win_border.b >> 1);
+                button->pressed_bg_color = COLOR32(0, button->bg_color.r >> 1, button->bg_color.g >> 1, button->bg_color.b >> 1);
             //Draw the rectangles
             gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                                          .y = ptr->position.y + win_ptr->position.y + 12},
@@ -609,7 +615,7 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             //Calculate text bounds
             p2d_t t_bounds = gfx_text_bounds(button->text);
             //Draw the text
-            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1  + ((ptr->size.x - t_bounds.x) / 2),
+            gfx_puts((p2d_t){.x = ptr->position.x + win_ptr->position.x + 3  + ((ptr->size.x - t_bounds.x) / 2),
                              .y = ptr->position.y + win_ptr->position.y + 12 + ((ptr->size.y - t_bounds.y) / 2)},
                      button->text_color, COLOR32(0, 0, 0, 0), button->text);
         }
