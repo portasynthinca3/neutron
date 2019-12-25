@@ -224,20 +224,18 @@ void* memset(void* dst, int ch, size_t size){
 void* memcpy(void* destination, const void* source, size_t num){
     if(num == 0)
         return destination;
-    #ifdef STDLIB_MEMCPY_SSE2
-    //Chck if the data is 32-byte aligned
-    if(((uint64_t)destination % 32 == 0) && ((uint64_t)source % 32 == 0) && (num % 32 == 0)){
+    #ifdef STDLIB_MEMCPY_WC
+    //Chck if the data is 8-byte aligned
+    if(((uint64_t)destination % 8 == 0) && ((uint64_t)source % 8 == 0) && (num % 8 == 0)){
         //Tell the CPU we're gonna access the data soon so it can prefetch it
         __asm__ volatile("prefetchnta %0" : : "m" (source));
-        //Copy the data if it is
-        __asm__ volatile("_stdlib_memcpy_sse2:"
-                         "  movapd (%%rsi), %%xmm0;"
-                         "  movapd 16(%%rsi), %%xmm1;"
-                         "  movapd %%xmm0, (%%rdi);"
-                         "  movapd %%xmm1, 16(%%rdi);"
-                         "  add $32, %%rsi;"
-                         "  add $32, %%rdi;"
-                         "  loop _stdlib_memcpy_sse2;" : : "S" (source), "D" (destination), "c" (num / 16));
+        //Copy the data
+        __asm__ volatile("_stdlib_memcpy_wc:"
+                         "  mov (%%rsi), %%rax;"
+                         "  movnti %%rax, (%%rdi);"
+                         "  add $8, %%rsi;"
+                         "  add $8, %%rdi;"
+                         "  loop _stdlib_memcpy_wc;" : : "S" (source), "D" (destination), "c" (num / 8));
         //Return
         return destination;
     }
@@ -338,6 +336,26 @@ unsigned char inb(unsigned short port){
     unsigned char value;
     __asm__ volatile("inb %%dx, %%al" : "=a" (value) : "d" (port));
     return value;
+}
+
+/*
+ * Reads a model-specific register (MSR)
+ */
+uint64_t rdmsr(uint32_t msr){
+    uint64_t val_h;
+    uint64_t val_l;
+    __asm__ volatile("rdmsr" : "=d" (val_h), "=a" (val_l) : "c" (msr));
+    while(1);
+    return (val_h << 32) | val_l;
+}
+
+/*
+ * Writes a value to model-specific register (MSR)
+ */
+void wrmsr(uint32_t msr, uint64_t val){
+    uint64_t val_h = val >> 32;
+    uint64_t val_l = val & 0xFFFFFFFF;
+    __asm__ volatile("wrmsr" : : "d" (val_h), "a" (val_l), "c" (msr));
 }
 
 /*

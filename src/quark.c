@@ -24,6 +24,7 @@
 #include "./images/neutron_logo.xbm"
 
 #include "./apps/app.h"
+#include "./apps/term/term.h"
 #include "./apps/calculator/calculator.h"
 
 struct idt_desc idt_d;
@@ -228,6 +229,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     acpi_init();
     //Register the apps
     quark_boot_status(">>> Registering applications <<<", 90);
+    stdgui_register_app(TERM_APP);
     stdgui_register_app(CALCULATOR_APP);
     //Configure GUI
     quark_boot_status(">>> Configuring GUI <<<", 95);

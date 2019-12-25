@@ -101,12 +101,18 @@ void ps2_poll(int32_t* mx, int32_t* my, uint8_t* ml, uint8_t* mr){
     //Variable holding the I/O port 64h data
     uint8_t p64d;
     //While data is available for reading
-    while((p64d = inb(0x64)) & 1){
-        //If bit 5 is set, it's a mouse data byte
-        if(p64d & 0x20)
-            fifo_pushb(ms_buffer, &ms_buffer_head, inb(0x60));
-        else //Else, a keyboard one
-            fifo_pushb(kbd_buffer, &kbd_buffer_head, inb(0x60));
+    uint64_t timeout = 1000;
+    while(timeout--){
+        //If data is available
+        if((p64d = inb(0x64)) & 1){
+            //If bit 5 is set, it's a mouse data byte
+            if(p64d & 0x20)
+                fifo_pushb(ms_buffer, &ms_buffer_head, inb(0x60));
+            else //Else, a keyboard one
+                fifo_pushb(kbd_buffer, &kbd_buffer_head, inb(0x60));
+            //Reload the timeout
+            timeout = 1000;
+        }
     }
     //If at least three bytes are available for reading in the mouse buffer
     if(fifo_av(&ms_buffer_head, &ms_buffer_tail) >= 3){
@@ -138,5 +144,9 @@ void ps2_poll(int32_t* mx, int32_t* my, uint8_t* ml, uint8_t* mr){
         //Set mouse button state variables
         *ml = ms_flags & 1;
         *mr = ms_flags & 2;
+    }
+    //If at least some data is available in the keyboard buffer
+    if(fifo_av(&kbd_buffer_head, &kbd_buffer_tail)){
+
     }
 }

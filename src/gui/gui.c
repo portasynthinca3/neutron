@@ -109,6 +109,8 @@ window_t* gui_create_window(char* title, void* icon_8, uint32_t flags, p2d_t pos
     win.title = (char*)malloc(sizeof(char) * (strlen(title) + 1));
     //Copy the title over
     memcpy(win.title, title, strlen(title) + 1);
+    //Ignore the first frame of this window
+    win.ignore = 1;
     //Assign the properties
     win.icon_8 = icon_8;
     win.flags = flags;
@@ -429,8 +431,13 @@ void gui_render_windows(void){
  * Renders a window
  */
 void gui_render_window(window_t* ptr){
+    if(ptr->ignore){
+        ptr->ignore = 0;
+        return;
+    }
     if(ptr->flags & GUI_WIN_FLAG_MINIMIZED)
         return; //Do not render the window if it's minimized
+
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Draw the shade
@@ -483,12 +490,26 @@ void gui_render_window(window_t* ptr){
         while((control = &ptr->controls[i++])->type)
             gui_render_control(ptr, control);
     }
+
+    //Raise the "render start" event
+    if(ptr->event_handler != NULL){
+        ui_event_args_t args = (ui_event_args_t){.win = ptr, .control = NULL, .type = GUI_EVENT_RENDER_START, .mouse_pos = (p2d_t){.x = mx, .y = my}};
+        ptr->event_handler(&args);
+    }
+
+    //Raise the "render end" event
+    if(ptr->event_handler != NULL){
+        ui_event_args_t args = (ui_event_args_t){.win = ptr, .control = NULL, .type = GUI_EVENT_RENDER_END, .mouse_pos = (p2d_t){.x = mx, .y = my}};
+        ptr->event_handler(&args);
+    }
 }
 
 /*
  * Processes window's interaction with the mouse
  */
 void gui_process_window(window_t* ptr){
+    if(ptr->ignore)
+        return;
     //Set the size based on the real size and flags
     if(ptr->flags & GUI_WIN_FLAG_MAXIMIZED)
         ptr->size = (p2d_t){.x = gfx_res_x() - 1, .y = gfx_res_y() - 16 - 1};
@@ -602,7 +623,7 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             if(button->bg_color.a == 0)
                 button->bg_color = COLOR32(0, color_scheme.win_border.r, color_scheme.win_border.g, color_scheme.win_border.b);
             if(button->border_color.a == 0)
-                button->border_color = COLOR32(0, color_scheme.win_border.r, color_scheme.win_border.g, color_scheme.win_border.b);
+                button->border_color = COLOR32(0, button->bg_color.r, button->bg_color.g, button->bg_color.b);
             if(button->pressed_bg_color.a == 0)
                 button->pressed_bg_color = COLOR32(0, button->bg_color.r >> 1, button->bg_color.g >> 1, button->bg_color.b >> 1);
             //Draw the rectangles

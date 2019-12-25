@@ -211,7 +211,7 @@ void _stdgui_cb_launch_app(ui_event_args_t* args){
  */
 void stdgui_create_program_launcher(void){
     //Size of the program launcher
-    p2d_t pl_size = (p2d_t){.x = 400, .y = 300};
+    p2d_t pl_size = (p2d_t){.x = 200, .y = 150};
     //Create the window
     window_t* program_launcher =
     gui_create_window("Applications", NULL, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = 32, .y = 32}, pl_size, NULL);
@@ -222,7 +222,7 @@ void stdgui_create_program_launcher(void){
         app_t* app = &loaded_apps[app_idx];
         //Create a button for it
         control_t* btn = gui_create_button(program_launcher, next_btn_pos, (p2d_t){.x = 64, .y = 64}, "",
-            COLOR32(0, 0, 0, 0), gui_get_color_scheme()->win_bg, COLOR32(0, 0, 0, 0), COLOR32(255, 0, 0, 0), _stdgui_cb_launch_app);
+            COLOR32(0, 0, 0, 0), gui_get_color_scheme()->win_bg, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_cb_launch_app);
         //Save the button
         app_buttons[app_idx] = btn;
         //Create its icon

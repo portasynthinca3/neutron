@@ -248,7 +248,7 @@ void gfx_fill(color32_t color){
  */
 void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
     //Draw each horizontal line in the rectangle
-    for(uint32_t y = pos.y; y < pos.y + size.y; y++)
+    for(uint64_t y = pos.y; y < pos.y + size.y; y++)
         gfx_draw_hor_line((p2d_t){.x = pos.x, .y = y}, size.x, c);
 }
 
@@ -257,17 +257,17 @@ void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
  */
 void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c){
     //Draw two horizontal lines
-    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y}, size.x, c);
-    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y + size.y}, size.x, c);
+    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y}, (uint64_t)size.x, c);
+    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y + size.y}, (uint64_t)size.x, c);
     //Draw two vertical lines
-    gfx_draw_vert_line((p2d_t){.x = pos.x, .y = pos.y}, size.y, c);
-    gfx_draw_vert_line((p2d_t){.x = pos.x + size.x, .y = pos.y}, size.y, c);
+    gfx_draw_vert_line((p2d_t){.x = pos.x, .y = pos.y}, (uint64_t)size.y, c);
+    gfx_draw_vert_line((p2d_t){.x = pos.x + size.x, .y = pos.y}, (uint64_t)size.y, c);
 }
 
 /*
  * Draw a horizontal line
  */
-void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c){
+void gfx_draw_hor_line(p2d_t pos, uint64_t w, color32_t c){
     //Get the video buffer
     color32_t* buf = gfx_buffer();
     //Calculate the scanline start
@@ -280,13 +280,13 @@ void gfx_draw_hor_line(p2d_t pos, uint16_t w, color32_t c){
 /*
  * Draw a vertical line
  */
-void gfx_draw_vert_line(p2d_t pos, uint16_t h, color32_t c){
+void gfx_draw_vert_line(p2d_t pos, uint64_t h, color32_t c){
     //Get the video buffer
     color32_t* buf = gfx_buffer();
     //Calculate the scanline start
     uint32_t st = (pos.y * res_x) + pos.x;
     //Draw each pixel in the line
-    for(uint32_t o = 0; o <= h * res_x; o += res_x)
+    for(uint64_t o = 0; o <= h * res_x; o += res_x)
         buf[st + o] = c;
 }
 

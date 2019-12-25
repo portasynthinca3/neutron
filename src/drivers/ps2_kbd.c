@@ -24,3 +24,10 @@ void ps2_kbd_leds(uint8_t scroll, uint8_t num, uint8_t caps){
     ps2_send(0xED); //Command: set LEDs
     ps2_send((scroll & 1) | ((num & 1) << 1) | ((caps & 1) << 2));
 }
+
+/*
+ * Parses data available in the keyboard inpu buffer
+ */
+void ps2_kbd_parse(uint8_t* buf, uint16_t* head, uint16_t* tail){
+
+}

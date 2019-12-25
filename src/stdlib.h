@@ -6,10 +6,10 @@
 #endif
 
 //The quark version
-#define QUARK_VERSION_STR "v0.2.2"
+#define QUARK_VERSION_STR "v0.2.3"
 
-//Use SSE2 for memcpy() transfers?
-#define STDLIB_MEMCPY_SSE2
+//Use WC for memcpy() transfers?
+#define STDLIB_MEMCPY_WC
 
 //Standard type definitions
 
@@ -94,6 +94,8 @@ uint64_t rdtsc(void);
 uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s);
 void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access);
 int memcmp(const void* lhs, const void* rhs, size_t cnt);
+uint64_t rdmsr(uint32_t msr);
+void wrmsr(uint32_t msr, uint64_t val);
 
 //Dynamic memory allocation functions
 

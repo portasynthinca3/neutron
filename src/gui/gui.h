@@ -68,6 +68,9 @@ typedef struct {
     p2d_t size_real;
     //The event handler for the window
     void(*event_handler)(ui_event_args_t*);
+    //Ignore window rendering and processing?
+    //(is being set on creation)
+    uint8_t ignore;
 } window_t;
 
 //Structures defining extended controls
