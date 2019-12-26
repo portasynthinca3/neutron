@@ -1,7 +1,7 @@
 #ifndef PS2_H
 #define PS2_h
 
-#include "../stdlib.h"
+#include "../../stdlib.h"
 
 //PS/2 controller data port
 #define PS2_CONT_DATA           0x60
@@ -23,6 +23,6 @@ uint8_t ps2_read(void);
 void ps2_send(uint8_t d);
 void ps2_init(void);
 void ps2_alloc_buf(void);
-void ps2_poll(int32_t* mx, int32_t* my, uint8_t* ml, uint8_t* mr);
+void ps2_poll(void);
 
 #endif

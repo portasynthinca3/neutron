@@ -16,7 +16,8 @@
 #include "./drivers/ata.h"
 #include "./drivers/pic.h"
 #include "./drivers/pit.h"
-#include "./drivers/ps2.h"
+#include "./drivers/human_io/ps2.h"
+#include "./drivers/human_io/mouse.h"
 #include "./drivers/acpi.h"
 
 #include "./fonts/font_neutral.h"
@@ -241,12 +242,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Exit UEFI boot services
     SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
 
-    //Constantly update the GUI
-    for(;;){
+    //Constantly
+    while(1){
+        //Poll the PS/2 controller
+        ps2_poll();
+        //Update the GUI
         gui_update();
+        //Signal an end of the frame
+        mouse_frame_end();
     }
-
-    while(1);
 }
 
 /*

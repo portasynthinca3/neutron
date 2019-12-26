@@ -3,8 +3,8 @@
 
 #include "./ps2_kbd.h"
 #include "./ps2.h"
-#include "../stdlib.h"
-#include "./gfx.h"
+#include "../../stdlib.h"
+#include "../gfx.h"
 
 /*
  * Performs an initialization of the PS/2 keyboard
@@ -26,7 +26,7 @@ void ps2_kbd_leds(uint8_t scroll, uint8_t num, uint8_t caps){
 }
 
 /*
- * Parses data available in the keyboard inpu buffer
+ * Parses data available in the keyboard input buffer
  */
 void ps2_kbd_parse(uint8_t* buf, uint16_t* head, uint16_t* tail){
 

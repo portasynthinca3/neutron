@@ -199,9 +199,7 @@ void gui_render_window(window_t* ptr);
 void gui_render_control(window_t* win_ptr, control_t* ptr);
 void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer);
 
-void gui_init_ps2(void);
-void gui_poll_ps2(void);
-void gui_reset_ps2(void);
+void gui_get_mouse(void);
 
 void gui_draw_cursor(uint32_t x, uint32_t y);
 

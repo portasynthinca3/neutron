@@ -3,9 +3,9 @@
 
 #include "./ps2.h"
 #include "./ps2_kbd.h"
-#include "../stdlib.h"
-#include "../gui/gui.h"
-#include "../drivers/gfx.h"
+#include "./ps2_mouse.h"
+#include "../../stdlib.h"
+#include "../../gui/gui.h"
 
 //Keyboard buffer
 uint8_t* kbd_buffer;
@@ -68,13 +68,9 @@ void ps2_init(void){
     outb(0x64, 0xAE); //Issue command 0xAE (enable first PS/2 port)
     while(inb(0x64) & 2); //Wait for input acceptability
     outb(0x64, 0xA8); //Issue command 0xA8 (enable second PS/2 port)
-    while(inb(0x64) & 2); //Wait for input acceptability
-    outb(0x64, 0xD4); //Issue command 0xD4 (write to second PS/2 port)
-    while(inb(0x64) & 2); //Wait for input acceptability
-    outb(0x60, 0xF4); //Issue mouse command 0xF4 (enable packet streaming)
-    while(!(inb(0x64) & 1)); //Wait for the mouse to send an ACK byte
-    inb(0x60); //Read and discard the ACK byte
-    ps2_kbd_init(); //Initialize the PS/2 keyboard
+    //Initialize keyboard and mouse
+    ps2_mouse_init();
+    ps2_kbd_init();
 }
 
 /*
@@ -97,53 +93,20 @@ void ps2_alloc_buf(void){
 /*
  * Polls the PS/2 controller
  */
-void ps2_poll(int32_t* mx, int32_t* my, uint8_t* ml, uint8_t* mr){
+void ps2_poll(void){
     //Variable holding the I/O port 64h data
     uint8_t p64d;
     //While data is available for reading
-    uint64_t timeout = 1000;
-    while(timeout--){
-        //If data is available
-        if((p64d = inb(0x64)) & 1){
-            //If bit 5 is set, it's a mouse data byte
-            if(p64d & 0x20)
-                fifo_pushb(ms_buffer, &ms_buffer_head, inb(0x60));
-            else //Else, a keyboard one
-                fifo_pushb(kbd_buffer, &kbd_buffer_head, inb(0x60));
-            //Reload the timeout
-            timeout = 1000;
-        }
+    while((p64d = inb(0x64)) & 1){
+        //If bit 5 is set, it's a mouse data byte
+        if(p64d & 0x20)
+            fifo_pushb(ms_buffer, &ms_buffer_head, inb(0x60));
+        else //Else, a keyboard one
+            fifo_pushb(kbd_buffer, &kbd_buffer_head, inb(0x60));
     }
     //If at least three bytes are available for reading in the mouse buffer
     if(fifo_av(&ms_buffer_head, &ms_buffer_tail) >= 3){
-        //Read the packet
-        uint8_t ms_flags = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
-        uint8_t ms_x = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
-        uint8_t ms_y = fifo_popb(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
-        //Bit 3 of flags should always be set
-        if(ms_flags & 8){
-            //Process it
-            if(ms_flags & 0x20) //Bit 5 in flags means delta Y is negative
-                *my -= (int32_t)((int32_t)ms_y) | 0xFFFFFFFF00; //We subtract because PS/2 assumes that the Y axis is looking up, but it's the opposite in graphics
-            else
-                *my -= (int32_t)ms_y;
-            if(ms_flags & 0x10) //Bit 4 in flags means delta X is negative
-                *mx += (int32_t)((int32_t)ms_x) | 0xFFFFFFFF00;
-            else
-                *mx += (int32_t)ms_x;
-        }
-        //Constrain the coordinates
-        if(*mx < 0)
-            *mx = 0;
-        else if(*mx >= gfx_res_x())
-            *mx = gfx_res_x() - 1;
-        if(*my < 0)
-            *my = 0;
-        else if(*my >= gfx_res_y())
-            *my = gfx_res_y() - 1;
-        //Set mouse button state variables
-        *ml = ms_flags & 1;
-        *mr = ms_flags & 2;
+        ps2_mouse_parse(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
     }
     //If at least some data is available in the keyboard buffer
     if(fifo_av(&kbd_buffer_head, &kbd_buffer_tail)){

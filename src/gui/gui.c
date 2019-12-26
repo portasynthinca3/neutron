@@ -7,7 +7,7 @@
 #include "../drivers/gfx.h"
 #include "../drivers/diskio.h"
 #include "../drivers/pit.h"
-#include "../drivers/ps2.h"
+#include "../drivers/human_io/mouse.h"
 
 #include "../images/power.xbm"
 #include "../images/system.xbm"
@@ -281,10 +281,11 @@ control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t 
 }
 
 /*
- * Polls PS/2 mouse
+ * Gets mouse data
  */
-void gui_poll_ps2(void){
-    ps2_poll(&mx, &my, &ml, &mr);
+void gui_get_mouse(void){
+    mouse_abs(&mx, &my);
+    mouse_buttons(&ml, &mr);
 }
 
 /*
@@ -293,8 +294,8 @@ void gui_poll_ps2(void){
 void gui_update(void){
     uint64_t render_start = rdtsc();
 
-    //Poll the PS/2 controller
-    gui_poll_ps2();
+    //Get the mouse data
+    gui_get_mouse();
     //Draw the desktop
     gfx_fill(color_scheme.desktop);
     //Draw the top bar
