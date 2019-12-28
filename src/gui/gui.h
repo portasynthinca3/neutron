@@ -34,6 +34,8 @@ typedef struct {
     void* control;
     //Mouse position on screen when the event occured
     p2d_t mouse_pos;
+    //Pointer to extra data
+    void* extra_data;
 } ui_event_args_t;
 
 //Structure defining a form control
@@ -148,6 +150,7 @@ typedef struct {
 #define GUI_EVENT_RENDER_END                        2
 #define GUI_EVENT_CLICK                             3
 #define GUI_EVENT_TRACK_BAR_CHANGE                  4
+#define GUI_EVENT_KEYBOARD                          5
 
 //Image formats
 

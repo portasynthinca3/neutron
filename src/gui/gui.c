@@ -8,6 +8,7 @@
 #include "../drivers/diskio.h"
 #include "../drivers/pit.h"
 #include "../drivers/human_io/mouse.h"
+#include "../drivers/human_io/kbd.h"
 
 #include "../images/power.xbm"
 #include "../images/system.xbm"
@@ -336,6 +337,23 @@ void gui_update(void){
     if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
         quark_gui_callback_system_pressed();
 
+    //If there's a focused window
+    if(window_focused != NULL){
+        //Read the keyboard events and send them to the focused window
+        kbd_event_t event;
+        while(kbd_pop_event(&event)){
+            if(window_focused->event_handler != NULL){
+                ui_event_args_t args = (ui_event_args_t){.win = window_focused, .control = NULL, .type = GUI_EVENT_KEYBOARD,
+                    .mouse_pos = (p2d_t){.x = mx, .y = my}, .extra_data = &event};
+                window_focused->event_handler(&args);
+            }
+        }
+    }
+    //Else, just flush the event buffer
+    else {
+        while(kbd_pop_event(NULL));
+    }
+
     //Render and process the windows
     gui_render_windows();
     //Draw the cursor
@@ -439,6 +457,12 @@ void gui_render_window(window_t* ptr){
     if(ptr->flags & GUI_WIN_FLAG_MINIMIZED)
         return; //Do not render the window if it's minimized
 
+    //Raise the "render start" event
+    if(ptr->event_handler != NULL){
+        ui_event_args_t args = (ui_event_args_t){.win = ptr, .control = NULL, .type = GUI_EVENT_RENDER_START, .mouse_pos = (p2d_t){.x = mx, .y = my}};
+        ptr->event_handler(&args);
+    }
+
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Draw the shade
@@ -490,12 +514,6 @@ void gui_render_window(window_t* ptr){
         control_t* control;
         while((control = &ptr->controls[i++])->type)
             gui_render_control(ptr, control);
-    }
-
-    //Raise the "render start" event
-    if(ptr->event_handler != NULL){
-        ui_event_args_t args = (ui_event_args_t){.win = ptr, .control = NULL, .type = GUI_EVENT_RENDER_START, .mouse_pos = (p2d_t){.x = mx, .y = my}};
-        ptr->event_handler(&args);
     }
 
     //Raise the "render end" event

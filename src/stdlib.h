@@ -6,7 +6,7 @@
 #endif
 
 //The quark version
-#define QUARK_VERSION_STR "v0.2.3"
+#define QUARK_VERSION_STR "v0.2.5"
 
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC

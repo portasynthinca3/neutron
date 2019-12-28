@@ -638,6 +638,8 @@ typedef struct {
     term_char_t* buf;
     //The input buffer
     char* input_buf;
+    //The input buffer position
+    uint16_t input_buf_pos;
     //The cursor position
     term_coord_t cursor;
     //Is the cursor visible or not
@@ -646,8 +648,6 @@ typedef struct {
     term_coord_t size;
     //The window that's representing the terminal
     window_t* win;
-    //The color lookup table
-    color32_t color_lut[16];
     //The cursor animation progress
     uint8_t cur_anim_prog;
 } term_t;
