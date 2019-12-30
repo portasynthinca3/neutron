@@ -7,7 +7,7 @@
 #include "./stdlib.h"
 #include "./drivers/gfx.h"
 
-EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
+EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
 free_block_t* first_free_block;
 void* gen_free_base;
@@ -53,21 +53,21 @@ void dram_init(void){
     size = sizeof(EFI_MEMORY_DESCRIPTOR) * 31;
     mem_map_retry:
     size += sizeof(EFI_MEMORY_DESCRIPTOR) * 31;
-    status = quark_get_efi_systable()->BootServices->AllocatePool(EfiLoaderData, size, (void*)&buf);
+    status = krnl_get_efi_systable()->BootServices->AllocatePool(EfiLoaderData, size, (void*)&buf);
     if(EFI_ERROR(status)){
-        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"Failed to allocate memory for the memory map\r\n");
         while(1);
     }
     //Map the memory
-    status = quark_get_efi_systable()->BootServices->GetMemoryMap(&size, buf, &map_key, &desc_size, &desc_ver);
+    status = krnl_get_efi_systable()->BootServices->GetMemoryMap(&size, buf, &map_key, &desc_size, &desc_ver);
     //Re-allocate the buffer with a different size if the current one isn't sufficient
     if(EFI_ERROR(status)){
         if(status == EFI_BUFFER_TOO_SMALL){
-            quark_get_efi_systable()->BootServices->FreePool(buf);
+            krnl_get_efi_systable()->BootServices->FreePool(buf);
             goto mem_map_retry;
         } else {
-            quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+            krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
                 (CHAR16*)L"Failed to get the memory map\r\n");
             while(1);
         }
@@ -100,7 +100,7 @@ void dram_init(void){
     total_ram_size += best_block_size;
 
     if(gen_free_top == NULL){
-        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"No usable memory was found\r\n");
         while(1);
     }
@@ -125,7 +125,7 @@ void* malloc(size_t size){
     //  have enough memory and need to crash
     if(first_free_block == NULL){
         #ifdef STDLIB_CARSH_ON_ALLOC_ERR
-            crash_label_2: gfx_panic((uint64_t)&&crash_label_2, QUARK_PANIC_NOMEM_CODE);
+            crash_label_2: gfx_panic((uint64_t)&&crash_label_2, KRNL_PANIC_NOMEM_CODE);
         #else
             return NULL;
         #endif
@@ -142,7 +142,7 @@ void* malloc(size_t size){
     }
     //If we still didn't find free space, we defenitely don't have enough RAM
     #ifdef STDLIB_CARSH_ON_ALLOC_ERR
-        crash_label_3: gfx_panic((uint64_t)&&crash_label_3, QUARK_PANIC_NOMEM_CODE);
+        crash_label_3: gfx_panic((uint64_t)&&crash_label_3, KRNL_PANIC_NOMEM_CODE);
     #else
         return NULL;
     #endif
@@ -345,7 +345,6 @@ uint64_t rdmsr(uint32_t msr){
     uint64_t val_h;
     uint64_t val_l;
     __asm__ volatile("rdmsr" : "=d" (val_h), "=a" (val_l) : "c" (msr));
-    while(1);
     return (val_h << 32) | val_l;
 }
 
@@ -353,8 +352,8 @@ uint64_t rdmsr(uint32_t msr){
  * Writes a value to model-specific register (MSR)
  */
 void wrmsr(uint32_t msr, uint64_t val){
-    uint64_t val_h = val >> 32;
-    uint64_t val_l = val & 0xFFFFFFFF;
+    uint32_t val_h = val >> 32;
+    uint32_t val_l = val & 0xFFFFFFFF;
     __asm__ volatile("wrmsr" : : "d" (val_h), "a" (val_l), "c" (msr));
 }
 

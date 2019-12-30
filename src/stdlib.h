@@ -5,8 +5,8 @@
 #define NULL ((void*)0)
 #endif
 
-//The quark version
-#define QUARK_VERSION_STR "v0.2.5"
+//The krnl version
+#define KRNL_VERSION_STR "v0.2.5"
 
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC
@@ -67,18 +67,18 @@ struct idt_entry {
 
 //A macro that creates generic IDT entries
 #define IDT_ENTRY(OFFS, CSEL, TYPE) ((struct idt_entry){.offset_lower = ((uint32_t)OFFS) & 0xFFFF, .code_selector = ((uint32_t)CSEL), .zero = 0, .type_attr = TYPE, .offset_higher = ((((uint32_t)OFFS) >> 16) & 0xFFFF)})
-//A macro that creates Quark ISR IDT entries
+//A macro that creates Kernel ISR IDT entries
 #define IDT_ENTRY_ISR(OFFS) (IDT_ENTRY(OFFS, 8, 0b10001110))
 
 //Panic codes
 
-#define QUARK_PANIC_NOMEM_CODE              1
-#define QUARK_PANIC_NOMEM_MSG               "malloc() failed due to lack of free memory"
-#define QUARK_PANIC_PANTEST_CODE            2
-#define QUARK_PANIC_PANTEST_MSG             "not an error: called gfx_panic() for testing purposes"
-#define QUARK_PANIC_CPUEXC_CODE             3
-#define QUARK_PANIC_CPUEXC_MSG              "CPU-generated exception"
-#define QUARK_PANIC_UNKNOWN_MSG             "<unknown code>"
+#define KRNL_PANIC_NOMEM_CODE              1
+#define KRNL_PANIC_NOMEM_MSG               "malloc() failed due to lack of free memory"
+#define KRNL_PANIC_PANTEST_CODE            2
+#define KRNL_PANIC_PANTEST_MSG             "not an error: called gfx_panic() for testing purposes"
+#define KRNL_PANIC_CPUEXC_CODE             3
+#define KRNL_PANIC_CPUEXC_MSG              "CPU-generated exception"
+#define KRNL_PANIC_UNKNOWN_MSG             "<unknown code>"
 
 //Debug functions
 
@@ -96,6 +96,10 @@ void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint
 int memcmp(const void* lhs, const void* rhs, size_t cnt);
 uint64_t rdmsr(uint32_t msr);
 void wrmsr(uint32_t msr, uint64_t val);
+
+//Model-Specific Registers (MSRs) definitions
+
+#define MSR_PAT                             0x277
 
 //Dynamic memory allocation functions
 

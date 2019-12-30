@@ -7,7 +7,7 @@
 uint64_t ticks = 0;
 
 /*
- * This is called by Quark whenever an IRQ0 occurs
+ * This is called by Kernel whenever an IRQ0 occurs
  */
 void pit_irq0(void){
     //Increment the tick count

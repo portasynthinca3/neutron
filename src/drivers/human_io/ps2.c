@@ -6,6 +6,7 @@
 #include "./ps2_mouse.h"
 #include "../../stdlib.h"
 #include "../../gui/gui.h"
+#include "../ata.h" //For delay only
 
 //Keyboard buffer
 uint8_t* kbd_buffer;
@@ -39,6 +40,7 @@ void ps2_wait_recv(void){
  * Sends a command to the PS/2 controller
  */
 void ps2_command(uint8_t c){
+    ata_wait_100us(10);
     outb(PS2_CONT_COMM, c);
 }
 
@@ -62,18 +64,15 @@ void ps2_send(uint8_t d){
  * Initializes the PS/2 system
  */
 void ps2_init(void){
+    //Flush the input buffer
+    for(uint32_t i = 0; i < 1000; i++)
+        inb(PS2_CONT_DATA);
     //Disable PS/2 ports
     ps2_command(0xAD);
     ps2_command(0xA7);
     //Flush the output buffer
     while(ps2_cont_status() & 1)
         ps2_read();
-    //Perform controller self-test
-    ps2_command(0xAA);
-    if(ps2_read() != 0x55){
-        gfx_verbose_println("Self-testing the PS/2 controller resulted in an error |x_x|");
-        while(1);
-    }
     //Read configuration byte
     ps2_command(0x20);
     uint8_t config_byte = ps2_read();
@@ -82,18 +81,6 @@ void ps2_init(void){
     //Write the modified configuration byte back
     ps2_command(0x60);
     ps2_send(config_byte);
-    //Perform port 1 test
-    ps2_command(0xAB);
-    if(ps2_read() != 0){
-        gfx_verbose_println("Testing the first port resulted in an error |x_x|");
-        while(1);
-    }
-    //Perform port 2 test
-    ps2_command(0xA9);
-    if(ps2_read() != 0){
-        gfx_verbose_println("Testing the second port resulted in an error |x_x|");
-        while(1);
-    }
     //Enable PS/2 ports
     ps2_command(0xAE);
     ps2_command(0xA8);
@@ -126,20 +113,26 @@ void ps2_alloc_buf(void){
 void ps2_poll(void){
     //Variable holding the I/O port 64h data
     uint8_t p64d;
-    //While there's data ready to be read
-    if((p64d = inb(0x64)) & 1){
-        //If bit 5 is set, it's a mouse data byte
-        if(p64d & 0x20)
-            fifo_pushb(ms_buffer, &ms_buffer_head, inb(PS2_CONT_DATA));
-        else //Else, a keyboard one
-            fifo_pushb(kbd_buffer, &kbd_buffer_head, inb(PS2_CONT_DATA));
+    uint32_t timeout = 10;
+    //While the time didn't out
+    while(timeout--){
+        //While there's data ready to be read
+        if((p64d = inb(0x64)) & 1){
+            //If bit 5 is set, it's a mouse data byte
+            if(p64d & 0x20)
+                fifo_pushb(ms_buffer, &ms_buffer_head, inb(PS2_CONT_DATA));
+            else //Else, a keyboard one
+                fifo_pushb(kbd_buffer, &kbd_buffer_head, inb(PS2_CONT_DATA));
+        }
+        //Delay for 1ms
+        ata_wait_100us(10);
     }
-    //If at least three bytes are available for reading in the mouse buffer
-    if(fifo_av(&ms_buffer_head, &ms_buffer_tail) >= 3){
+    //While at least three bytes are available for reading in the mouse buffer
+    while(fifo_av(&ms_buffer_head, &ms_buffer_tail) >= 3){
         ps2_mouse_parse(ms_buffer, &ms_buffer_head, &ms_buffer_tail);
     }
-    //If at least some data is available in the keyboard buffer
-    if(fifo_av(&kbd_buffer_head, &kbd_buffer_tail)){
+    //While at least some data is available in the keyboard buffer
+    while(fifo_av(&kbd_buffer_head, &kbd_buffer_tail)){
         ps2_kbd_parse(kbd_buffer, &kbd_buffer_head, &kbd_buffer_tail);
     }
 }

@@ -16,4 +16,9 @@ typedef struct {
     uint16_t ver_patch;
 } app_t;
 
+void app_register(app_t app);
+uint32_t app_count(void);
+app_t* app_get_id(uint32_t id);
+app_t* app_get_name(char* name);
+
 #endif

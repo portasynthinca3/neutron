@@ -9,7 +9,7 @@
 #include "../stdlib.h"
 #include "./gfx.h"
 
-EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
+EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
 uint32_t acpi_smi_cmd;
 uint8_t acpi_en;
@@ -154,8 +154,8 @@ uint8_t acpi_sdt_checksum(acpi_sdt_hdr_t* rsdt){
  */
 acpi_rsdp_t* acpi_find_rsdp(void){
     //Search for the pointer in the UEFI config table
-    EFI_CONFIGURATION_TABLE* config_table =  quark_get_efi_systable()->ConfigurationTable;
-    for(uint32_t i = 0; i < quark_get_efi_systable()->NumberOfTableEntries; i++){
+    EFI_CONFIGURATION_TABLE* config_table =  krnl_get_efi_systable()->ConfigurationTable;
+    for(uint32_t i = 0; i < krnl_get_efi_systable()->NumberOfTableEntries; i++){
         //If the GUID is ACPI 1.0 RSDP pointer GUID, return it
         if(memcmp(&(config_table[i].VendorGuid), &(EFI_GUID)ACPI_TABLE_GUID, sizeof(EFI_GUID)) == 0)
             return config_table[i].VendorTable;

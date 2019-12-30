@@ -1,5 +1,5 @@
 //Neutron Project
-//Quark - the kernel
+//The kernel
 
 #include <efi.h>
 #include <efilib.h>
@@ -50,16 +50,16 @@ extern void irq13_wrap(void);
 extern void irq14_wrap(void);
 extern void irq15_wrap(void);
 
-uint8_t quark_verbose;
+uint8_t krnl_verbose;
 
 //Pointer to the EFI system table
-EFI_SYSTEM_TABLE* quark_efi_systable;
+EFI_SYSTEM_TABLE* krnl_efi_systable;
 
 /*
  * Gets the EFI system table
  */
-EFI_SYSTEM_TABLE* quark_get_efi_systable(void){
-    return quark_efi_systable;
+EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
+    return krnl_efi_systable;
 }
 
 /*
@@ -78,44 +78,44 @@ void sys_color_change(ui_event_args_t* args){
 /*
  * This function is caled whenever the user requests the system color picker
  */
-void quark_open_sys_color_picker(ui_event_args_t* args){
+void krnl_open_sys_color_picker(ui_event_args_t* args){
     stdgui_create_color_picker(sys_color_change, gui_get_color_scheme()->win_border);
 }
 
 /*
  * This function is called whenever someone requests to shutdown
  */
-void quark_shutdown(void){
+void krnl_shutdown(void){
     acpi_shutdown();
 }
 
 /*
  * This function is called whenever someone requests to restart
  */
-void quark_reboot(void){
+void krnl_reboot(void){
     acpi_reboot();
 }
 
 /*
  * This function is called whenewer the user presses a GUI power button
  */
-void quark_gui_callback_power_pressed(void){
+void krnl_gui_callback_power_pressed(void){
     stdgui_create_shutdown_prompt();
 }
 
 /*
  * This function is called whenewer the user presses a GUI system button
  */
-void quark_gui_callback_system_pressed(void){
+void krnl_gui_callback_system_pressed(void){
     stdgui_create_system_win();
 }
 
 /*
  * Display a boot progress bar
  */
-void quark_boot_status(char* str, uint32_t progress){
+void krnl_boot_status(char* str, uint32_t progress){
     //Only if we're not in verbose mode
-    if(!quark_verbose){
+    if(!krnl_verbose){
         //Draw the screen
         gfx_draw_filled_rect((p2d_t){.x = 0, .y = gfx_res_y() / 2},
                             (p2d_t){.x = gfx_res_x(), .y = 8}, COLOR32(255, 0, 0, 0));
@@ -137,11 +137,11 @@ void quark_boot_status(char* str, uint32_t progress){
  */
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable){
     //Save the system table pointer
-    quark_efi_systable = SystemTable;
+    krnl_efi_systable = SystemTable;
     //Disable the watchdog timer
-    quark_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
+    krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
-    quark_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron (UEFI version) is starting up\r\n");
+    krnl_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron (UEFI version) is starting up\r\n");
 
 	//Disable interrupts
 	__asm__ volatile("cli");
@@ -151,8 +151,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     dram_init();
 
     //Set verbose mode
-    quark_verbose = 1;
-    gfx_set_verbose(quark_verbose);
+    krnl_verbose = 1;
+    gfx_set_verbose(krnl_verbose);
 
     //Initialize PICs
     /*pic_init(32, 40); //Remap IRQs
@@ -203,41 +203,41 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_set_font(font_neutral);
 
-    gfx_verbose_println(QUARK_VERSION_STR);
+    gfx_verbose_println(KRNL_VERSION_STR);
     gfx_verbose_println("Verbose mode is on");
 
-    //Print the quark version
-    if(!quark_verbose)
-        gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(QUARK_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
-                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), QUARK_VERSION_STR);
+    //Print the krnl version
+    if(!krnl_verbose)
+        gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(KRNL_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
+                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), KRNL_VERSION_STR);
     //Draw the neutron logo
     gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
     //Print the boot process
-    quark_boot_status(">>> Loading <<<", 0);
+    krnl_boot_status(">>> Loading <<<", 0);
 
     //Initialize PS/2
-    quark_boot_status(">>> Initializing PS/2 <<<", 15);
+    krnl_boot_status(">>> Initializing PS/2 <<<", 15);
     ps2_init();
     //Enumerate PCI devices
-    quark_boot_status(">>> Detecting PCI devices <<<", 30);
+    krnl_boot_status(">>> Detecting PCI devices <<<", 30);
     pci_enumerate();
     //Enumerate partitions
-    quark_boot_status(">>> Detecting drive partitions <<<", 45);
+    krnl_boot_status(">>> Detecting drive partitions <<<", 45);
     diskio_init();
     //Initialize ACPI
-    quark_boot_status(">>> Initializing ACPI <<<", 60);
+    krnl_boot_status(">>> Initializing ACPI <<<", 60);
     acpi_init();
     //Register the apps
-    quark_boot_status(">>> Registering applications <<<", 90);
-    stdgui_register_app(TERM_APP);
-    stdgui_register_app(CALCULATOR_APP);
+    krnl_boot_status(">>> Registering applications <<<", 90);
+    app_register(TERM_APP);
+    app_register(CALCULATOR_APP);
     //Configure GUI
-    quark_boot_status(">>> Configuring GUI <<<", 95);
+    krnl_boot_status(">>> Configuring GUI <<<", 95);
     gui_init();
     stdgui_create_program_launcher();
     //The loading process is done!
-    quark_boot_status(">>> Done <<<", 100);
+    krnl_boot_status(">>> Done <<<", 100);
 
     //Exit UEFI boot services
     SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
@@ -248,7 +248,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
         ps2_poll();
         //Update the GUI
         gui_update();
-        //Signal an end of the frame
+        //Signal an end of the frame to the mouse driver
         mouse_frame_end();
     }
 }
@@ -256,11 +256,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 /*
  * Exception ISR
  */
-void quark_exc(void){
+void krnl_exc(void){
     //Print some info
     unsigned int ip;
     __asm__ volatile("mov %%edx, %0" : "=r" (ip));
-    gfx_panic(ip, QUARK_PANIC_CPUEXC_CODE);
+    gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE);
 
     //Hang
     while(1);
@@ -269,7 +269,7 @@ void quark_exc(void){
 /*
  * IRQ ISR
  */
-void quark_irq(uint32_t irq_no){
+void krnl_irq(uint32_t irq_no){
     //IRQ0 is sent by the PIT
     if(irq_no == 0)
         pit_irq0();

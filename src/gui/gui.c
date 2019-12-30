@@ -47,8 +47,8 @@ uint64_t gui_render_cyc = 0;
 uint64_t gui_trans_cyc = 0;
 
 uint8_t last_frame_ml = 0;
-void quark_gui_callback_power_pressed(void);
-void quark_gui_callback_system_pressed(void);
+void krnl_gui_callback_power_pressed(void);
+void krnl_gui_callback_system_pressed(void);
 
 control_ext_progress_t* example_progress_bar;
 
@@ -328,14 +328,14 @@ void gui_update(void){
                  COLOR32(255, 255, 0, 0), COLOR32(0, 0, 0, 0));
     //Call the callback if it was pressed
     if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
-        quark_gui_callback_power_pressed();
+        krnl_gui_callback_power_pressed();
     //Draw the system icon
     gfx_draw_xbm((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, system_bits, (p2d_t){.x = system_width, .y = system_height},
                  COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0));
 
     //Call the callback if it was pressed
     if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
-        quark_gui_callback_system_pressed();
+        krnl_gui_callback_system_pressed();
 
     //If there's a focused window
     if(window_focused != NULL){

@@ -640,6 +640,8 @@ typedef struct {
     char* input_buf;
     //The input buffer position
     uint16_t input_buf_pos;
+    //The cursor position in the input line
+    uint16_t input_cur_pos;
     //The cursor position
     term_coord_t cursor;
     //Is the cursor visible or not
@@ -652,6 +654,8 @@ typedef struct {
     uint8_t cur_anim_prog;
 } term_t;
 
+void term_process_input(term_t* term);
+void term_win_event(ui_event_args_t* args);
 void term_puts(term_t* term, char* str, uint8_t fcolor, uint8_t bcolor);
 void term_entry(void);
 

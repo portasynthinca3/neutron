@@ -9,27 +9,23 @@
 
 #include "../images/neutron_logo.xbm"
 
-//These are defined in Quark
-void quark_shutdown(void);
-void quark_reboot(void);
-void quark_open_sys_color_picker(ui_event_args_t* args);
+//These are defined in Kernel
+void krnl_shutdown(void);
+void krnl_reboot(void);
+void krnl_open_sys_color_picker(ui_event_args_t* args);
 
-//The list of loaded apps
-app_t loaded_apps[32];
 //The list of buttons for launching respective apps
 control_t* app_buttons[32];
-//Where to load the next app
-uint8_t next_app = 0;
 
 //The position the next app will be loaded into
 
 void _stdgui_cb_shutdown_pressed(ui_event_args_t* args){
     if(args->type == GUI_EVENT_CLICK)
-        quark_shutdown();
+        krnl_shutdown();
 }
 void _stdgui_cb_reboot_pressed(ui_event_args_t* args){
     if(args->type == GUI_EVENT_CLICK)
-        quark_reboot();
+        krnl_reboot();
 }
 
 //Image that shows the currently selected color in the color picker
@@ -105,7 +101,7 @@ void stdgui_create_system_win(void){
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - name_label_width) / 2, .y = 13 + neutron_logo_height + 2}, 
                              (p2d_t){.x = name_label_width, .y = 8}, name_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
     //Add the version label to it
-    char* ver_label_text = QUARK_VERSION_STR;
+    char* ver_label_text = KRNL_VERSION_STR;
     uint32_t ver_label_width = gfx_text_bounds(ver_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - ver_label_width) / 2, .y = 13 + neutron_logo_height + 2 + 8 + 2}, 
                              (p2d_t){.x = ver_label_width, .y = 8}, ver_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
@@ -124,7 +120,7 @@ void stdgui_create_system_win(void){
                              (p2d_t){.x = ram_label_width, .y = 8}, ram_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
     //Add the system color change button to it
     gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 40}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
-                      COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), quark_open_sys_color_picker);
+                      COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), krnl_open_sys_color_picker);
 }
 
 /*
@@ -171,38 +167,15 @@ color32_t stdgui_cpick_get_color(void){
 }
 
 /*
- * Registers an application
- */
-void stdgui_register_app(app_t app){
-    //Print the information about the application we're loading
-    char temp[100];
-    char temp2[10];
-    temp[0] = 0;
-    strcat(temp, "Registering app \"");
-    strcat(temp, app.name);
-    strcat(temp, "\" ver. ");
-    strcat(temp, sprintu(temp2, app.ver_major, 1));
-    strcat(temp, ".");
-    strcat(temp, sprintu(temp2, app.ver_minor, 1));
-    strcat(temp, ".");
-    strcat(temp, sprintu(temp2, app.ver_patch, 1));
-    strcat(temp, " as ID ");
-    strcat(temp, sprintu(temp2, next_app, 1));
-    gfx_verbose_println(temp);
-    //Actually store the application data
-    loaded_apps[next_app++] = app;
-}
-
-/*
  * Every app launch button event handler
  */
 void _stdgui_cb_launch_app(ui_event_args_t* args){
     //Only respond to clicking
     if(args->type == GUI_EVENT_CLICK){
         //Go through the button list
-        for(uint16_t app_idx = 0; app_idx < next_app; app_idx++)
+        for(uint16_t app_idx = 0; app_idx < 32; app_idx++)
             if(app_buttons[app_idx] == args->control)
-                loaded_apps[app_idx].entry_point(); //Call the entry point of an app
+                app_get_id(app_idx)->entry_point(); //Call the entry point of an app
     }
 }
 
@@ -217,9 +190,9 @@ void stdgui_create_program_launcher(void){
     gui_create_window("Applications", NULL, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = 32, .y = 32}, pl_size, NULL);
     //Go through each app
     p2d_t next_btn_pos = (p2d_t){.x = 1, .y = 1};
-    for(uint16_t app_idx = 0; app_idx < next_app; app_idx++){
+    for(uint16_t app_idx = 0; app_idx < app_count(); app_idx++){
         //Fetch the app
-        app_t* app = &loaded_apps[app_idx];
+        app_t* app = app_get_id(app_idx);
         //Create a button for it
         control_t* btn = gui_create_button(program_launcher, next_btn_pos, (p2d_t){.x = 64, .y = 64}, "",
             COLOR32(0, 0, 0, 0), gui_get_color_scheme()->win_bg, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_cb_launch_app);

@@ -8,7 +8,7 @@
 #include "./gfx.h"
 #include "../stdlib.h"
 
-EFI_SYSTEM_TABLE* quark_get_efi_systable(void);
+EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
 //The video buffer pointers
 color32_t* vbe_buffer;
@@ -61,11 +61,11 @@ void gfx_init(void){
     gfx_find_gop();
     //If it hadn't been found, print an error
     if(graphics_output == NULL){
-        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"Error: Unable to find the graphics output protocol\r\n");
         while(1);
     } else {
-        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"GOP found\r\n");
     }
     //Choose the best video mode
@@ -92,23 +92,23 @@ void gfx_find_gop(void){
     //Handle the graphics output protocol
     //Firstly, through the ConsoleOut handle
     EFI_STATUS status;
-    status = quark_get_efi_systable()->BootServices->HandleProtocol(quark_get_efi_systable()->ConsoleOutHandle,
+    status = krnl_get_efi_systable()->BootServices->HandleProtocol(krnl_get_efi_systable()->ConsoleOutHandle,
         &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void**)&graphics_output);
     if(!EFI_ERROR(status))
         return;
     //Then, directly
-    status = quark_get_efi_systable()->BootServices->LocateProtocol(&((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID),
+    status = krnl_get_efi_systable()->BootServices->LocateProtocol(&((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID),
         NULL, (void**)graphics_output);
     if(!EFI_ERROR(status))
         return;
     //Lastly, locate by handle
     uint64_t handle_count = 0;
     EFI_HANDLE* handle;
-    status = quark_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
+    status = krnl_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
         &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), NULL, &handle_count, &handle);
     if(EFI_ERROR(status))
         return;
-    status = quark_get_efi_systable()->BootServices->HandleProtocol(handle,
+    status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle,
         &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void*)&graphics_output);
 }
 
@@ -118,21 +118,21 @@ void gfx_find_gop(void){
 void gfx_choose_best(void){
     EFI_STATUS status;
 
-    quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+    krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
         (CHAR16*)L"Probing video mode list\r\n");
 
     //Get the EDID
     uint64_t handle_count = 0;
     EFI_HANDLE* handle;
     EFI_EDID_DISCOVERED_PROTOCOL* edid;
-    status = quark_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
+    status = krnl_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
         &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), NULL, &handle_count, &handle);
     if(EFI_ERROR(status)){
-        quark_get_efi_systable()->ConOut->OutputString(quark_get_efi_systable()->ConOut,
+        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"Error: unable to find EDID protocol handle\r\n");
         while(1);
     }
-    status = quark_get_efi_systable()->BootServices->HandleProtocol(handle,
+    status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle,
         &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
     //Parse it
     //To be specific, its detailed timing descriptors
@@ -472,19 +472,19 @@ void gfx_panic(int ip, int code){
     }
     //Determine the error message that needs to be printed
     char* panic_msg = NULL;
-    if(code == QUARK_PANIC_NOMEM_CODE)
-        panic_msg = QUARK_PANIC_NOMEM_MSG;
-    else if(code == QUARK_PANIC_PANTEST_CODE)
-        panic_msg = QUARK_PANIC_PANTEST_MSG;
-    else if(code == QUARK_PANIC_CPUEXC_CODE)
-        panic_msg = QUARK_PANIC_CPUEXC_MSG;
+    if(code == KRNL_PANIC_NOMEM_CODE)
+        panic_msg = KRNL_PANIC_NOMEM_MSG;
+    else if(code == KRNL_PANIC_PANTEST_CODE)
+        panic_msg = KRNL_PANIC_PANTEST_MSG;
+    else if(code == KRNL_PANIC_CPUEXC_CODE)
+        panic_msg = KRNL_PANIC_CPUEXC_MSG;
     else
-        panic_msg = QUARK_PANIC_UNKNOWN_MSG;
+        panic_msg = KRNL_PANIC_UNKNOWN_MSG;
     //Construct the error message
     char text[250];
     char temp[15];
     text[0] = 0;
-    strcat(text, "Quark panic occured at address 0x");
+    strcat(text, "Kernel panic occured at address 0x");
     strcat(text, sprintub16(temp, ip, 8));
     strcat(text, "\n  errcode ");
     strcat(text, sprintu(temp, code, 1));

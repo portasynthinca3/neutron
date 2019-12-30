@@ -1,11 +1,12 @@
 .c
-src/quark.c
+#The base of everything
+src/krnl.c
 src/isr_wrapper.s
 src/stdlib.c
-
+#GUI stuff
 src/gui/gui.c
 src/gui/stdgui.c
-
+#Drivers
 src/drivers/diskio.c
 src/drivers/gfx.c
 src/drivers/usb.c
@@ -19,9 +20,10 @@ src/drivers/human_io/mouse.c
 src/drivers/human_io/ps2.c
 src/drivers/human_io/ps2_kbd.c
 src/drivers/human_io/ps2_mouse.c
-
+#Applications
+src/apps/app.c
 src/apps/calculator/calculator.c
 src/apps/term/term.c
 .fs
-build/quark.bin>quark
+build/krnl.bin>krnl
 neutron.nbuild>nbuild
