@@ -38,8 +38,7 @@ uint8_t focus_processed;
 uint16_t topb_win_pos;
 //The current time as a string
 char time[64] = "??:??:??\0";
-//If this flag is set, focus can't be changed and the background below
-//  the window in focus is darkended
+//If this flag is set, focus can't be changed
 uint8_t focus_monopoly = 0;
 //The amount of CPU cycles it took to render the last frame
 uint64_t gui_render_cyc = 0;
@@ -78,21 +77,22 @@ void gui_init(void){
     gfx_verbose_println("Initializing color scheme");
     //Set the default color scheme
     color_scheme.desktop =                  COLOR32(255, 20, 20, 20);
-    color_scheme.top_bar =                  COLOR32(255, 30, 30, 30);
+    color_scheme.top_bar =                  COLOR32(255, 71, 71, 71);
     color_scheme.cursor =                   COLOR32(255, 255, 255, 255);
     color_scheme.selection =                COLOR32(255, 0, 128, 255);
     color_scheme.time =                     COLOR32(255, 255, 255, 255);
-    color_scheme.win_bg =                   COLOR32(255, 255, 255, 255);
+    color_scheme.win_bg =                   COLOR32(255, 32, 32, 32);
     color_scheme.win_title =                COLOR32(255, 255, 255, 255);
-    color_scheme.win_border =               COLOR32(255, 0, 0, 0);
-    color_scheme.win_border_inactive =      COLOR32(255, 30, 30, 30);
+    color_scheme.win_title_inactive =       COLOR32(255, 200, 200, 200);
+    color_scheme.win_border =               COLOR32(255, 9, 9, 9);
+    color_scheme.win_border_inactive =      COLOR32(255, 39, 39, 39);
     color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 255);
     color_scheme.win_minimize_btn =         COLOR32(255, 255, 255, 255);
     color_scheme.win_unavailable_btn =      COLOR32(255, 128, 128, 128);
     
     //Allocate some space for the windows
-    gfx_verbose_println("Allocating memory for windows");
+    gfx_verbose_println("Allocating memory for the window list");
     windows = (window_t*)calloc(256, sizeof(window_t));
     gfx_verbose_println("GUI init done");
 
@@ -473,7 +473,8 @@ void gui_render_window(window_t* ptr){
         gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                       (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_border);
         //Print its title
-        gfx_puts((p2d_t){.x = ptr->position.x + 2 + 8 + 2, .y = ptr->position.y + 2}, color_scheme.win_title, COLOR32(0, 0, 0, 0), ptr->title);
+        gfx_puts((p2d_t){.x = ptr->position.x + 2 + 8 + 2, .y = ptr->position.y + 2},
+            (ptr == window_focused) ? color_scheme.win_title : color_scheme.win_title_inactive, COLOR32(0, 0, 0, 0), ptr->title);
         //If there is an icon, draw it
         if(ptr->icon_8 != NULL)
             gfx_draw_raw((p2d_t){.x = ptr->position.x + 2, .y = ptr->position.y + 1}, ptr->icon_8, (p2d_t){.x = 8, .y = 8});

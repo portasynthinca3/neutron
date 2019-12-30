@@ -6,10 +6,10 @@
 #include "../../gui/gui.h"
 #include "../../drivers/gfx.h"
 
-color32_t calculator_display_bg = COLOR32(255, 128, 128, 128);
-color32_t calculator_button_bg = COLOR32(255, 128, 128, 128);
-color32_t calculator_button_unused_bg = COLOR32(255, 64, 64, 64);
-color32_t calculator_equal_bg = COLOR32(255, 255, 128, 0);
+const color32_t calculator_display_bg = COLOR32(255, 64, 64, 64);
+const color32_t calculator_button_bg = calculator_display_bg;
+const color32_t calculator_button_unused_bg = COLOR32(255, 48, 48, 48);
+const color32_t calculator_equal_bg = COLOR32(255, 255, 128, 0);
 
 control_t* calculator_label_result;
 
@@ -112,7 +112,8 @@ void calculator_pressed(ui_event_args_t* args){
 void calculator_entry(void){
     //Create the window
     window_t* window = 
-    gui_create_window("Calc", calculator_icon_8, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = 100, .y = 100}, (p2d_t){.x = 90, .y = 127}, NULL);
+    gui_create_window("Calc", calculator_icon_8, GUI_WIN_FLAGS_STANDARD,
+        (p2d_t){.x = gfx_res_x() / 2 - 45, .y = gfx_res_y() / 2 - 64}, (p2d_t){.x = 90, .y = 127}, NULL);
     //Create a progress bar mimicking the display
     gui_create_progress_bar(window, (p2d_t){.x = 1, .y = 0}, (p2d_t){86, 25}, calculator_display_bg, COLOR32(0, 0, 0, 0),
         COLOR32(255, 0, 0, 0), 100, 0, NULL);

@@ -7,6 +7,10 @@
 #include "../../drivers/gfx.h"
 #include "../../drivers/human_io/kbd.h"
 
+//These are defined in the Kernel
+void krnl_shutdown(void);
+void krnl_reboot(void);
+
 //Default terminal color lookup table
 color32_t term_color_lut[16] = {
     COLOR32(255, 0, 0, 0),
@@ -45,6 +49,19 @@ void term_process_input(term_t* term){
             term->buf[o] = (term_char_t){.character = ' ', .fcolor = 15, .bcolor = 0};
         //Reset the cursor position
         term->cursor = (term_coord_t){.x = 2, .y = 0};
+    } else if(strcmp(input, "help") == 0){
+        //Print the help message
+        term_puts(term, "    List of commands:\n", 0xB, 0);
+        term_puts(term, "    clear\n", 0xB, 0);
+        term_puts(term, "clears the terminal and resets the cursor position\n", 15, 0);
+        term_puts(term, "    shutdown\n", 0xB, 0);
+        term_puts(term, "shuts the system down\n", 15, 0);
+        term_puts(term, "    reboot\n", 0xB, 0);
+        term_puts(term, "reboots the computer\n", 15, 0);
+        term_puts(term, "    echo <text>\n", 0xB, 0);
+        term_puts(term, "prints <text>\n", 15, 0);
+        term_puts(term, "    app help\n", 0xB, 0);
+        term_puts(term, "prints details on the 'app' command\n", 15, 0);
     } else if(memcmp(input, "echo ", 5) == 0){
         //Split the string
         char buf[100];
@@ -53,6 +70,12 @@ void term_process_input(term_t* term){
         //Print it
         term_puts(term, buf, 15, 0);
         term_puts(term, "\n", 15, 0);
+    } else if(strcmp(input, "shutdown") == 0){
+        //It's not my job, the kernel can do it for me
+        krnl_shutdown();
+    } else if(strcmp(input, "reboot") == 0){
+        //It's not my job, the kernel can do it for me
+        krnl_reboot();
     } else if(memcmp(input, "app ", 4) == 0){
         if(strcmp(input, "app list") == 0){
             //Scan through the app list

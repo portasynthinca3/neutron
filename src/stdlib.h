@@ -6,7 +6,7 @@
 #endif
 
 //The krnl version
-#define KRNL_VERSION_STR "v0.2.5"
+#define KRNL_VERSION_STR "v0.2.6"
 
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC

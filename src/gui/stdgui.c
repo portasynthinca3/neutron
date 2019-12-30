@@ -9,7 +9,7 @@
 
 #include "../images/neutron_logo.xbm"
 
-//These are defined in Kernel
+//These are defined in the Kernel
 void krnl_shutdown(void);
 void krnl_reboot(void);
 void krnl_open_sys_color_picker(ui_event_args_t* args);
@@ -76,7 +76,8 @@ void stdgui_create_shutdown_prompt(void){
     char* msg = "What do you want to do?";
     p2d_t msg_bounds = gfx_text_bounds(msg);
     gui_create_label(shutdown_window, (p2d_t){.x = (shutdown_win_size.x - msg_bounds.x) / 2,
-                                              .y = (shutdown_win_size.y - msg_bounds.y - 25) / 2}, msg_bounds, msg, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+                                              .y = (shutdown_win_size.y - msg_bounds.y - 25) / 2}, msg_bounds, msg,
+        COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
     gui_create_button(shutdown_window, (p2d_t){.x = 0, .y = shutdown_win_size.y - 25 - 13}, (p2d_t){.x = shutdown_win_size.x / 2, .y = 25}, "Shutdown",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_cb_shutdown_pressed);
     gui_create_button(shutdown_window, (p2d_t){.x = shutdown_win_size.x / 2 - 2, .y = shutdown_win_size.y - 25 - 13}, (p2d_t){.x = shutdown_win_size.x / 2, .y = 25}, "Reboot",
@@ -95,20 +96,20 @@ void stdgui_create_system_win(void){
     //Add the Neutron logo to it
     gui_create_image(window,
                      (p2d_t){.x = (system_win_size.x - neutron_logo_width) / 2, .y = 13}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height},
-                     GUI_IMAGE_FORMAT_XBM, neutron_logo_bits, COLOR32(0, 0, 0, 0), COLOR32(255, 0, 0, 0), NULL);
+                     GUI_IMAGE_FORMAT_XBM, neutron_logo_bits, COLOR32(0, 0, 0, 0), COLOR32(255, 255, 255, 255), NULL);
     //Add the name label to it
     char* name_label_text = "Neutron Project. 2019, Andrey Antonenko";
     uint32_t name_label_width = gfx_text_bounds(name_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - name_label_width) / 2, .y = 13 + neutron_logo_height + 2}, 
-                             (p2d_t){.x = name_label_width, .y = 8}, name_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+                             (p2d_t){.x = name_label_width, .y = 8}, name_label_text, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
     //Add the version label to it
     char* ver_label_text = KRNL_VERSION_STR;
     uint32_t ver_label_width = gfx_text_bounds(ver_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - ver_label_width) / 2, .y = 13 + neutron_logo_height + 2 + 8 + 2}, 
-                             (p2d_t){.x = ver_label_width, .y = 8}, ver_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+                             (p2d_t){.x = ver_label_width, .y = 8}, ver_label_text, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
     //Add the RAM usage indicator to it
     gui_create_progress_bar(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 22}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15},
-                            gui_get_color_scheme()->win_bg, COLOR32(255, 255, 0, 0), COLOR32(255, 0, 0, 0), stdlib_usable_ram(), stdlib_used_ram(), NULL);
+                            gui_get_color_scheme()->win_bg, COLOR32(255, 255, 0, 0), COLOR32(255, 255, 255, 255), stdlib_usable_ram(), stdlib_used_ram(), NULL);
     //Add the RAM label to it
     char ram_label_text[50] = "RAM: ";
     char temp[10];
@@ -118,7 +119,7 @@ void stdgui_create_system_win(void){
     strcat(ram_label_text, " MB used");
     uint32_t ram_label_width = gfx_text_bounds(ram_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - ram_label_width) / 2, .y = 13 + neutron_logo_height + 26}, 
-                             (p2d_t){.x = ram_label_width, .y = 8}, ram_label_text, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+                             (p2d_t){.x = ram_label_width, .y = 8}, ram_label_text, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
     //Add the system color change button to it
     gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 40}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), krnl_open_sys_color_picker);
@@ -210,7 +211,7 @@ void stdgui_create_program_launcher(void){
         p2d_t title_size = gfx_text_bounds(title);
         gui_create_label(program_launcher, (p2d_t){.x = next_btn_pos.x + 32 - (title_size.x / 2),
                                                    .y = next_btn_pos.y + 5 + 48 + 2}, title_size,
-                         title, COLOR32(255, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+                         title, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
         //Increment the position
         next_btn_pos.x += 64 + 8;
         if(next_btn_pos.x + 64 > pl_size.x){
