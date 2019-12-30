@@ -40,6 +40,7 @@ void _stdgui_fill_img(void){
             cpick_img_buf[pos++] = cpick_color.r;
             cpick_img_buf[pos++] = cpick_color.g;
             cpick_img_buf[pos++] = cpick_color.b;
+            cpick_img_buf[pos++] = 255;
         }
     }
 }
@@ -134,7 +135,7 @@ uint8_t stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t
                                          (p2d_t){.x = (gfx_res_x() - win_size.x) / 2,
                                                  .y = (gfx_res_y() - win_size.y) / 2}, win_size, NULL);
     //Create a buffer for the image
-    cpick_img_buf = (uint8_t*)malloc(40 * 40 * 3);
+    cpick_img_buf = (uint8_t*)malloc(40 * 40 * 4);
     _stdgui_fill_img();
     //Create the image
     gui_create_image(window, (p2d_t){.x = 5, .y = 5}, (p2d_t){.x = 40, .y = 40}, GUI_IMAGE_FORMAT_RAW, cpick_img_buf, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
