@@ -80,7 +80,11 @@ void term_process_input(term_t* term){
             else
                 term_puts(term, "Application not found", 0xC, 0);
         } else {
-            term_puts(term, "Usage:\n    app list\nprints the list of available applications\n    app start <name>\ncalls the entry point for application with name <name>\n", 15, 0);
+            term_puts(term, "    Usage:\n", 0xB, 0);
+            term_puts(term, "    app list\n", 0xB, 0);
+            term_puts(term, "prints the list of available applications\n", 15, 0);
+            term_puts(term, "    app start <name>\n", 0xB, 0);
+            term_puts(term, "calls the entry point for application with name <name>\n", 15, 0);
         }
     } else {
         term_puts(term, "Command not found\n", 0xC, 0);
