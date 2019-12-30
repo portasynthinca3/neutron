@@ -14,7 +14,6 @@ typedef struct {
     color32_t cursor;
     color32_t selection;
     color32_t win_bg;
-    color32_t win_shade;
     color32_t win_title;
     color32_t win_border;
     color32_t win_border_inactive;

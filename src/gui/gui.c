@@ -83,7 +83,6 @@ void gui_init(void){
     color_scheme.selection =                COLOR32(255, 0, 128, 255);
     color_scheme.time =                     COLOR32(255, 255, 255, 255);
     color_scheme.win_bg =                   COLOR32(255, 255, 255, 255);
-    color_scheme.win_shade =                COLOR32(255, 30, 30, 30);
     color_scheme.win_title =                COLOR32(255, 255, 255, 255);
     color_scheme.win_border =               COLOR32(255, 0, 0, 0);
     color_scheme.win_border_inactive =      COLOR32(255, 30, 30, 30);
@@ -147,24 +146,29 @@ void gui_destroy_window(window_t* win){
     control_t* control;
     uint32_t i = 0;
     while((control = &win->controls[i++])->type){
-        //free(control->extended);
-        //free(control);
+        free(control->extended);
+        free(control);
     }
     //Free up the memory used by the window title
-    //free(win->title);
+    free(win->title);
     //Free up the memory used by the window itself
-    //free(win);
-    //Scan through the window list to determine its end
-    window_t* last;
+    free(win);
+    //Scan through the window list to determine the window count
+    window_t* scan_win;
     i = 0;
-    while((last = &windows[i++])->title);
-    i--;
-    //Calculate index of the deleted window in the window list
-    uint32_t idx = ((uint64_t)win - (uint64_t)windows) / sizeof(window_t);
-    //Move the windows that stand after one that we just deleted, one to the left
-    for(uint32_t j = idx + 1; j < i; j++){
-        windows[j - 1] = windows[j];
+    uint32_t win_cnt = 0;
+    uint32_t idx = 0;
+    while((scan_win = &windows[i++])->title){
+        //Increment the window count
+        win_cnt++;
+        //While we're at it, find the index of the window we're about to delete
+        if(scan_win == win)
+            idx = i - 1;
     }
+    //Move the windows that stand after one that we just deleted, one to the left
+    if(idx != i)
+        for(uint32_t j = idx + 1; j <= i; j++)
+            windows[j - 1] = windows[j];
     //Mark the last window as the last one
     windows[i - 1].title = NULL;
 }
@@ -385,6 +389,8 @@ void gui_update(void){
 void gui_render_windows(void){
     //Some local variables
     window_t* current_window;
+    uint32_t i = 0;
+    uint32_t win_cnt = 0;
     //Clear the focus processed flag
     focus_processed = 0;
     //Reset the top bar position
@@ -394,18 +400,13 @@ void gui_render_windows(void){
     if(window_focused != NULL) //Process the window in focus first
         gui_process_window(window_focused);
     //Scan through the window list to determine its end
-    window_t* last;
-    uint32_t i = 0;
-    while((last = &windows[i++])->title);
-    i--;
+    while((current_window = &windows[i++])->title) win_cnt++;
     //Process windows from the end of the list
-    while(i--){
-        if(&windows[i] != window_focused)
-            gui_process_window(&windows[i]);
-    }
+    for(int32_t j = win_cnt - 1; j >= 0; j--)
+        if(&windows[j] != window_focused)
+            gui_process_window(&windows[j]);
 
     //Reset the counter
-    uint16_t win_cnt = 0;
     i = 0;
     //Fetch the next window
     while((current_window = &windows[i++])->title){
@@ -429,9 +430,6 @@ void gui_render_windows(void){
         //Render the current window if it isn't in focus
         if(current_window != window_focused)
             gui_render_window(current_window);
-
-        //Increment the window counter
-        win_cnt++;
     }
 
     //If the window in focus is valid
@@ -465,11 +463,6 @@ void gui_render_window(window_t* ptr){
 
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
-        //Draw the shade
-        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + ptr->size.x + 1,
-                                     .y = ptr->position.y + 4}, (p2d_t){.x = 4, .y = ptr->size.y + 1}, color_scheme.win_shade);
-        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + 4,
-                                     .y = ptr->position.y + ptr->size.y + 1}, (p2d_t){.x = ptr->size.x + 1, .y = 4}, color_scheme.win_shade);
         //Fill a rectangle with a window background color
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
                              (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, color_scheme.win_bg);
@@ -538,6 +531,39 @@ void gui_process_window(window_t* ptr){
         return; //Do not process the window if it's minimized
     //Only process the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
+
+        //Process the top-right buttons
+        if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                             (p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2},
+                             (p2d_t){.x = 8, .y = 8})
+           && (ptr->flags & GUI_WIN_FLAG_CLOSABLE) && ml){
+            //Destroy this window
+            gui_destroy_window(ptr);
+            //Don't process the window as it doesn't exist anymore |X_X|
+            return;
+        } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                                    (p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2},
+                                    (p2d_t){.x = 8, .y = 8})
+                  && (ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE) && ml){
+            if(ptr->flags & GUI_WIN_FLAG_MAXIMIZED){
+                //If the window is already maximized, restore the normal size
+                ptr->flags &= ~GUI_WIN_FLAG_MAXIMIZED;
+            } else {
+                //Else, set window position to the top left corner
+                ptr->position = (p2d_t){.x = 0, .y = 16};
+                //Set the maximized flag
+                ptr->flags |= GUI_WIN_FLAG_MAXIMIZED;
+            }
+        } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
+                                    (p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2},
+                                    (p2d_t){.x = 8, .y = 8})
+                  && (ptr->flags & GUI_WIN_FLAG_MINIMIZABLE) && ml){
+            //Set the minimized flag
+            ptr->flags |= GUI_WIN_FLAG_MINIMIZED;
+            //If the window is in focus, reset the focus
+            if(ptr == window_focused)
+                window_focused = NULL;
+        }
         //Process window dragging
         //If there's no such window that's being dragged right now, the cursor is in bounds of the title
         //  and the left button is being pressed, assume the window we're dragging is this one
@@ -579,37 +605,6 @@ void gui_process_window(window_t* ptr){
                              (p2d_t){.x = ptr->size.x - 2, .y = ptr->size.y - 2})){
             focus_processed = 1;
             window_focused = ptr;
-        }
-
-        //Process the top-right buttons
-        if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
-                             (p2d_t){.x = ptr->position.x + ptr->size.x - 10, .y = ptr->position.y + 2},
-                             (p2d_t){.x = 8, .y = 8})
-           && (ptr->flags & GUI_WIN_FLAG_CLOSABLE) && ml){
-            //Destroy this window
-            gui_destroy_window(ptr);
-        } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
-                                    (p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2},
-                                    (p2d_t){.x = 8, .y = 8})
-                  && (ptr->flags & GUI_WIN_FLAG_MAXIMIZABLE) && ml){
-            if(ptr->flags & GUI_WIN_FLAG_MAXIMIZED){
-                //If the window is already maximized, restore the normal size
-                ptr->flags &= ~GUI_WIN_FLAG_MAXIMIZED;
-            } else {
-                //Else, set window position to the top left corner
-                ptr->position = (p2d_t){.x = 0, .y = 16};
-                //Set the maximized flag
-                ptr->flags |= GUI_WIN_FLAG_MAXIMIZED;
-            }
-        } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
-                                    (p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2},
-                                    (p2d_t){.x = 8, .y = 8})
-                  && (ptr->flags & GUI_WIN_FLAG_MINIMIZABLE) && ml){
-            //Set the minimized flag
-            ptr->flags |= GUI_WIN_FLAG_MINIMIZED;
-            //If the window is in focus, reset the focus
-            if(ptr == window_focused)
-                window_focused = NULL;
         }
 
         //Now process its controls

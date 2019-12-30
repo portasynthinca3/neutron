@@ -22,7 +22,8 @@ static kbd_scan_char_map_t kbd_scan_char_map[] = {
     {KBD_SCAN_6, '6', '^'}, {KBD_SCAN_7, '7', '&'}, {KBD_SCAN_8, '8', '*'}, {KBD_SCAN_9, '9', '('}, {KBD_SCAN_0, '0', ')'},
     {KBD_SCAN_LEFT_SQUARE_BRACKET, '[', '{'}, {KBD_SCAN_RIGHT_SQUARE_BRACKET, ']', '}'}, {KBD_SCAN_BACKSLASH, '\\', '|'},
     {KBD_SCAN_SEMICOLON, ':', ';'}, {KBD_SCAN_TICK, '\'', '"'}, {KBD_SCAN_ENTER, '\n', '\n'}, {KBD_SCAN_COMMA, ',', '<'},
-    {KBD_SCAN_PERIOD, '.', '>'}, {KBD_SCAN_SLASH, '/', '?'}, {KBD_SCAN_SPACE, ' ', ' '}, {KBD_SCAN_BACKSPACE, 8, 8}
+    {KBD_SCAN_PERIOD, '.', '>'}, {KBD_SCAN_SLASH, '/', '?'}, {KBD_SCAN_SPACE, ' ', ' '}, {KBD_SCAN_BACKSPACE, 8, 8},
+    {KBD_SCAN_MINUS, '-', '_'}, {KBD_SCAN_EQUAL, '=', '+'}
 };
 
 //An array holding the state of all keys
