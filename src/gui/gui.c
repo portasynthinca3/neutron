@@ -38,6 +38,8 @@ uint8_t focus_processed;
 uint16_t topb_win_pos;
 //The current time as a string
 char time[64] = "??:??:??\0";
+//The current date as a string
+char date[64] = "?/?/?\0";
 //If this flag is set, focus can't be changed
 uint8_t focus_monopoly = 0;
 //The amount of time it took to render the last frame
@@ -53,8 +55,8 @@ control_ext_progress_t* example_progress_bar;
 
 void gui_example_button_callback(ui_event_args_t* args){
     if(example_progress_bar->val == 0)
-        example_progress_bar->val = 50;
-    else if(example_progress_bar->val == 50)
+        example_progress_bar->val = 80;
+    else if(example_progress_bar->val == 80)
         example_progress_bar->val = 100;
     else if(example_progress_bar->val == 100)
         example_progress_bar->val = 0;
@@ -304,17 +306,29 @@ void gui_update(void){
     //Draw the desktop
     gfx_fill(color_scheme.desktop);
     //Draw the top bar
-    gfx_draw_filled_rect((p2d_t){.x = 0, .y = 0}, (p2d_t){.x = gfx_res_x(), .y = 16}, color_scheme.top_bar);
+    gfx_draw_filled_rect((p2d_t){.x = 0, .y = 0}, (p2d_t){.x = gfx_res_x(), .y = 20}, color_scheme.top_bar);
     
-    //Get the time
-    uint8_t h, m, s = 0;
-    if(read_rtc_time(&h, &m, &s)){
-        //Clear the time string
-        time[0] = 0;
+    //Get the time and date
+    uint16_t h, m, s, d, mo, y = 0;
+    if(read_rtc_time(&h, &m, &s, &d, &mo, &y)){
+        //Clear the date string
+        date[0] = 0;
         //Create a temporary local string
         char temp[64];
         temp[0] = 0;
-        strcat(time, temp);
+        //Append days
+        strcat(date, sprintu(temp, d, 2));
+        strcat(date, "/");
+        //Append months
+        strcat(date, sprintu(temp, mo, 2));
+        strcat(date, "/");
+        //Append years
+        strcat(date, sprintu(temp, y, 2));
+
+        //Clear the time string
+        time[0] = 0;
+        //Clear the temporary local string
+        temp[0] = 0;
         //Append hours
         strcat(time, sprintu(temp, h, 2));
         strcat(time, ":");
@@ -324,21 +338,23 @@ void gui_update(void){
         //Append seconds
         strcat(time, sprintu(temp, s, 2));
     }
-    //Print it
-    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4, .y = 5}, color_scheme.time, COLOR32(0, 0, 0, 0), time);
+    //Print them
+    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(date).x - 4, .y = 2}, color_scheme.time, COLOR32(0, 0, 0, 0), date);
+    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - ((gfx_text_bounds(date).x - gfx_text_bounds(time).x) / 2) - 4, .y = 12},
+        color_scheme.time, COLOR32(0, 0, 0, 0), time);
 
     //Draw the power icon
-    gfx_draw_xbm((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, power_bits, (p2d_t){.x = power_width, .y = power_height},
+    gfx_draw_xbm((p2d_t){.x = gfx_res_x() - 60 - 16, .y = 2}, power_bits, (p2d_t){.x = power_width, .y = power_height},
                  COLOR32(255, 255, 0, 0), COLOR32(0, 0, 0, 0));
     //Call the callback if it was pressed
-    if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
+    if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - 60 - 16, .y = 2}, (p2d_t){.x = 16, .y = 16}))
         krnl_gui_callback_power_pressed();
-    //Draw the system icon
-    gfx_draw_xbm((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, system_bits, (p2d_t){.x = system_width, .y = system_height},
-                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0));
 
+    //Draw the system icon
+    gfx_draw_xbm((p2d_t){.x = gfx_res_x() - 60 - 16 - 8 - 16, .y = 2}, system_bits, (p2d_t){.x = system_width, .y = system_height},
+                 COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0));
     //Call the callback if it was pressed
-    if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4 - 4 - 16 - 8 - 16, .y = 0}, (p2d_t){.x = 16, .y = 16}))
+    if(ml && !last_frame_ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my}, (p2d_t){.x = gfx_res_x() - 60 - 16 - 8 - 16, .y = 2}, (p2d_t){.x = 16, .y = 16}))
         krnl_gui_callback_system_pressed();
 
     //If there's a focused window

@@ -6,7 +6,7 @@
 #endif
 
 //The krnl version
-#define KRNL_VERSION_STR "v0.2.8"
+#define KRNL_VERSION_STR "v0.2.9"
 
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC
@@ -93,7 +93,7 @@ void puts_e9(char* str);
 void load_idt(struct idt_desc* idt);
 void bswap_dw(int* value);
 uint64_t rdtsc(void);
-uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s);
+uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16_t* mo, uint16_t* y);
 void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access);
 int memcmp(const void* lhs, const void* rhs, size_t cnt);
 uint64_t rdmsr(uint32_t msr);

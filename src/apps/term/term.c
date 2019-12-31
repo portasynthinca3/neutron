@@ -59,6 +59,8 @@ void term_process_input(term_t* term){
         term_puts(term, "shuts the system down\n", 15, 0);
         term_puts(term, "    reboot\n", 0xB, 0);
         term_puts(term, "reboots the computer\n", 15, 0);
+        term_puts(term, "    millis\n", 0xB, 0);
+        term_puts(term, "prints the number of milliseconds since boot\n", 15, 0);
         term_puts(term, "    echo <text>\n", 0xB, 0);
         term_puts(term, "prints <text>\n", 15, 0);
         term_puts(term, "    app help\n", 0xB, 0);

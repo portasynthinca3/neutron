@@ -439,10 +439,10 @@ size_t strlen(const char* str){
 }
 
 /*
- * Read RTC hour, minute and second registers
+ * Read RTC hour, minute, second, day, month and year registers
  * Returns 0 if the data is valid
  */
-uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
+uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16_t* mo, uint16_t* y){
     //Read CMOS Status Register A
     outb(0x70, 0x0A);
     uint8_t status_a = inb(0x71);
@@ -454,6 +454,7 @@ uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
     }
     if(i++ >= 10000)
         return 0;
+    __asm__ ("cli"); //Disable interrupts
     //Read hours
     outb(0x70, 0x04);
     *h = inb(0x71);
@@ -463,15 +464,28 @@ uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
     //Read seconds
     outb(0x70, 0x00);
     *s = inb(0x71);
+    //Read day
+    outb(0x70, 0x07);
+    *d = inb(0x71);
+    //Read month
+    outb(0x70, 0x08);
+    *mo = inb(0x71);
+    //Read year
+    outb(0x70, 0x09);
+    *y = inb(0x71);
+    __asm__ ("sti"); //Enable interrupts
 
     //Read Status Register B to find out the data format
     outb(0x70, 0x0B);
     uint8_t status_b = inb(0x71);
     //If bit 2 is set, the values are BCD
     if(!(status_b & (1 << 2))){
-        *h = (((*h >> 4) & 0x0F) * 10) + (*h & 0x0F); 
-        *m = (((*m >> 4) & 0x0F) * 10) + (*m & 0x0F); 
-        *s = (((*s >> 4) & 0x0F) * 10) + (*s & 0x0F); 
+        *h = (((*h >> 4) & 0x0F) * 10) + (*h & 0x0F);
+        *m = (((*m >> 4) & 0x0F) * 10) + (*m & 0x0F);
+        *s = (((*s >> 4) & 0x0F) * 10) + (*s & 0x0F);
+        *d = (((*d >> 4) & 0x0F) * 10) + (*d & 0x0F);
+        *mo = (((*mo >> 4) & 0x0F) * 10) + (*mo & 0x0F);
+        *y = (((*y >> 4) & 0x0F) * 10) + (*y & 0x0F);
     }
     //If bit 1 is set, the time is in the 12-hour format
     //  add 12 to the hour count if its highest bit is set
@@ -483,9 +497,10 @@ uint8_t read_rtc_time(uint8_t* h, uint8_t* m, uint8_t* s){
         }
     }
 
-    //Honestly, when I started to write this function, I
-    //  didn't even imagine how complex it would become
-    //  (compared to my expectations, of course)
+    //We're in the 21st century after all
+    *y += 2000;
+
+    //Success!
     return 1;
 }
 
