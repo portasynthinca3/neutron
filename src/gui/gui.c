@@ -398,7 +398,7 @@ void gui_render_windows(void){
 
     uint8_t process_non_focus = 0;
     //If the window in focus is valid
-    if(window_focused != NULL) //Process it focus first
+    if(window_focused != NULL) //Process it first
         process_non_focus = gui_process_window(window_focused);
     else
         process_non_focus = 1;
@@ -654,9 +654,13 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             if(button->pressed_bg_color.a == 0)
                 button->pressed_bg_color = COLOR32(0, button->bg_color.r >> 1, button->bg_color.g >> 1, button->bg_color.b >> 1);
             //Draw the rectangles
+            color32_t bg_color = button->pressed_last_frame ? button->pressed_bg_color : button->bg_color;
+            if(!ml && gfx_point_in_rect((p2d_t){mx, my}, (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
+                                                                 .y = ptr->position.y + win_ptr->position.y + 12}, ptr->size))
+                bg_color = gfx_blend_colors(button->pressed_bg_color, button->bg_color);
             gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                                          .y = ptr->position.y + win_ptr->position.y + 12},
-                                 ptr->size, button->pressed_last_frame ? button->pressed_bg_color : button->bg_color);
+                                 ptr->size, bg_color);
             gfx_draw_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                                   .y = ptr->position.y + win_ptr->position.y + 12},
                           ptr->size, button->border_color);

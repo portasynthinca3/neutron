@@ -545,3 +545,13 @@ void gfx_verbose_println(char* msg){
 void gfx_set_verbose(uint8_t v){
     verbose_enabled = v;
 }
+
+/*
+ * Blends two colors together
+ */
+color32_t gfx_blend_colors(color32_t a, color32_t b){
+    return COLOR32(((uint16_t)a.a + (uint16_t)b.a) / 2,
+                   ((uint16_t)a.r + (uint16_t)b.r) / 2,
+                   ((uint16_t)a.g + (uint16_t)b.g) / 2,
+                   ((uint16_t)a.b + (uint16_t)b.b) / 2);
+}
