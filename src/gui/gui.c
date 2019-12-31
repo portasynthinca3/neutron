@@ -396,15 +396,20 @@ void gui_render_windows(void){
     //Reset the top bar position
     topb_win_pos = 0;
 
+    uint8_t process_non_focus = 0;
     //If the window in focus is valid
-    if(window_focused != NULL) //Process the window in focus first
-        gui_process_window(window_focused);
+    if(window_focused != NULL) //Process it focus first
+        process_non_focus = gui_process_window(window_focused);
+    else
+        process_non_focus = 1;
     //Scan through the window list to determine its end
     while((current_window = &windows[i++])->title) win_cnt++;
     //Process windows from the end of the list
-    for(int32_t j = win_cnt - 1; j >= 0; j--)
-        if(&windows[j] != window_focused)
-            gui_process_window(&windows[j]);
+    if(process_non_focus)
+        for(int32_t j = win_cnt - 1; j >= 0; j--)
+            if(&windows[j] != window_focused)
+                if(!gui_process_window(&windows[j]))
+                    break; //Don't process other windows if this one is blocking others
 
     //Reset the counter
     i = 0;
@@ -518,18 +523,20 @@ void gui_render_window(window_t* ptr){
 }
 
 /*
- * Processes window's interaction with the mouse
+ * Processes window's interaction with the mouse and returns
+ *   1 or 0 depending on the mouse pointer state
+ *   (0 = don't process other windows)
  */
-void gui_process_window(window_t* ptr){
+uint8_t gui_process_window(window_t* ptr){
     if(ptr->ignore)
-        return;
+        return 1;
     //Set the size based on the real size and flags
     if(ptr->flags & GUI_WIN_FLAG_MAXIMIZED)
         ptr->size = (p2d_t){.x = gfx_res_x() - 1, .y = gfx_res_y() - 16 - 1};
     else
         ptr->size = ptr->size_real;
     if(ptr->flags & GUI_WIN_FLAG_MINIMIZED)
-        return; //Do not process the window if it's minimized
+        return 1; //Do not process the window if it's minimized
     //Only process the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
 
@@ -541,7 +548,8 @@ void gui_process_window(window_t* ptr){
             //Destroy this window
             gui_destroy_window(ptr);
             //Don't process the window as it doesn't exist anymore |X_X|
-            return;
+            //And don't process others too (because of the press)
+            return 0;
         } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
                                     (p2d_t){.x = ptr->position.x + ptr->size.x - 19, .y = ptr->position.y + 2},
                                     (p2d_t){.x = 8, .y = 8})
@@ -555,6 +563,7 @@ void gui_process_window(window_t* ptr){
                 //Set the maximized flag
                 ptr->flags |= GUI_WIN_FLAG_MAXIMIZED;
             }
+            return 0;
         } else if(gfx_point_in_rect((p2d_t){.x = mx, .y = my},
                                     (p2d_t){.x = ptr->position.x + ptr->size.x - 28, .y = ptr->position.y + 2},
                                     (p2d_t){.x = 8, .y = 8})
@@ -564,14 +573,16 @@ void gui_process_window(window_t* ptr){
             //If the window is in focus, reset the focus
             if(ptr == window_focused)
                 window_focused = NULL;
+            return 0;
         }
+
         //Process window dragging
         //If there's no such window that's being dragged right now, the cursor is in bounds of the title
         //  and the left button is being pressed, assume the window we're dragging is this one
         if(window_dragging == NULL &&
             ml && gfx_point_in_rect((p2d_t){.x = mx, .y = my},
-                                    (p2d_t){.x = ptr->position.x + 1, .y = ptr->position.y + 1},
-                                    (p2d_t){.x = ptr->size.x - 2, .y = 9})){
+                                    (p2d_t){.x = ptr->position.x, .y = ptr->position.y},
+                                    (p2d_t){.x = ptr->size.x, .y = 9})){
                 window_dragging = ptr;
                 window_dragging_cpos = (p2d_t){.x = ptr->position.x - mx, .y = ptr->position.y - my};
         }
@@ -597,7 +608,7 @@ void gui_process_window(window_t* ptr){
 
         //Process window focusing
         //If the cursor is inside the current window, the focusing hadn't been done in the current frame,
-        //  focus monopoly isn't enabled and the left button is held down, set the window in focus and set the "focus processed" flag
+        //  focus monopoly isn't enabled and the left button is held down, set the window in focus and the "focus processed" flag
         if(!focus_monopoly &&
            ml &&
            !focus_processed &&
@@ -608,12 +619,13 @@ void gui_process_window(window_t* ptr){
             window_focused = ptr;
         }
 
-        //Now process its controls
+        //Now process the controls
         uint8_t process_ptr = gfx_point_in_rect((p2d_t){.x = mx, .y = my}, ptr->position, ptr->size);
         uint32_t i = 0;
         control_t* control;
         while((control = &ptr->controls[i++])->type)
             gui_process_control(ptr, control, process_ptr);
+        return !(process_ptr && ml);
     }
 }
 

@@ -197,7 +197,7 @@ control_t* gui_create_track_bar(window_t* win, p2d_t pos, p2d_t size, color32_t 
                                 color32_t border_color, uint32_t max_val, uint32_t val, void(*event_handler)(ui_event_args_t*));
 
 void gui_render_windows(void);
-void gui_process_window(window_t* ptr);
+uint8_t gui_process_window(window_t* ptr);
 void gui_render_window(window_t* ptr);
 void gui_render_control(window_t* win_ptr, control_t* ptr);
 void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_pointer);
