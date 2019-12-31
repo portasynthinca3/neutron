@@ -349,27 +349,35 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
 }
 
 /*
- * Put a char with backgrund color in video buffer
+ * Put a char with backgrund color in video buffer, return the size of the draw character
  */
-void gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
+p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
     //Get the video buffer
     color32_t* buf = gfx_buffer();
     //Calculate the video buffer offset
-    unsigned int buf_offset = (pos.y * res_x) + pos.x - 6;
+    uint64_t buf_offset = (pos.y * res_x) + pos.x;
     //Calculate the font offset
-    unsigned int font_offset = (c - 1) * 6;
+    uint64_t font_offset = (c - 1) * 6;
+    //For keeping track of the character width
+    uint32_t c_width = 0;
     //For each column in the font
-    for(unsigned char i = 0; i < 6; i++){
+    for(uint32_t i = 0; i < 6; i++){
         //Load it
-        unsigned char font_col = font[font_offset + i];
+        uint8_t font_col = font[font_offset + i];
         //And for each pixel in that column
-        for(unsigned char j = 0; j < 8; j++){
-            if((font_col >> j) & 1)
+        for(uint8_t j = 0; j < 8; j++){
+            if(((font_col >> j) & 1) && (color.a != 0))
                 buf[buf_offset + i + (j * res_x)] = color; //Draw it
             else if(bcolor.a != 0)
                 buf[buf_offset + i + (j * res_x)] = bcolor; //Or clear it
         }
+        //Increment the character width
+        c_width++;
+        //Return early if the end has been reached
+        if(i > 0 && font_col == 0)
+            return (p2d_t){c_width, 8};
     }
+    return (p2d_t){c_width, 8};
 }
 
 /*
@@ -390,26 +398,13 @@ void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s){
                     pos_actual.x = pos.x;
                     pos_actual.y += 8;
                     break;
-                    /*
-                case 1: //Foreground color change
-                    state = 1;
+                default: { //Print the char and advance its position
+                    p2d_t char_size = gfx_putch(pos_actual, color, bcolor, c);
+                    pos_actual.x += char_size.x;
                     break;
-                case 2: //Background color change
-                    state = 2;
-                    break;
-                    */
-                default: //Print the char and advance its position
-                    pos_actual.x += 6;
-                    gfx_putch(pos_actual, color, bcolor, c);
-                    break;
+                }
             }
-        }/* else if(state == 1){ //State: foreground color change
-            color = c;
-            state = 0;
-        } else if(state == 2){ //State: background color change
-            color = c;
-            state = 0;
-        }*/
+        }
     }
 }
 
@@ -430,15 +425,12 @@ p2d_t gfx_text_bounds(char* s){
                 pos.x = 0;
                 pos.y += 8;
                 break;
-            case 1: //Foreground color change
-                i++; //Skip one char
+            default: { //Advance the position
+                //Get the character size by printing it with alpha=0
+                p2d_t char_size = gfx_putch((p2d_t){0, 0}, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), c);
+                pos.x += char_size.x;
                 break;
-            case 2: //Background color change
-                i++; //Skip one char
-                break;
-            default: //Print the char and advance its position
-                pos.x += 6;
-                break;
+            }
         }
         //If the X position is greater than the X size, update the latter
         if(pos.x > sz.x)

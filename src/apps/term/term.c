@@ -74,7 +74,6 @@ void term_process_input(term_t* term){
         //It's not my job, the kernel can do it for me
         krnl_shutdown();
     } else if(strcmp(input, "reboot") == 0){
-        //It's not my job, the kernel can do it for me
         krnl_reboot();
     } else if(memcmp(input, "app ", 4) == 0){
         if(strcmp(input, "app list") == 0){
@@ -128,12 +127,15 @@ void term_win_event(ui_event_args_t* args){
                 if(term->cursor.x == 0 && term->cursor.y == 0)
                     term->cursor = (term_coord_t){.x = 1, .y = 0};
                 //Draw the terminal character by character
-                p2d_t window_offset = (p2d_t){.x = ((window_t*)(args->win))->position.x + 7,
+                p2d_t window_offset = (p2d_t){.x = ((window_t*)(args->win))->position.x + 1,
                                               .y = ((window_t*)(args->win))->position.y + 11};
                 uint32_t offset = 0;
                 for(uint32_t y = 0; y < term->size.y; y++){
                     for(uint32_t x = 0; x < term->size.x; x++){
                         term_char_t term_char = term->buf[(y * term->size.x) + x];
+                        //Draw the rectangle beneath the character
+                        gfx_draw_filled_rect((p2d_t){.x = window_offset.x + (x * 6), .y = window_offset.y + (y * 8)},
+                            (p2d_t){6, 8}, term_color_lut[term_char.bcolor]);
                         //Draw the character
                         gfx_putch((p2d_t){.x = window_offset.x + (x * 6), .y = window_offset.y + (y * 8)},
                             term_color_lut[term_char.fcolor], term_color_lut[term_char.bcolor], term->buf[offset].character);
@@ -143,7 +145,7 @@ void term_win_event(ui_event_args_t* args){
                 }
                 //Draww^_^ the cursor
                 if(term->cursor_visible){
-                    p2d_t pos_on_screen = (p2d_t){.x = window_offset.x + (term->cursor.x * 6) - 6, .y = window_offset.y + (term->cursor.y * 8) + 7};
+                    p2d_t pos_on_screen = (p2d_t){.x = window_offset.x + (term->cursor.x * 6), .y = window_offset.y + (term->cursor.y * 8) + 7};
                     uint8_t anim_prog = term->cur_anim_prog;
                     gfx_draw_hor_line(pos_on_screen, ((anim_prog > 20) ? 1 : 0) * 5, term_color_lut[15]);
                     if(++term->cur_anim_prog > 40)
