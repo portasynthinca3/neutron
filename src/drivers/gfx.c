@@ -373,7 +373,7 @@ p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
         }
         //Increment the character width
         c_width++;
-        //Return early if the end has been reached
+        //Return early if the end had been reached
         if(i > 2 && font_col == 0)
             return (p2d_t){c_width, 8};
     }
@@ -478,12 +478,14 @@ void gfx_panic(int ip, int code){
     text[0] = 0;
     strcat(text, "Kernel panic occured at address 0x");
     strcat(text, sprintub16(temp, ip, 8));
-    strcat(text, "\n  errcode ");
+    strcat(text, "\nerrcode ");
     strcat(text, sprintu(temp, code, 1));
     strcat(text, ": ");
     strcat(text, panic_msg);
+    //Get its bounds
+    p2d_t msg_bounds = gfx_text_bounds(text);
     //Print it
-    gfx_puts((p2d_t){.x = 0, .y = 0}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), text);
+    gfx_puts((p2d_t){.x = (gfx_res_x() - msg_bounds.x) / 2, .y = (gfx_res_y() - msg_bounds.y) / 2}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), text);
     //Display it
     gfx_flip();
     //Hang

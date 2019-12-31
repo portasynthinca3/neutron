@@ -5,6 +5,7 @@
 #include "../app.h"
 #include "../../gui/gui.h"
 #include "../../drivers/gfx.h"
+#include "../../drivers/timr.h"
 #include "../../drivers/human_io/kbd.h"
 
 //These are defined in the Kernel
@@ -75,6 +76,10 @@ void term_process_input(term_t* term){
         krnl_shutdown();
     } else if(strcmp(input, "reboot") == 0){
         krnl_reboot();
+    } else if(strcmp(input, "millis") == 0){
+        char temp[20];
+        term_puts(term, sprintu(temp, timr_ms(), 1), 15, 0);
+        term_puts(term, "\n", 15, 0);
     } else if(memcmp(input, "app ", 4) == 0){
         if(strcmp(input, "app list") == 0){
             //Scan through the app list

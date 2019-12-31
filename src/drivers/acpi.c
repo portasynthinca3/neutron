@@ -5,7 +5,7 @@
 #include <efilib.h>
 
 #include "./acpi.h"
-#include "./pit.h"
+#include "./timr.h"
 #include "../stdlib.h"
 #include "./gfx.h"
 

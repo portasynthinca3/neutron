@@ -14,8 +14,8 @@
 #include "./drivers/pci.h"
 #include "./drivers/usb.h"
 #include "./drivers/ata.h"
-#include "./drivers/pic.h"
-#include "./drivers/pit.h"
+#include "./drivers/apic.h"
+#include "./drivers/timr.h"
 #include "./drivers/human_io/ps2.h"
 #include "./drivers/human_io/mouse.h"
 #include "./drivers/acpi.h"
@@ -33,30 +33,16 @@ struct idt_desc idt_d;
 extern void enable_a20(void);
 extern void exc_wrapper(void);
 extern void exc_wrapper_code(void);
-extern void irq0_wrap(void);
-extern void irq1_wrap(void);
-extern void irq2_wrap(void);
-extern void irq3_wrap(void);
-extern void irq4_wrap(void);
-extern void irq5_wrap(void);
-extern void irq6_wrap(void);
-extern void irq7_wrap(void);
-extern void irq8_wrap(void);
-extern void irq9_wrap(void);
-extern void irq10_wrap(void);
-extern void irq11_wrap(void);
-extern void irq12_wrap(void);
-extern void irq13_wrap(void);
-extern void irq14_wrap(void);
-extern void irq15_wrap(void);
+extern void apic_timer_isr_wrap(void);
 
+//Is the kernel in verbose mode or not?
 uint8_t krnl_verbose;
 
 //Pointer to the EFI system table
 EFI_SYSTEM_TABLE* krnl_efi_systable;
 
 /*
- * Gets the EFI system table
+ * Gets the EFI system table pointer
  */
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
     return krnl_efi_systable;
@@ -154,49 +140,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_verbose = 1;
     gfx_set_verbose(krnl_verbose);
 
-    //Initialize PICs
-    /*pic_init(32, 40); //Remap IRQs
-    //Set up IDT
-    struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
-    //Set every exception IDT entry using the same pattern
-    for(int i = 0; i < 32; i++){
-        uint64_t wrapper_address = (uint64_t)&exc_wrapper;
-        if(i == 8 || (i >= 10 && i <= 14) || i == 17 || i == 30) //Set a special wrapper for exceptions that push error code onto stack
-            wrapper_address = (uint64_t)&exc_wrapper_code;
-        idt[i].offset_lower = (uint32_t)(uint64_t)wrapper_address & 0xFFFF;
-        idt[i].offset_higher = ((uint32_t)(uint64_t)wrapper_address >> 16) & 0xFFFF;
-        idt[i].code_selector = 0x08;
-        idt[i].zero = 0;
-        idt[i].type_attr = 0b10001110;
-    }
-    //Set up gates for IRQs
-    idt[32] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq0_wrap);
-    idt[33] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq1_wrap);
-    idt[34] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq2_wrap);
-    idt[35] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq3_wrap);
-    idt[36] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq4_wrap);
-    idt[37] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq5_wrap);
-    idt[38] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq6_wrap);
-    idt[39] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq7_wrap);
-    idt[40] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq8_wrap);
-    idt[41] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq9_wrap);
-    idt[42] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq10_wrap);
-    idt[43] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq11_wrap);
-    idt[44] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq12_wrap);
-    idt[45] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq13_wrap);
-    idt[46] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq14_wrap);
-    idt[47] = IDT_ENTRY_ISR((uint32_t)(uint64_t)&irq15_wrap);
-    //Load IDT
-    idt_d.base = (void*)idt;
-    idt_d.limit = 256 * sizeof(struct idt_entry);
-    load_idt(&idt_d);
-    //Initialize PIT
-    pit_configure_irq0_ticks(PIT_FQ / 1000); //Generate an interrupt 1000 times a second
-    //Enable interrupts
-    __asm__ volatile("sti");
-    //Enable non-maskable interrupts
-    outb(0x70, 0);*/
-
     //Do some graphics-related initialization stuff
     gfx_init();
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
@@ -236,11 +179,39 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status(">>> Configuring GUI <<<", 95);
     gui_init();
     stdgui_create_program_launcher();
+    //Set up IDT
+    krnl_boot_status(">>> Setting up interrupts <<<", 97);
+    //Exit UEFI boot services before we can use IDT
+    SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
+    //Get the current code selector
+    uint16_t cur_cs = 0;
+    __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
+    //Set up IDT
+    struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
+    //Set every exception IDT entry using the same pattern
+    for(int i = 0; i < 32; i++){
+        uint64_t wrapper_address = (uint64_t)&exc_wrapper;
+        if(i == 8 || (i >= 10 && i <= 14) || i == 17 || i == 30) //Set a special wrapper for exceptions that push error code onto stack
+            wrapper_address = (uint64_t)&exc_wrapper_code;
+        idt[i] = IDT_ENTRY_ISR(wrapper_address, cur_cs);
+    }
+    //Set up gates for interrupts
+    idt[32] = IDT_ENTRY_ISR((uint64_t)&apic_timer_isr_wrap, cur_cs);
+    //Load IDT
+    idt_d.base = (void*)idt;
+    idt_d.limit = 256 * sizeof(struct idt_entry);
+    load_idt(&idt_d);
+    //Enable interrupts
+    __asm__ volatile("sti");
+    //Enable non-maskable interrupts
+    outb(0x70, 0);
+    //Initialize the APIC and its timer
+    krnl_boot_status(">>> Initializing LAPIC <<<", 98);
+    apic_init();
+    timr_init();
+
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
-
-    //Exit UEFI boot services
-    SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
 
     //Constantly
     while(1){
@@ -264,15 +235,4 @@ void krnl_exc(void){
 
     //Hang
     while(1);
-}
-
-/*
- * IRQ ISR
- */
-void krnl_irq(uint32_t irq_no){
-    //IRQ0 is sent by the PIT
-    if(irq_no == 0)
-        pit_irq0();
-    //Signal End Of Interrupt
-    pic_send_eoi(irq_no);
 }

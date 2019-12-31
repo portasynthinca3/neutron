@@ -6,7 +6,7 @@
 #endif
 
 //The krnl version
-#define KRNL_VERSION_STR "v0.2.6"
+#define KRNL_VERSION_STR "v0.2.8"
 
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC
@@ -58,17 +58,19 @@ struct idt_desc {
  * Structure describing an IDT entry
  */
 struct idt_entry {
-   uint16_t offset_lower;
-   uint16_t code_selector;
-   uint8_t zero;
-   uint8_t type_attr;
-   uint16_t offset_higher;
+    uint16_t offset_1;
+    uint16_t selector;
+    uint8_t intr_stack_table;
+    uint8_t type_attr;
+    uint16_t offset_2;
+    uint32_t offset_3;
+    uint32_t reserved;
 } __attribute__ ((packed));
 
 //A macro that creates generic IDT entries
-#define IDT_ENTRY(OFFS, CSEL, TYPE) ((struct idt_entry){.offset_lower = ((uint32_t)OFFS) & 0xFFFF, .code_selector = ((uint32_t)CSEL), .zero = 0, .type_attr = TYPE, .offset_higher = ((((uint32_t)OFFS) >> 16) & 0xFFFF)})
+#define IDT_ENTRY(OFFS, CSEL, TYPE) ((struct idt_entry){.offset_1 = (OFFS) & 0xFFFF, .selector = (CSEL), .intr_stack_table = 0, .type_attr = (TYPE), .offset_2 = (OFFS) >> 16, .offset_3 = (OFFS) >> 32, .reserved = 0})
 //A macro that creates Kernel ISR IDT entries
-#define IDT_ENTRY_ISR(OFFS) (IDT_ENTRY(OFFS, 8, 0b10001110))
+#define IDT_ENTRY_ISR(OFFS, CS) (IDT_ENTRY((OFFS), (CS), 0b10001110))
 
 //Panic codes
 

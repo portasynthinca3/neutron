@@ -12,8 +12,8 @@ src/drivers/gfx.c
 src/drivers/usb.c
 src/drivers/pci.c
 src/drivers/ata.c
-src/drivers/pic.c
-src/drivers/pit.c
+src/drivers/apic.c
+src/drivers/timr.c
 src/drivers/acpi.c
 src/drivers/human_io/kbd.c
 src/drivers/human_io/mouse.c

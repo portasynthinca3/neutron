@@ -6,7 +6,7 @@
 #include "../stdlib.h"
 #include "../drivers/gfx.h"
 #include "../drivers/diskio.h"
-#include "../drivers/pit.h"
+#include "../drivers/timr.h"
 #include "../drivers/human_io/mouse.h"
 #include "../drivers/human_io/kbd.h"
 
@@ -40,10 +40,10 @@ uint16_t topb_win_pos;
 char time[64] = "??:??:??\0";
 //If this flag is set, focus can't be changed
 uint8_t focus_monopoly = 0;
-//The amount of CPU cycles it took to render the last frame
-uint64_t gui_render_cyc = 0;
-//The amount of CPU cycles it took to transfer the last frame to the screen
-uint64_t gui_trans_cyc = 0;
+//The amount of time it took to render the last frame
+uint64_t gui_render = 0;
+//The amount of time it took to transfer the last frame to the screen
+uint64_t gui_trans = 0;
 
 uint8_t last_frame_ml = 0;
 void krnl_gui_callback_power_pressed(void);
@@ -96,8 +96,8 @@ void gui_init(void){
     windows = (window_t*)calloc(256, sizeof(window_t));
     gfx_verbose_println("GUI init done");
 
-    gui_trans_cyc = 0;
-    gui_render_cyc = 0;
+    gui_trans = 0;
+    gui_render = 0;
 }
 
 /*
@@ -297,7 +297,7 @@ void gui_get_mouse(void){
  * Redraw the GUI
  */
 void gui_update(void){
-    uint64_t render_start = rdtsc();
+    uint64_t render_start = timr_ms();
 
     //Get the mouse data
     gui_get_mouse();
@@ -365,19 +365,18 @@ void gui_update(void){
 
     #ifdef GUI_PRINT_RENDER_TIME
     char temp[25];
-    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render_cyc, 10));
-    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans_cyc, 10));
-    gfx_puts((p2d_t){.x = 0, .y = 32}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintub16(temp, (uint64_t)gfx_buffer(), 16));
-    gfx_puts((p2d_t){.x = 0, .y = 40}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintub16(temp, (uint64_t)gfx_buf_another(), 16));
+    gfx_puts((p2d_t){.x = 0, .y = 16}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_render, 5));
+    gfx_puts((p2d_t){.x = 0, .y = 24}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, gui_trans, 5));
+    gfx_puts((p2d_t){.x = 0, .y = 32}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), sprintu(temp, timr_ms(), 8));
     #endif
 
     //Flip the buffers
-    uint64_t flip_start = rdtsc();
+    uint64_t flip_start = timr_ms();
     gfx_flip();
-    uint64_t all_end = rdtsc();
+    uint64_t all_end = timr_ms();
 
-    gui_render_cyc = flip_start - render_start;
-    gui_trans_cyc = all_end - flip_start;
+    gui_render = flip_start - render_start;
+    gui_trans = all_end - flip_start;
 
     //Record the mouse state
     last_frame_ml = ml;
