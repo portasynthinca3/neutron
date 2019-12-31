@@ -374,7 +374,7 @@ p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
         //Increment the character width
         c_width++;
         //Return early if the end has been reached
-        if(i > 0 && font_col == 0)
+        if(i > 2 && font_col == 0)
             return (p2d_t){c_width, 8};
     }
     return (p2d_t){c_width, 8};
