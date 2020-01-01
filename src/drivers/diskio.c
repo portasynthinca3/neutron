@@ -14,11 +14,13 @@ uint8_t* buffer;
  */
 void diskio_init(void){
     //Allocate a chunk of memory for the list
-    partitions = (disk_part_t*)malloc(sizeof(disk_part_t) * 64);
-    uint8_t cur_part = 0;
-    //Allocal a chunk of memory as a read/write buffer
-    buffer = (uint8_t*)malloc(sizeof(uint8_t) * DISK_IO_BUFFER_SIZE);
-    //Firstly, go through the ATA devices
+    partitions = (disk_part_t*)malloc(4 * 4 * sizeof(disk_part_t));
+    uint16_t cur_part = 0;
+    //A dummy partition
+    disk_part_t* dummy_part;
+    //Allocate a chunk of memory as a read/write buffer
+    buffer = (uint8_t*)malloc(DISK_IO_BUFFER_SIZE);
+    //Go through the ATA devices
     for(uint8_t i = 0; i < 4; i++){
         char temp[50] = "Detecting partitions on ATA drive ";
         char temp2[15];
@@ -44,30 +46,26 @@ void diskio_init(void){
                 //Fetch the partition length
                 partitions[cur_part].size = *(uint32_t*)(p_base + 0xC);
                 //Fetch the partition status
-                partitions[cur_part].valid = ((*(uint8_t*)p_base) == 0x80);
+                partitions[cur_part].valid = (partitions[cur_part].type != 0);
                 //Increment the partition pointer
-                cur_part++;
+                if(partitions[cur_part].valid){
+                    //Print the partition info
+                    temp[0] = 0;
+                    strcat(temp, "Found MBR partition type ");
+                    strcat(temp, sprintu(temp2, partitions[cur_part].type, 1));
+                    gfx_verbose_println(temp);
+                    //Go to the next one
+                    cur_part++;
+                }
             }
-        } else {
-            gfx_verbose_println("Unsupported or non-existent drive, skipping");
         }
     }
 }
 
 /*
- * Read the byte describing floppy drives from CMOS
- */
-unsigned char diskio_get_floppy_drives(void){
-    unsigned char val;
-    //BLACK MAGIC
-    __asm__ volatile("movb $0x10, %%al; outb %%al, $0x70; inb $0x71, %%al" : "=a" (val));
-    return val;
-}
-
-/*
  * Read sectors to the buffer from a partition
  */
-void diskio_read_sect(uint8_t part_no, uint32_t sect, uint8_t count, uint32_t from_part){
+void diskio_read_sect(uint16_t part_no, uint32_t sect, uint8_t count, uint8_t from_part){
     disk_part_t* part = &partitions[part_no];
     //Immediately return if the partition is invalid
     if(!part->valid)
