@@ -63,10 +63,10 @@ for path in c_files:
 	path_obj = 'build/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path + ' -> ' + path_obj)
-	os.system('x86_64-w64-mingw32-gcc -ffreestanding -m64 -msse2 -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
+	os.system('x86_64-w64-mingw32-gcc -ffreestanding -mcmodel=large -mno-red-zone -m64 -msse2 -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
 
 print('Linking')
-os.system('x86_64-w64-mingw32-gcc -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj) + ' -lgcc')
+os.system('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj) + ' -lgcc')
 
 print('Bulding system image')
 print('  Creating image file')

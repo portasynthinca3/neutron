@@ -4,8 +4,6 @@
 #include "../stdlib.h"
 #include "../drivers/gfx.h"
 #include "./gui.h"
-#include "../apps/app.h"
-#include "../apps/deficon.h"
 
 #include "../images/neutron_logo.xbm"
 
@@ -166,57 +164,4 @@ uint8_t stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t
  */
 color32_t stdgui_cpick_get_color(void){
     return cpick_color;
-}
-
-/*
- * Every app launch button event handler
- */
-void _stdgui_cb_launch_app(ui_event_args_t* args){
-    //Only respond to clicking
-    if(args->type == GUI_EVENT_CLICK){
-        //Go through the button list
-        for(uint16_t app_idx = 0; app_idx < 32; app_idx++)
-            if(app_buttons[app_idx] == args->control)
-                app_get_id(app_idx)->entry_point(); //Call the entry point of an app
-    }
-}
-
-/*
- * Creates the program launcher
- */
-void stdgui_create_program_launcher(void){
-    //Size of the program launcher
-    p2d_t pl_size = (p2d_t){.x = 200, .y = 150};
-    //Create the window
-    window_t* program_launcher =
-    gui_create_window("Applications", NULL, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = 32, .y = 32}, pl_size, NULL);
-    //Go through each app
-    p2d_t next_btn_pos = (p2d_t){.x = 1, .y = 1};
-    for(uint16_t app_idx = 0; app_idx < app_count(); app_idx++){
-        //Fetch the app
-        app_t* app = app_get_id(app_idx);
-        //Create a button for it
-        control_t* btn = gui_create_button(program_launcher, next_btn_pos, (p2d_t){.x = 64, .y = 64}, "",
-            COLOR32(0, 0, 0, 0), gui_get_color_scheme()->win_bg, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_cb_launch_app);
-        //Save the button
-        app_buttons[app_idx] = btn;
-        //Create its icon
-        void* icon_ptr = deficon;
-        if(app->icon != NULL)
-            icon_ptr = app->icon;
-        gui_create_image(program_launcher, (p2d_t){.x = 8 + next_btn_pos.x, .y = next_btn_pos.y + 5}, (p2d_t){.x = 48, .y = 48}, GUI_IMAGE_FORMAT_RAW,
-            icon_ptr, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
-        //Create its title
-        char* title = app->name;
-        p2d_t title_size = gfx_text_bounds(title);
-        gui_create_label(program_launcher, (p2d_t){.x = next_btn_pos.x + 32 - (title_size.x / 2),
-                                                   .y = next_btn_pos.y + 5 + 48 + 2}, title_size,
-                         title, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
-        //Increment the position
-        next_btn_pos.x += 64 + 8;
-        if(next_btn_pos.x + 64 > pl_size.x){
-            next_btn_pos.x = 1;
-            next_btn_pos.y += 64 + 8;
-        }
-    }
 }

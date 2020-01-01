@@ -3,6 +3,8 @@
 src/krnl.c
 src/isr_wrapper.s
 src/stdlib.c
+src/mtask/mtask.c
+src/mtask/mtask_sw.s
 #GUI stuff
 src/gui/gui.c
 src/gui/stdgui.c
@@ -20,10 +22,6 @@ src/drivers/human_io/mouse.c
 src/drivers/human_io/ps2.c
 src/drivers/human_io/ps2_kbd.c
 src/drivers/human_io/ps2_mouse.c
-#Applications
-src/apps/app.c
-src/apps/calculator/calculator.c
-src/apps/term/term.c
 .fs
 build/krnl.bin>krnl
 neutron.nbuild>nbuild

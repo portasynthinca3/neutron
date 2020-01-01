@@ -6,6 +6,7 @@
 
 #include "./stdlib.h"
 #include "./drivers/gfx.h"
+#include "./mtask/mtask.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
@@ -34,6 +35,9 @@ uint64_t stdlib_used_ram(void){
  * Abort execution
  */
 void abort(){
+    //Stop the scheduler
+    mtask_stop();
+    //Hang
     while(1);
 }
 

@@ -5,11 +5,11 @@
 #define NULL ((void*)0)
 #endif
 
-//The krnl version
-#define KRNL_VERSION_STR "v0.3.0"
+//The kernel version
+#define KRNL_VERSION_STR "v0.4.0"
 
 //Use WC for memcpy() transfers?
-#define STDLIB_MEMCPY_WC
+//#define STDLIB_MEMCPY_WC
 
 //Standard type definitions
 

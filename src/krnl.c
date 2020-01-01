@@ -24,9 +24,7 @@
 
 #include "./images/neutron_logo.xbm"
 
-#include "./apps/app.h"
-#include "./apps/term/term.h"
-#include "./apps/calculator/calculator.h"
+#include "./mtask/mtask.h"
 
 struct idt_desc idt_d;
 
@@ -111,10 +109,21 @@ void krnl_boot_status(char* str, uint32_t progress){
                              (p2d_t){.x = gfx_res_x() / 3, .y = 2}, COLOR32(255, 64, 64, 64));
         gfx_draw_filled_rect((p2d_t){.x = gfx_res_x() / 3, .y = gfx_res_y() * 3 / 4},
                              (p2d_t){.x = gfx_res_x() / 300 * progress, .y = 2}, COLOR32(255, 255, 255, 255));
-        //gfx_flip();
+        gfx_flip();
     } else {
-        //If we are, draw print the string using verbose mode
+        //If we are, however, draw print the string using verbose mode
         gfx_verbose_println(str);
+    }
+}
+
+/*
+ * GUI task code
+ */
+void gui_task(void){
+    while(1){
+        ps2_poll();
+        gui_update();
+        mouse_frame_end();
     }
 }
 
@@ -127,7 +136,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Disable the watchdog timer
     krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
-    krnl_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron (UEFI version) is starting up\r\n");
+    krnl_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron is starting up\r\n");
 
 	//Disable interrupts
 	__asm__ volatile("cli");
@@ -171,14 +180,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Initialize ACPI
     krnl_boot_status(">>> Initializing ACPI <<<", 60);
     acpi_init();
-    //Register the apps
-    krnl_boot_status(">>> Registering applications <<<", 90);
-    app_register(TERM_APP);
-    app_register(CALCULATOR_APP);
     //Configure GUI
     krnl_boot_status(">>> Configuring GUI <<<", 95);
     gui_init();
-    stdgui_create_program_launcher();
     //Set up IDT
     krnl_boot_status(">>> Setting up interrupts <<<", 97);
     //Exit UEFI boot services before we can use IDT
@@ -205,34 +209,35 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     __asm__ volatile("sti");
     //Enable non-maskable interrupts
     outb(0x70, 0);
-    //Initialize the APIC and its timer
-    krnl_boot_status(">>> Initializing LAPIC <<<", 98);
+    //Initialize the APIC
+    krnl_boot_status(">>> Initializing APIC <<<", 98);
     apic_init();
-    timr_init();
+    //Initialize the multitasking system
+    krnl_boot_status(">>> Initializing multitasking <<<", 99);
+    mtask_init();
 
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
 
-    //Constantly
-    while(1){
-        //Poll the PS/2 controller
-        ps2_poll();
-        //Update the GUI
-        gui_update();
-        //Signal an end of the frame to the mouse driver
-        mouse_frame_end();
-    }
+    mtask_create_task(16384, "System GUI", gui_task);
+
+    //Hang
+    while(1);
 }
 
 /*
  * Exception ISR
  */
 void krnl_exc(void){
+    //Stop the schaeduler
+    mtask_stop();
     //Print some info
-    unsigned int ip;
-    __asm__ volatile("mov %%edx, %0" : "=r" (ip));
+    uint64_t ip;
+    __asm__ volatile("mov %%rdx, %0" : "=r" (ip));
     gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE);
 
-    //Hang
-    while(1);
+    //Load 0xDEADBEEF into EAX for ease of debugging
+    __asm__ volatile("mov $0xDEADBEEF, %eax");
+    //Abort
+    abort();
 }
