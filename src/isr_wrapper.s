@@ -22,7 +22,7 @@ apic_timer_isr_wrap:
     ;//Clear the "ready" flag
     mov byte ptr [mtask_ready], 0
     call mtask_save_state
-    call timr_tick
+    ;//call timr_tick
     call mtask_schedule
     call apic_eoi
     jmp mtask_restore_state

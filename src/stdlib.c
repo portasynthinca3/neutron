@@ -536,7 +536,7 @@ char* sprintu(char* str, uint64_t i, uint8_t min){
     return str;
 }
 
-char* hex_const = "0123456789ABCDEF";
+char hex_const[16] = "0123456789ABCDEF";
 
 /*
  * Print an uint64_t with base 16 to the string
@@ -544,7 +544,7 @@ char* hex_const = "0123456789ABCDEF";
 char* sprintub16(char* str, uint64_t i, uint8_t min){
     //Create some variables
     uint8_t pos = 0;
-    uint64_t div = 1ULL << 63; //Start with the leftmost digit
+    uint64_t div = 1ULL << 60; //Start with the leftmost digit
     uint8_t started = 0;
     for(uint8_t j = 1; j <= 16; j++){
         //Fetch the next digit
@@ -558,7 +558,7 @@ char* sprintub16(char* str, uint64_t i, uint8_t min){
         if(started)
             str[pos++] = hex_const[digit];
         //Move to the next digit
-        div /= 16;
+        div >>= 4;
     }
     //Mark the end of the string
     str[pos] = 0;
@@ -566,10 +566,6 @@ char* sprintub16(char* str, uint64_t i, uint8_t min){
     return str;
 }
 
-//Turn off optimization for the next function as GCC was
-//  optimizing it in a veeeeeeeeeeeeeery strange way
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 /*
  * Append the string at src to the end of the string at dest
  */
@@ -584,7 +580,6 @@ char* strcat(char* dest, char* src){
     //Return the destination
     return dest;
 }
-#pragma GCC pop_options
 
 /*
  * Compare two memory blocks

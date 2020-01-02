@@ -16,6 +16,7 @@ static ps2_kbd_scan_map_t ps2_kbd_scan_map[] = {
     {.ps2_scan = 0x0C, .num = KBD_SCAN_F4}, {.ps2_scan = 0x03, .num = KBD_SCAN_F5}, {.ps2_scan = 0x0B, .num = KBD_SCAN_F6},
     {.ps2_scan = 0x83, .num = KBD_SCAN_F7}, {.ps2_scan = 0x0A, .num = KBD_SCAN_F8}, {.ps2_scan = 0x01, .num = KBD_SCAN_F9},
     {.ps2_scan = 0x09, .num = KBD_SCAN_F10}, {.ps2_scan = 0x78, .num = KBD_SCAN_F11}, {.ps2_scan = 0x07, .num = KBD_SCAN_F12},
+    {.ps2_scan = 0xE071, .num = KBD_SCAN_DELETE},
     //Second row
     {.ps2_scan = 0x0E, .num = KBD_SCAN_BACK_TICK}, {.ps2_scan = 0x16, .num = KBD_SCAN_1}, {.ps2_scan = 0x1E, .num = KBD_SCAN_2},
     {.ps2_scan = 0x26, .num = KBD_SCAN_3}, {.ps2_scan = 0x25, .num = KBD_SCAN_4}, {.ps2_scan = 0x2E, .num = KBD_SCAN_5},

@@ -7,6 +7,8 @@
 #include "./kbd.h"
 #include "../../stdlib.h"
 
+void krnl_dump(void);
+
 /*
  * Neutron key number to character map
  */
@@ -52,6 +54,15 @@ char kbd_find_char(kbd_scan_code_t scan, uint8_t shift){
 void kbd_set_key(kbd_scan_code_t scan_code, uint8_t state){
     //Set the key state
     key_state[scan_code] = state;
+    //If this is a Ctrl+Alt+Del sequence
+    if((key_state[KBD_SCAN_LEFT_CONTROL] || key_state[KBD_SCAN_RIGHT_CONTROL]) &&
+       (key_state[KBD_SCAN_LEFT_ALT] || key_state[KBD_SCAN_RIGHT_ALT]) &&
+        key_state[KBD_SCAN_DELETE]){
+        //Invoke kernel dump
+        krnl_dump();
+        //Abort
+        abort();
+    }
     //Construct an event
     kbd_event_t event = (kbd_event_t){.scan_code = scan_code, .state = state};
     //Add it to the event queue at its head;

@@ -19,10 +19,26 @@ void mtask_init(void){
     //Allocate a buffer for the task list
     mtask_task_list = (task_t*)malloc(MTASK_TASK_COUNT * sizeof(task_t));
     
+    mtask_cur_task_no = 0;
     mtask_next_task = 0;
     mtask_next_uid = 0;
     mtask_ready = 0;
-    mtask_cur_task_no = 0;
+    //Initialize the scheduling timer
+    timr_init();
+}
+
+/*
+ * Gets an UID of the currently running task
+ */
+uint64_t mtask_get_uid(void){
+    return mtask_task_list[mtask_cur_task_no].uid;
+}
+
+/*
+ * Returns the task list
+ */
+task_t* mtask_get_task_list(void){
+    return mtask_task_list;
 }
 
 /*
@@ -56,9 +72,8 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
     __asm__ volatile("pushfq; pop %0" : "=r" (rflags));
     task->state.cr3 = cr3;
     task->state.rflags = rflags;
-    //Mark the task as both valid and running
+    //Mark the task as valid
     task->valid = 1;
-    task->running = 1;
 
     //Check if it's the first task ever created
     if(mtask_next_task++ == 0){
@@ -67,24 +82,35 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
         mtask_cur_task_no = 0;
         //We're ready AF!
         mtask_ready = 1;
-        //Initialize the scheduling timer
-        timr_init();
-        //Call the task function
+        //Call the function
         func();
     }
+}
+
+/*
+ * Destroys the task with a certain UID
+ */
+void mtask_stop_task(uint64_t uid){
+    mtask_ready = 0;
+
+    for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
+        if(mtask_task_list[i].uid == uid)
+            mtask_task_list[i].valid = 0;
+
+    mtask_ready = 1;
 }
 
 /*
  * Chooses the next task to be run
  */
 void mtask_schedule(void){
-    uint8_t found = 0;
-    while(!found){
+    while(1){
         //We scan through the task list to find a next task that's valid and running
         mtask_cur_task_no++;
         if(mtask_cur_task_no >= mtask_next_task)
             mtask_cur_task_no = 0;
-        found = mtask_task_list[mtask_cur_task_no].valid && mtask_task_list[mtask_cur_task_no].running;
+        if(mtask_task_list[mtask_cur_task_no].valid)
+            break;
     }
 
     mtask_cur_task = &mtask_task_list[mtask_cur_task_no];

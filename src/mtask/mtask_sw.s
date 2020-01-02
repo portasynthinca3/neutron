@@ -9,15 +9,25 @@ mtask_save_state:
     ;//Load the target state pointer address into RAX
     mov rax, [mtask_cur_task]
     ;//Save the task state
-    pop [rax+  8]      ;//RBX was pushed onto stack
-    pop [rax+  0]      ;//as well as RAX
-    mov [rax+ 16], rcx ;//save the rest of the registers directly
+    pop [rax+  8]       ;//RBX was pushed onto stack
+    pop [rax+  0]       ;//as well as RAX
+    mov [rax+ 16], rcx  ;//save the rest of the registers directly
     mov [rax+ 24], rdx
+    push rax            ;//Save RAX
+    mov rcx, [rax+160]  ;//Load the last task switch CPU cycle into RCX
+    mfence
+    lfence
+    rdtsc               ;//Read the current cycle number into EDX:EAX
+    lfence
+    shl rdx, 32         ;//Move EDX:EAX into RDX
+    or rdx, rax
+    sub rdx, rcx        ;//Calculate the amount of CPU cycles the task consumed
+    pop rax             ;//Restore RAX
+    mov [rax+152], rdx  ;//Store the amount of CPU cycles the task consumed
+    mov [rax+160], rcx  ;//Store the last task switch CPU cycle
     mov [rax+ 32], rsi
     mov [rax+ 40], rdi
     mov [rax+ 48], rbp
-    lea r15, [rsp+48] ;//task's RSP was 48 bytes up
-    mov [rax+ 56], r15
     mov [rax+ 64], r8
     mov [rax+ 72], r9
     mov [rax+ 80], r10
@@ -26,11 +36,13 @@ mtask_save_state:
     mov [rax+104], r13
     mov [rax+112], r14
     mov [rax+120], r15
+    lea r15, [rsp+48]   ;//task's RSP was 48 bytes higher
+    mov [rax+ 56], r15
     mov r15, cr3
     mov [rax+128], r15
-    mov r15, [rsp+  8] ;//task's RIP was at RSP+8
+    mov r15, [rsp+  8]  ;//task's RIP is at RSP+8
     mov [rax+136], r15
-    mov r15, [rsp+ 24] ;//RFLAGS at RSP+24
+    mov r15, [rsp+ 24]  ;//RFLAGS at RSP+24
     mov [rax+144], r15
     ret
 
@@ -55,9 +67,9 @@ mtask_restore_state:
     mov rdx, [rbx+ 24]
     mov rcx, [rbx+ 16]
     mov rax, [rbx+  0]
-    push [rbx+144] ;//RFLAGS
+    push     [rbx+144]   ;//RFLAGS
     popfq
-    push [rbx+136] ;//RIP
+    push     [rbx+136]   ;//RIP
     mov rbx, [rbx+  8]
     ;//Set the "ready" flag
     mov byte ptr [mtask_ready], 1

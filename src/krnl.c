@@ -95,6 +95,124 @@ void krnl_gui_callback_system_pressed(void){
 }
 
 /*
+ * Dumps the task state on screen
+ */
+void krnl_dump_task_state(task_t* task){
+    char temp[500];
+    temp[0] = 0;
+    char temp2[20];
+
+    //Print RAX-RBX, RSI, RDI, RSP, RBP
+    strcat(temp, "  RAX=");
+    strcat(temp, sprintub16(temp2, task->state.rax, 16));
+    strcat(temp, " RBX=");
+    strcat(temp, sprintub16(temp2, task->state.rbx, 16));
+    strcat(temp, " RCX=");
+    strcat(temp, sprintub16(temp2, task->state.rcx, 16));
+    strcat(temp, " RDX=");
+    strcat(temp, sprintub16(temp2, task->state.rdx, 16));
+    strcat(temp, " RSI=");
+    strcat(temp, sprintub16(temp2, task->state.rsi, 16));
+    strcat(temp, " RDI=");
+    strcat(temp, sprintub16(temp2, task->state.rdi, 16));
+    strcat(temp, " RSP=");
+    strcat(temp, sprintub16(temp2, task->state.rsp, 16));
+    strcat(temp, " RBP=");
+    strcat(temp, sprintub16(temp2, task->state.rbp, 16));
+    gfx_verbose_println(temp);
+
+    //Print R8-R15
+    temp[0] = 0;
+    strcat(temp, "  R8=");
+    strcat(temp, sprintub16(temp2, task->state.r8, 16));
+    strcat(temp, " R9=");
+    strcat(temp, sprintub16(temp2, task->state.r9, 16));
+    strcat(temp, " R10=");
+    strcat(temp, sprintub16(temp2, task->state.r10, 16));
+    strcat(temp, " R11=");
+    strcat(temp, sprintub16(temp2, task->state.r11, 16));
+    strcat(temp, " R12=");
+    strcat(temp, sprintub16(temp2, task->state.r12, 16));
+    strcat(temp, " R13=");
+    strcat(temp, sprintub16(temp2, task->state.r13, 16));
+    strcat(temp, " R14=");
+    strcat(temp, sprintub16(temp2, task->state.r14, 16));
+    strcat(temp, " R15=");
+    strcat(temp, sprintub16(temp2, task->state.r15, 16));
+    gfx_verbose_println(temp);
+
+    //Print CR3, RIP, RFLAGS
+    temp[0] = 0;
+    strcat(temp, "  CR3=");
+    strcat(temp, sprintub16(temp2, task->state.cr3, 16));
+    strcat(temp, " RIP=");
+    strcat(temp, sprintub16(temp2, task->state.rip, 16));
+    strcat(temp, " RFLAGS=");
+    strcat(temp, sprintub16(temp2, task->state.rflags, 16));
+    gfx_verbose_println(temp);
+
+    //Print cycles
+    temp[0] = 0;
+    strcat(temp, "  CYC_CONS=");
+    strcat(temp, sprintub16(temp2, task->state.cycles, 16));
+    strcat(temp, " CYC_LAST=");
+    strcat(temp, sprintub16(temp2, task->state.last_cycle, 16));
+    gfx_verbose_println(temp);
+}
+
+/*
+ * Dumps all the information about the system on screen
+ */
+void krnl_dump(void){
+    //Stop the schaeduler
+    mtask_stop();
+
+    gfx_verbose_println("---=== NEUTRON KERNEL DUMP ===---");
+
+    gfx_verbose_println("TASKS:");
+    //Scan through the task list
+    task_t* tasks = mtask_get_task_list();
+    for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++){
+        //If task at that index is valid
+        if(tasks[i].valid){
+            //Print its details
+            char temp[100];
+            temp[0] = 0;
+            char temp2[10];
+            strcat(temp, " ");
+            strcat(temp, tasks[i].name);
+            strcat(temp, " <-> UID ");
+            strcat(temp, sprintu(temp2, tasks[i].uid, 1));
+            if(tasks[i].uid == mtask_get_uid())
+                strcat(temp, " [DUMP REQUEST]");
+            gfx_verbose_println(temp);
+            krnl_dump_task_state(&tasks[i]);
+        }
+    }
+}
+
+/*
+ * Exception ISR
+ */
+void krnl_exc(void){
+    //Get the exception address from RDX
+    uint64_t ip;
+    __asm__ volatile("mov %%rdx, %0" : "=m" (ip));
+    //Stop the schaeduler
+    mtask_stop();
+    //Print some info
+    krnl_dump();
+    gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE);
+
+    //Load 0xDEADBEEF into EAX for ease of debugging
+    __asm__ volatile("mov $0xDEADBEEF, %eax");
+    //Load exception address into RBX for ease of debugging too
+    __asm__ volatile("mov %0, %%rbx" : : "m" (ip));
+    //Abort
+    abort();
+}
+
+/*
  * Display a boot progress bar
  */
 void krnl_boot_status(char* str, uint32_t progress){
@@ -128,12 +246,22 @@ void dummy_task(void){
  * GUI task code
  */
 void gui_task(void){
-    mtask_create_task(8192, "dummy", dummy_task);
     while(1){
         ps2_poll();
         gui_update();
         mouse_frame_end();
     }
+}
+
+/*
+ * Multitasking entry point
+ */
+void mtask_entry(void){
+    mtask_create_task(16384, "System GUI", gui_task);
+    mtask_create_task(16384, "dummy", dummy_task);
+    
+    mtask_stop_task(mtask_get_uid());
+    while(1);
 }
 
 /*
@@ -228,27 +356,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
 
-    mtask_create_task(16384, "System GUI", gui_task);
+    mtask_create_task(16384, "MTask entry", mtask_entry);
     //The multitasking core is designed in such a way that after the
     //  first ever call to mtask_create_task() the execution of the
     //  caller function stops forever, so we won't go any further
     //But just to double-check,
     while(1);
-}
-
-/*
- * Exception ISR
- */
-void krnl_exc(void){
-    //Stop the schaeduler
-    mtask_stop();
-    //Print some info
-    uint64_t ip;
-    __asm__ volatile("mov %%rdx, %0" : "=r" (ip));
-    gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE);
-
-    //Load 0xDEADBEEF into EAX for ease of debugging
-    __asm__ volatile("mov $0xDEADBEEF, %eax");
-    //Abort
-    abort();
 }
