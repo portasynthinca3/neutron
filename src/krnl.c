@@ -229,8 +229,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status(">>> Done <<<", 100);
 
     mtask_create_task(16384, "System GUI", gui_task);
-
-    //Hang
+    //The multitasking core is designed in such a way that after the
+    //  first ever call to mtask_create_task() the execution of the
+    //  caller function stops forever, so we won't go any further
+    //But just to double-check,
     while(1);
 }
 

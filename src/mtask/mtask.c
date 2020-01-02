@@ -56,6 +56,9 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
     __asm__ volatile("pushfq; pop %0" : "=r" (rflags));
     task->state.cr3 = cr3;
     task->state.rflags = rflags;
+    //Mark the task as both valid and running
+    task->valid = 1;
+    task->running = 1;
 
     //Check if it's the first task ever created
     if(mtask_next_task++ == 0){
@@ -75,9 +78,14 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
  * Chooses the next task to be run
  */
 void mtask_schedule(void){
-    mtask_cur_task_no++;
-    if(mtask_cur_task_no >= mtask_next_task)
-        mtask_cur_task_no = 0;
+    uint8_t found = 0;
+    while(!found){
+        //We scan through the task list to find a next task that's valid and running
+        mtask_cur_task_no++;
+        if(mtask_cur_task_no >= mtask_next_task)
+            mtask_cur_task_no = 0;
+        found = mtask_task_list[mtask_cur_task_no].valid && mtask_task_list[mtask_cur_task_no].running;
+    }
 
     mtask_cur_task = &mtask_task_list[mtask_cur_task_no];
 }

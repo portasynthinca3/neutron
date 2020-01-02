@@ -13,6 +13,8 @@ typedef struct {
     task_state_t state;
     uint64_t uid;
     char name[64];
+    uint8_t valid;
+    uint8_t running;
 } task_t;
 
 #define MTASK_TASK_COUNT            32
