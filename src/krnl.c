@@ -116,10 +116,19 @@ void krnl_boot_status(char* str, uint32_t progress){
     }
 }
 
+uint64_t dummy_var = 0;
+
+void dummy_task(void){
+    while(1){
+        dummy_var++;
+    }
+}
+
 /*
  * GUI task code
  */
 void gui_task(void){
+    mtask_create_task(8192, "dummy", dummy_task);
     while(1){
         ps2_poll();
         gui_update();

@@ -33,7 +33,7 @@ void timr_init(void){
     uint32_t ticks_in_10ms = 0xFFFFFFFF - cnt_val;
     apic_reg_wr(LAPIC_REG_LVT_TIM, 0x20000 | 32); //Enable the timer with interrupt vector #32
     apic_reg_wr(LAPIC_REG_TIMR_DIVCONF, 3); //Set the divider to 16
-    apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_10ms * 100); //Set the initial counter value
+    apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_10ms * 2); //Set the initial counter value
 }
 
 /*

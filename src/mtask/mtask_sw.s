@@ -59,4 +59,6 @@ mtask_restore_state:
     popfq
     push [rbx+136] ;//RIP
     mov rbx, [rbx+  8]
+    ;//Set the "ready" flag
+    mov byte ptr [mtask_ready], 1
     ret

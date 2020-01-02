@@ -19,6 +19,8 @@ apic_timer_isr_wrap:
     jne apic_timer_isr_wrap_continue
     iretq
     apic_timer_isr_wrap_continue:
+    ;//Clear the "ready" flag
+    mov byte ptr [mtask_ready], 0
     call mtask_save_state
     call timr_tick
     call mtask_schedule
