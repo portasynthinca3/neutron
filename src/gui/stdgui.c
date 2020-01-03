@@ -1,9 +1,12 @@
 //Neutron project
 //Standard GUI windows
 
+#include "./stdgui.h"
 #include "../stdlib.h"
 #include "../drivers/gfx.h"
 #include "./gui.h"
+#include "./windows.h"
+#include "./controls.h"
 
 #include "../images/neutron_logo.xbm"
 

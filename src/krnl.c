@@ -7,6 +7,8 @@
 #include "./stdlib.h"
 
 #include "./gui/gui.h"
+#include "./gui/windows.h"
+#include "./gui/controls.h"
 #include "./gui/stdgui.h"
 
 #include "./drivers/gfx.h"

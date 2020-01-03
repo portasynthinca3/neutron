@@ -2,6 +2,8 @@
 #define STDHUI_H
 
 #include "../stdlib.h"
+#include "./windows.h"
+#include "./controls.h"
 
 void stdgui_create_shutdown_prompt(void);
 void stdgui_create_system_win(void);

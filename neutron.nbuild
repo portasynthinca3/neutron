@@ -7,6 +7,8 @@ src/mtask/mtask.c
 src/mtask/mtask_sw.s
 #GUI stuff
 src/gui/gui.c
+src/gui/windows.c
+src/gui/controls.c
 src/gui/stdgui.c
 #Drivers
 src/drivers/diskio.c
