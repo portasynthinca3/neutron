@@ -19,8 +19,10 @@ void timr_init(void){
     //  an initial clock source
     //And we will use PIT channel 2 for that
     outb(0x61, (inb(0x61) & 0xFD) | 1);
-    outb(0x42, 0x9B); //Wait 0x2E9B PIT clock cycles
-    outb(0x42, 0x2E); //(10 ms)
+    outb(0x43, 0b10110010);
+    outb(0x42, 0x07); //Wait 0xE907 PIT clock cycles (50 ms)
+    inb(0x60);        //<delay>
+    outb(0x42, 0xE9); //
     outb(0x61, inb(0x61) & 0xFE); //Reset one-shot mode
     outb(0x61, inb(0x61) | 1);
     apic_reg_wr(LAPIC_REG_TIMR_INITCNT, 0xFFFFFFFF); //Set an initial count of uint32_t_max-1
@@ -30,10 +32,10 @@ void timr_init(void){
     apic_reg_wr(LAPIC_REG_LVT_TIM, 0x10000);
     //Get the counter value
     uint32_t cnt_val = apic_reg_rd(LAPIC_REG_TIMR_CURCNT);
-    uint32_t ticks_in_10ms = 0xFFFFFFFF - cnt_val;
+    uint32_t ticks_in_50ms = 0xFFFFFFFF - cnt_val;
     apic_reg_wr(LAPIC_REG_LVT_TIM, 0x20000 | 32); //Enable the timer with interrupt vector #32
     apic_reg_wr(LAPIC_REG_TIMR_DIVCONF, 3); //Set the divider to 16
-    apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_10ms * 20); //Set the initial counter value
+    apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_50ms * 200); //Set the initial counter value
 }
 
 /*

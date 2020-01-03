@@ -8,21 +8,21 @@
 task_t* mtask_task_list;
 uint32_t mtask_next_task;
 uint64_t mtask_next_uid;
-uint8_t mtask_ready = 0;
+uint32_t mtask_cur_task_no;
+uint8_t mtask_enabled;
 task_t* mtask_cur_task;
-uint32_t mtask_cur_task_no = 0;
 
 /*
  * Initializes the multitasking system
  */
 void mtask_init(void){
     //Allocate a buffer for the task list
-    mtask_task_list = (task_t*)malloc(MTASK_TASK_COUNT * sizeof(task_t));
+    mtask_task_list = (task_t*)calloc(MTASK_TASK_COUNT, sizeof(task_t));
     
     mtask_cur_task_no = 0;
     mtask_next_task = 0;
     mtask_next_uid = 0;
-    mtask_ready = 0;
+    mtask_enabled = 0;
     //Initialize the scheduling timer
     timr_init();
 }
@@ -45,7 +45,7 @@ task_t* mtask_get_task_list(void){
  * Stops the scheduler, effectively freezing the system
  */
 void mtask_stop(void){
-    mtask_ready = 0;
+    mtask_enabled = 1;
 }
 
 /*
@@ -61,7 +61,7 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
     //Clear the task registers
     task->state = (task_state_t){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //Allocate memory for the task stack
-    void* task_stack = malloc(stack_size);
+    void* task_stack = calloc(stack_size, 1);
     //Assign the task RSP
     task->state.rsp = (uint64_t)(task_stack + stack_size - 1);
     //Assign the task RIP
@@ -69,7 +69,7 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
     //Assign the task CR3 and RFLAGS
     uint64_t cr3, rflags;
     __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
-    __asm__ volatile("pushfq; pop %0" : "=r" (rflags));
+    __asm__ volatile("pushfq; pop %0" : "=m" (rflags));
     task->state.cr3 = cr3;
     task->state.rflags = rflags;
     //Mark the task as valid
@@ -80,10 +80,11 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
         //Assign the current task
         mtask_cur_task = task;
         mtask_cur_task_no = 0;
-        //We're ready AF!
-        mtask_ready = 1;
-        //Call the function
-        func();
+        //Call the switcher
+        //It should switch to the newly created task
+        __asm__ volatile("cli");
+        mtask_enabled = 1;
+        __asm__ volatile("jmp mtask_restore_state");
     }
 }
 
@@ -91,13 +92,9 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
  * Destroys the task with a certain UID
  */
 void mtask_stop_task(uint64_t uid){
-    mtask_ready = 0;
-
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
         if(mtask_task_list[i].uid == uid)
             mtask_task_list[i].valid = 0;
-
-    mtask_ready = 1;
 }
 
 /*

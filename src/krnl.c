@@ -157,6 +157,8 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, sprintub16(temp2, task->state.cycles, 16));
     strcat(temp, " CYC_LAST=");
     strcat(temp, sprintub16(temp2, task->state.last_cycle, 16));
+    strcat(temp, " SW_CNT=");
+    strcat(temp, sprintub16(temp2, task->state.switch_cnt, 16));
     gfx_verbose_println(temp);
 }
 
@@ -184,7 +186,7 @@ void krnl_dump(void){
             strcat(temp, " <-> UID ");
             strcat(temp, sprintu(temp2, tasks[i].uid, 1));
             if(tasks[i].uid == mtask_get_uid())
-                strcat(temp, " [DUMP REQUEST]");
+                strcat(temp, " [RUNNING]");
             gfx_verbose_println(temp);
             krnl_dump_task_state(&tasks[i]);
         }
@@ -234,18 +236,12 @@ void krnl_boot_status(char* str, uint32_t progress){
     }
 }
 
-uint64_t dummy_var = 0;
-
-void dummy_task(void){
-    while(1){
-        dummy_var++;
-    }
-}
-
 /*
  * GUI task code
  */
 void gui_task(void){
+    gfx_fill(COLOR32(255, 0, 0, 0));
+    gfx_flip();
     while(1){
         ps2_poll();
         gui_update();
@@ -253,13 +249,19 @@ void gui_task(void){
     }
 }
 
+uint64_t dummy_var = 0;
+void dummy(void){
+    while(1)
+        dummy_var++;
+}
+
 /*
  * Multitasking entry point
  */
 void mtask_entry(void){
-    mtask_create_task(16384, "System GUI", gui_task);
-    mtask_create_task(16384, "dummy", dummy_task);
-    
+    mtask_create_task(65536, "System GUI", gui_task);
+    mtask_create_task(65536, "Dummy task", dummy);
+
     mtask_stop_task(mtask_get_uid());
     while(1);
 }
@@ -321,6 +323,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status(">>> Configuring GUI <<<", 95);
     gui_init();
     //Set up IDT
+	//Disable interrupts
+	__asm__ volatile("cli");
     krnl_boot_status(">>> Setting up interrupts <<<", 97);
     //Exit UEFI boot services before we can use IDT
     SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
@@ -328,7 +332,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     uint16_t cur_cs = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
     //Set up IDT
-    struct idt_entry* idt = (struct idt_entry*)malloc(256 * sizeof(struct idt_entry));
+    struct idt_entry* idt = (struct idt_entry*)calloc(256, sizeof(struct idt_entry));
     //Set every exception IDT entry using the same pattern
     for(int i = 0; i < 32; i++){
         uint64_t wrapper_address = (uint64_t)&exc_wrapper;
@@ -342,10 +346,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(struct idt_entry);
     load_idt(&idt_d);
-    //Enable interrupts
-    __asm__ volatile("sti");
-    //Enable non-maskable interrupts
-    outb(0x70, 0);
     //Initialize the APIC
     krnl_boot_status(">>> Initializing APIC <<<", 98);
     apic_init();
@@ -356,7 +356,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
 
-    mtask_create_task(16384, "MTask entry", mtask_entry);
+    mtask_create_task(4096, "Multitasking bootstrapper", mtask_entry);
     //The multitasking core is designed in such a way that after the
     //  first ever call to mtask_create_task() the execution of the
     //  caller function stops forever, so we won't go any further

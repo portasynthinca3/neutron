@@ -121,31 +121,31 @@ void gfx_choose_best(void){
     krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
         (CHAR16*)L"Probing video mode list\r\n");
 
+    uint32_t mon_best_res_x = 0;
+    uint32_t mon_best_res_y = 0;
     //Get the EDID
     uint64_t handle_count = 0;
     EFI_HANDLE* handle;
     EFI_EDID_DISCOVERED_PROTOCOL* edid;
     status = krnl_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
         &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), NULL, &handle_count, &handle);
-    if(EFI_ERROR(status)){
-        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
-            (CHAR16*)L"Error: unable to find EDID protocol handle\r\n");
-        while(1);
-    }
-    status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle,
-        &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
-    //Parse it
-    //To be specific, its detailed timing descriptors
-    uint32_t mon_best_res_x;
-    uint32_t mon_best_res_y;
-    //Go through advanced timing descriptors
-    for(uint32_t base = 54; base <= 108; base += 18){
-        uint32_t mon_res_x = *(uint8_t* volatile)(edid->Edid + base + 2) << 4;
-        uint32_t mon_res_y = *(uint8_t* volatile)(edid->Edid + base + 5) << 4;
-        if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
-            mon_best_res_x = mon_res_x;
-            mon_best_res_y = mon_res_y;
+    if(!EFI_ERROR(status)){
+        status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle,
+            &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
+        //Parse it
+        //To be specific, its detailed timing descriptors
+        //Go through advanced timing descriptors
+        for(uint32_t base = 54; base <= 108; base += 18){
+            uint32_t mon_res_x = *(uint8_t* volatile)(edid->Edid + base + 2) << 4;
+            uint32_t mon_res_y = *(uint8_t* volatile)(edid->Edid + base + 5) << 4;
+            if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
+                mon_best_res_x = mon_res_x;
+                mon_best_res_y = mon_res_y;
+            }
         }
+    } else {
+        mon_best_res_x = 10000;
+        mon_best_res_y = 10000;
     }
 
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info;

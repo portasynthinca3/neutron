@@ -458,7 +458,6 @@ uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16
     }
     if(i++ >= 10000)
         return 0;
-    __asm__ ("cli"); //Disable interrupts
     //Read hours
     outb(0x70, 0x04);
     *h = inb(0x71);
@@ -477,7 +476,6 @@ uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16
     //Read year
     outb(0x70, 0x09);
     *y = inb(0x71);
-    __asm__ ("sti"); //Enable interrupts
 
     //Read Status Register B to find out the data format
     outb(0x70, 0x0B);

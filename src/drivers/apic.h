@@ -64,5 +64,6 @@ void apic_init(void);
 uint32_t apic_reg_rd(uint32_t reg);
 void apic_reg_wr(uint32_t reg, uint32_t val);
 uint32_t apic_get_id(void);
+void apic_eoi(void);
 
 #endif

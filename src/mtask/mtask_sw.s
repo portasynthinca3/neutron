@@ -3,28 +3,16 @@
 .align   8
 
 mtask_save_state:
-    ;//Save RAX and RBX
+    ;//Save RAX
     push rax
-    push rbx
-    ;//Load the target state pointer address into RAX
+    ;//Load the current task pointer into RAX
     mov rax, [mtask_cur_task]
-    ;//Save the task state
-    pop [rax+  8]       ;//RBX was pushed onto stack
-    pop [rax+  0]       ;//as well as RAX
-    mov [rax+ 16], rcx  ;//save the rest of the registers directly
+    ;//Store RAX
+    pop [rax+  0]
+    ;//Store the rest of GPRs
+    mov [rax+  8], rbx
+    mov [rax+ 16], rcx
     mov [rax+ 24], rdx
-    push rax            ;//Save RAX
-    mov rcx, [rax+160]  ;//Load the last task switch CPU cycle into RCX
-    mfence
-    lfence
-    rdtsc               ;//Read the current cycle number into EDX:EAX
-    lfence
-    shl rdx, 32         ;//Move EDX:EAX into RDX
-    or rdx, rax
-    sub rdx, rcx        ;//Calculate the amount of CPU cycles the task consumed
-    pop rax             ;//Restore RAX
-    mov [rax+152], rdx  ;//Store the amount of CPU cycles the task consumed
-    mov [rax+160], rcx  ;//Store the last task switch CPU cycle
     mov [rax+ 32], rsi
     mov [rax+ 40], rdi
     mov [rax+ 48], rbp
@@ -36,41 +24,68 @@ mtask_save_state:
     mov [rax+104], r13
     mov [rax+112], r14
     mov [rax+120], r15
-    lea r15, [rsp+48]   ;//task's RSP was 48 bytes higher
-    mov [rax+ 56], r15
-    mov r15, cr3
-    mov [rax+128], r15
-    mov r15, [rsp+  8]  ;//task's RIP is at RSP+8
-    mov [rax+136], r15
-    mov r15, [rsp+ 24]  ;//RFLAGS at RSP+24
-    mov [rax+144], r15
+    ;//Load the last task switch TSC into RCX
+    mov rcx, [rax+160]
+    ;//Read TSC into RDX
+    push rax
+    rdtsc ;//Actually reads into EDX:EAX, need to shift
+    shl rdx, 32
+    or  rdx, rax
+    pop rax
+    ;//Store RDX as the new "last switch TSC"
+    mov [rax+160], rdx
+    ;//Subtract RCX from RDX to get the difference
+    sub rdx, rcx
+    ;//Store it as the amount of cycles the task took
+    mov [rax+152], rdx
+    ;//Load non-GPRs into GPRs
+    mov r8,  cr3
+    mov r9,  [rsp+ 8] ;//RIP
+    mov r10, [rsp+24] ;//RFLAGS
+    mov r11, [rsp+32] ;//RSP
+    ;//Store them
+    mov [rax+128], r8
+    mov [rax+136], r9
+    mov [rax+144], r10
+    mov [rax+ 56], r11
+    ;//Increment the switch counter
+    inc qword ptr [rax+168]
     ret
 
 mtask_restore_state:
-    ;//Load the task state pointer into RBX
-    mov rbx, [mtask_cur_task]
-    ;//Restore CR3, R8-R15, RSP, RBP, RDI, RSI, RDX, RCX
-    mov r8,  [rbx+128]
-    mov cr3, r8
-    mov r8,  [rbx+ 64]
-    mov r9,  [rbx+ 72]
-    mov r10, [rbx+ 80]
-    mov r11, [rbx+ 88]
-    mov r12, [rbx+ 96]
-    mov r13, [rbx+104]
-    mov r14, [rbx+112]
-    mov r15, [rbx+120]
-    mov rsp, [rbx+ 56]
-    mov rbp, [rbx+ 48]
-    mov rdi, [rbx+ 40]
-    mov rsi, [rbx+ 32]
-    mov rdx, [rbx+ 24]
-    mov rcx, [rbx+ 16]
-    mov rax, [rbx+  0]
-    push     [rbx+144]   ;//RFLAGS
+    ;//Load the current task pointer into RAX
+    mov rax, [mtask_cur_task]
+    ;//Load RSP
+    mov rsp, [rax+ 56]
+    ;//Load non-GPRs
+    mov rbx, [rax+128]
+    mov rcx, [rax+136]
+    mov rdx, [rax+144]
+    mov cr3, rbx
+    push     rcx
+    push     rdx
+    ;//Load GPRs
+    mov rbx, [rax+  8]
+    mov rcx, [rax+ 16]
+    mov rdx, [rax+ 24]
+    mov rsi, [rax+ 32]
+    mov rdi, [rax+ 40]
+    mov rbp, [rax+ 48]
+    mov r8,  [rax+ 64]
+    mov r9,  [rax+ 72]
+    mov r10, [rax+ 80]
+    mov r11, [rax+ 88]
+    mov r12, [rax+ 96]
+    mov r13, [rax+104]
+    mov r14, [rax+112]
+    ;//Send EOI
+    mov r15, 0xFEE000B0
+    mov dword ptr [r15], 0
+    ;//Load R15
+    mov r15, [rax+120]
+    ;//Load RFALGS
     popfq
-    push     [rbx+136]   ;//RIP
-    mov rbx, [rbx+  8]
-    ;//Set the "ready" flag
-    mov byte ptr [mtask_ready], 1
+    ;//Enable interrupts
+    sti
+    ;//Load RIP
     ret
