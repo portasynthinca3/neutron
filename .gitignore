@@ -2,8 +2,3 @@
 .vscode/
 build/
 .gitignore
-usb.vmdk
-createusbvmdk.sh
-usbvmdk.sh
-bochsout.txt
-bx_enh_dbg.ini
