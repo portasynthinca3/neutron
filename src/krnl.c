@@ -246,6 +246,15 @@ void gui_task(void){
         ps2_poll();
         gui_update();
         mouse_frame_end();
+        /*
+        for(uint32_t i = 0; i < 512; i++){
+            uint32_t j = i;
+            if(j > 255)
+                j = 511 - j;
+            gfx_fill(COLOR32(255, j, 255 - j, 0));
+            gfx_flip();
+        }
+        */
     }
 }
 

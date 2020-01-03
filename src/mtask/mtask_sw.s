@@ -83,6 +83,8 @@ mtask_restore_state:
     mov dword ptr [r15], 0
     ;//Load R15
     mov r15, [rax+120]
+    ;//Load RAX
+    mov rax, [rax+  0]
     ;//Load RFALGS
     popfq
     ;//Enable interrupts

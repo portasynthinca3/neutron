@@ -3,12 +3,25 @@
 .align   8
 
 exc_wrapper:
+    ;//Disable interrupts
+    cli
+    ;//Save the state of the currently running task
+    ;//For ease of debugging
+    call mtask_save_state
+    ;//Get exception address
     pop rdx
     cld
     call krnl_exc
     iretq
 exc_wrapper_code:
-    pop rcx
+    ;//Disable interrupts
+    cli
+    ;//Move the stack pointer 8 bytes up
+    add rsp, 8
+    ;//Save the state of the currently running task
+    ;//For ease of debugging
+    call mtask_save_state
+    ;//Get exception address
     pop rdx
     cld
     call krnl_exc
