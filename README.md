@@ -12,7 +12,7 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 In theory, it should work on any modern system. Here are the minimal requirements:
 * CPU: x86-64 architecture
 * System: UEFI class 2 or 3
-* RAM: 256 MB
+* RAM: 64 MB
 # Show me the screenshots!
 They are in the `screens` directory
 # Okay, what do I need to be aware of?
