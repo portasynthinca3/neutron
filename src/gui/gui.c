@@ -409,7 +409,7 @@ void gui_render_windows(void){
     //Clear the focus processed flag
     focus_processed = 0;
     //Reset the top bar position
-    topb_win_pos = 0;
+    topb_win_pos = 2;
 
     uint8_t process_non_focus = 0;
     //If the window in focus is valid
@@ -432,17 +432,17 @@ void gui_render_windows(void){
     while((current_window = &windows[i++])->title){
         //Draw the highlight in the top bar if the window is in focus
         if(window_focused == current_window)
-            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos, .y = 0},
+            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos, .y = 2},
                                  (p2d_t){.x = 16, .y = 16}, color_scheme.selection);
         //Draw the window icon in the top bar
         if(current_window->icon_8 == NULL){
-            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 4, .y = 4},
+            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 4, .y = 6},
                                  (p2d_t){.x = 8, .y = 8}, color_scheme.win_bg);
-            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 5, .y = 5},
+            gfx_draw_filled_rect((p2d_t){.x = topb_win_pos + 5, .y = 7},
                                  (p2d_t){.x = 3, .y = 6}, COLOR32(255, 0, 64, 255));
-            gfx_draw_hor_line((p2d_t){.x = topb_win_pos + 9, .y = 5}, 2, color_scheme.win_title);
+            gfx_draw_hor_line((p2d_t){.x = topb_win_pos + 9, .y = 7}, 2, color_scheme.win_title);
         } else {
-            gfx_draw_raw((p2d_t){.x = topb_win_pos + 4, .y = 4}, current_window->icon_8, (p2d_t){.x = 8, .y = 8});
+            gfx_draw_raw((p2d_t){.x = topb_win_pos + 4, .y = 6}, current_window->icon_8, (p2d_t){.x = 8, .y = 8});
         }
         //Advance the bar position
         topb_win_pos += 16;
