@@ -11,7 +11,7 @@ typedef struct {
 
 //Structure defining a 32bpp color
 typedef struct {
-    uint8_t b, g, r, a;
+    uint8_t r, g, b, a;
 } __attribute__((packed)) color32_t;
 
 #define GFX_BUF_VBE 1

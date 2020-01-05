@@ -242,13 +242,15 @@ void krnl_boot_status(char* str, uint32_t progress){
  * GUI task code
  */
 void gui_task(void){
+    /*
     gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_flip();
     while(1){
-        ps2_poll();
+        //ps2_poll();
         gui_update();
-        mouse_frame_end();
+        //mouse_frame_end();
     }
+    */
 }
 
 uint64_t dummy_var = 0;
@@ -316,8 +318,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status(">>> Detecting PCI devices <<<", 30);
     pci_enumerate();
     //Enumerate partitions
-    krnl_boot_status(">>> Detecting drive partitions <<<", 45);
-    diskio_init();
+    //krnl_boot_status(">>> Detecting drive partitions <<<", 45);
+    //diskio_init();
     //Initialize ACPI
     krnl_boot_status(">>> Initializing ACPI <<<", 60);
     acpi_init();

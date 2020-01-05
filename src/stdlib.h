@@ -9,7 +9,7 @@
 #define KRNL_VERSION_STR "v0.4.4"
 
 //Use WC for memcpy() transfers?
-#define STDLIB_MEMCPY_WC
+//#define STDLIB_MEMCPY_WC
 
 //Standard type definitions
 

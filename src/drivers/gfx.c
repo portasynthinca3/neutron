@@ -70,10 +70,6 @@ void gfx_init(void){
     }
     //Choose the best video mode
     gfx_choose_best();
-    //Retrieve its parameters
-    res_x = graphics_output->Mode->Info->HorizontalResolution;
-    res_y = graphics_output->Mode->Info->VerticalResolution;
-    vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
     //Allocate the second buffer based on the screen size
     //  (actually, a little bit bigger than that)
     sec_buffer = (color32_t*)malloc(res_x * (res_y + 16) * sizeof(color32_t));
@@ -134,13 +130,15 @@ void gfx_choose_best(void){
             &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
         //Parse it
         //To be specific, its detailed timing descriptors
-        //Go through advanced timing descriptors
-        for(uint32_t base = 54; base <= 108; base += 18){
-            uint32_t mon_res_x = *(uint8_t* volatile)(edid->Edid + base + 2) << 4;
-            uint32_t mon_res_y = *(uint8_t* volatile)(edid->Edid + base + 5) << 4;
-            if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
-                mon_best_res_x = mon_res_x;
-                mon_best_res_y = mon_res_y;
+        //Go through them
+        if(!EFI_ERROR(status)){
+            for(uint32_t base = 54; base <= 108; base += 18){
+                uint32_t mon_res_x = *(uint8_t*)(edid->Edid + base + 2) << 4;
+                uint32_t mon_res_y = *(uint8_t*)(edid->Edid + base + 5) << 4;
+                if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
+                    mon_best_res_x = mon_res_x;
+                    mon_best_res_y = mon_res_y;
+                }
             }
         }
     } else {
@@ -170,8 +168,8 @@ void gfx_choose_best(void){
             }
         }
 
-        //Only choose BGRReserved modes
-        if(mode_info->PixelFormat == PixelBlueGreenRedReserved8BitPerColor){
+        //Only choose RGBReserved modes
+        if(mode_info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor){
             //Fetch mode resolution and compare it with the best one currently discovered
             //Do not exceed the display resolution
             uint32_t mode_res_x = mode_info->HorizontalResolution;
@@ -187,6 +185,10 @@ void gfx_choose_best(void){
     }
     //Set the mode
     graphics_output->SetMode(graphics_output, best_mode_num);
+    //Retrieve its parameters
+    res_x = graphics_output->Mode->Info->HorizontalResolution;
+    res_y = graphics_output->Mode->Info->VerticalResolution;
+    vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
 }
 
 /*
