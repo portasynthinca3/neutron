@@ -39,6 +39,13 @@ void timr_init(void){
 }
 
 /*
+ * Stops the timer
+ */
+void timr_stop(void){
+    apic_reg_wr(LAPIC_REG_LVT_TIM, apic_reg_rd(LAPIC_REG_LVT_TIM) & ~0x20000);
+}
+
+/*
  * Increment the millisecond counter
  */
 void timr_tick(void){

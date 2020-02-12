@@ -149,10 +149,10 @@ void gui_update(void){
         //Append seconds
         strcat(time, sprintu(temp, s, 2));
     }
+
     //Print them
-    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(date).x - 4, .y = 2}, color_scheme.time, COLOR32(0, 0, 0, 0), date);
-    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - ((gfx_text_bounds(date).x - gfx_text_bounds(time).x) / 2) - 4, .y = 12},
-        color_scheme.time, COLOR32(0, 0, 0, 0), time);
+    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(date).x, .y = 2}, color_scheme.time, COLOR32(0, 0, 0, 0), date);
+    gfx_puts((p2d_t){.x = gfx_res_x() - gfx_text_bounds(time).x - 4, .y = 12}, color_scheme.time, COLOR32(0, 0, 0, 0), time);
 
     //Draw the power icon
     gfx_draw_xbm((p2d_t){.x = gfx_res_x() - 60 - 16, .y = 2}, power_bits, (p2d_t){.x = power_width, .y = power_height},

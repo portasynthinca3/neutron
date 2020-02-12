@@ -213,7 +213,7 @@ void krnl_exc(void){
     //Load exception address into RBX for ease of debugging too
     __asm__ volatile("mov %0, %%rbx" : : "m" (ip));
     //Abort
-    abort();
+    while(1);
 }
 
 /*
@@ -242,15 +242,13 @@ void krnl_boot_status(char* str, uint32_t progress){
  * GUI task code
  */
 void gui_task(void){
-    /*
     gfx_fill(COLOR32(255, 0, 0, 0));
     gfx_flip();
     while(1){
-        //ps2_poll();
+        ps2_poll();
         gui_update();
-        //mouse_frame_end();
+        mouse_frame_end();
     }
-    */
 }
 
 uint64_t dummy_var = 0;
@@ -263,8 +261,8 @@ void dummy(void){
  * Multitasking entry point
  */
 void mtask_entry(void){
-    mtask_create_task(65536, "System GUI", gui_task);
-    mtask_create_task(65536, "Dummy task", dummy);
+    mtask_create_task(131072, "System UI", gui_task);
+    //mtask_create_task(65536, "Dummy task", dummy);
 
     mtask_stop_task(mtask_get_uid());
     while(1);

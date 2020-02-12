@@ -99,7 +99,7 @@ void stdgui_create_system_win(void){
                      (p2d_t){.x = (system_win_size.x - neutron_logo_width) / 2, .y = 13}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height},
                      GUI_IMAGE_FORMAT_XBM, neutron_logo_bits, COLOR32(0, 0, 0, 0), COLOR32(255, 255, 255, 255), NULL);
     //Add the name label to it
-    char* name_label_text = "Neutron Project. 2019, Andrey Antonenko";
+    char* name_label_text = "Neutron Project. 2019-2020, Andrey Antonenko";
     uint32_t name_label_width = gfx_text_bounds(name_label_text).x;
     gui_create_label(window, (p2d_t){.x = (system_win_size.x - name_label_width) / 2, .y = 13 + neutron_logo_height + 2}, 
                              (p2d_t){.x = name_label_width, .y = 8}, name_label_text, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);

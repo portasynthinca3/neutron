@@ -45,7 +45,8 @@ task_t* mtask_get_task_list(void){
  * Stops the scheduler, effectively freezing the system
  */
 void mtask_stop(void){
-    mtask_enabled = 1;
+    mtask_enabled = 0;
+    timr_stop();
 }
 
 /*
