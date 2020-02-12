@@ -93,9 +93,13 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
  * Destroys the task with a certain UID
  */
 void mtask_stop_task(uint64_t uid){
+    //Find the task and destoy it
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
         if(mtask_task_list[i].uid == uid)
             mtask_task_list[i].valid = 0;
+    //Hang if we're terminating the current task
+    if(uid == mtask_get_uid())
+        while(1);
 }
 
 /*

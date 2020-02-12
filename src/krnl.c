@@ -262,10 +262,9 @@ void dummy(void){
  */
 void mtask_entry(void){
     mtask_create_task(131072, "System UI", gui_task);
-    //mtask_create_task(65536, "Dummy task", dummy);
+    mtask_create_task(8192, "Dummy task", dummy);
 
     mtask_stop_task(mtask_get_uid());
-    while(1);
 }
 
 /*

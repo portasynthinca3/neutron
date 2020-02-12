@@ -7,8 +7,10 @@
 #include "./gui.h"
 #include "./windows.h"
 #include "./controls.h"
+#include "../mtask/mtask.h"
 
 #include "../images/neutron_logo.xbm"
+#include "../images/task_mgr.h"
 
 //These are defined in the Kernel
 void krnl_shutdown(void);
@@ -85,6 +87,12 @@ void stdgui_create_shutdown_prompt(void){
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_cb_reboot_pressed);
 }
 
+void _stdgui_task_mgr_btn_click(ui_event_args_t* args){
+    if(args->type == GUI_EVENT_CLICK){
+        stdgui_create_task_manager();
+    }
+}
+
 /*
  * Creates a system control window
  */
@@ -124,6 +132,58 @@ void stdgui_create_system_win(void){
     //Add the system color change button to it
     gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 40}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), krnl_open_sys_color_picker);
+    //Add the system task manager button to it
+    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 57}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Task manager",
+                      COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_task_mgr_btn_click);
+}
+
+//Task manager window label
+control_ext_label_t* task_mgr_label;
+
+/*
+ * The task that updates the task manager
+ */
+void _stdgui_task_mgr_updater(){
+    //Get the UID
+    uint64_t uid = mtask_get_uid();
+    //Temporary string
+    char temp[1024];
+    char temp2[128];
+    while(1){
+        //Construct the temporary string
+        temp[0] = 0;
+        //Scan through the task list
+        task_t* tasks = mtask_get_task_list();
+        for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++){
+            //If the task is valid
+            if(tasks[i].valid){
+                //Append its name to the string
+                strcat(temp, tasks[i].name);
+                //Append its kilocycle count to the string
+                strcat(temp, " (kC: ");
+                strcat(temp, sprintu(temp2, tasks[i].state.cycles / 1000, 1));
+                strcat(temp, ")\n");
+            }
+        }
+        //Copy the temporary string
+        memcpy(task_mgr_label->text, temp, 1024);
+    }
+}
+
+/*
+ * Creates a task manager window
+ */
+void stdgui_create_task_manager(void){
+    p2d_t window_size = (p2d_t){.x = 300, .y = 300};
+    //Create the window
+    window_t* window = gui_create_window("Task manager", task_mgr_icon, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = (gfx_res_x() - window_size.x) / 2,
+                                                                                                        .y = (gfx_res_y() - window_size.y) / 2},
+        window_size, NULL);
+    //Create the label
+    task_mgr_label = gui_create_label(window, (p2d_t){.x = 0, .y = 0}, window_size, "", COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL)->extended;
+        task_mgr_label->text = (char*)malloc(1024);
+    //Create the update process
+    mtask_create_task(16384, "Task Manager Updater", &_stdgui_task_mgr_updater);
 }
 
 /*
