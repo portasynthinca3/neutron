@@ -36,6 +36,9 @@ config_file_obj.close()
 c_files = list()
 fs_files = list()
 
+if not os.path.exists('build'):
+	os.mkdir('build')
+
 config_section = ''
 config_lines = config_contents.split('\n')
 for line_no in range(len(config_lines)):
@@ -65,7 +68,7 @@ for path in c_files:
 	execute('x86_64-w64-mingw32-gcc -ffreestanding -mcmodel=large -mno-red-zone -m64 -msse2 -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
 
 print_status('Linking')
-execute('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj) + ' -lgcc')
+execute('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
 print_status('Bulding system image')
 print('  Creating image file')
 execute('dd if=/dev/zero of=build/neutron.img count=' + str(image_size_sectors) + ' > /dev/null 2>&1')

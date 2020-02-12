@@ -18,5 +18,12 @@ They are in the `screens` directory
 # Okay, what do I need to be aware of?
 Keep in mind that the system is unstable. I am **not** responsible for **any** kind of damage.
 However, please tell me if you have found a bug, especially if it's dangerous enough to do any damage. That would be very nice!
-# Can I join the team?
-No, I don't think so. I want to do this project entirely on my own, at least yet.
+# Building
+1. You need to install the `x86_64-w64-mingw32-gcc` compiler. You can get it from the Arch User Repository or
+some other place. I personally have used the\
+`pamac build mingw-w64-gcc-base`\
+command to do this.
+2. You need to have python version 3 installed.
+3. Run the\
+`python3 builder.py`\
+command inside the directory that contains the project. The ISO file will be inside the `build` directory.
