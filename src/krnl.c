@@ -35,6 +35,9 @@ extern void exc_wrapper(void);
 extern void exc_wrapper_code(void);
 extern void apic_timer_isr_wrap(void);
 
+//Stack Smashing Protection guard
+uint64_t __stack_chk_guard;
+
 //Is the kernel in verbose mode or not?
 uint8_t krnl_verbose;
 
@@ -270,9 +273,19 @@ void mtask_entry(void){
 }
 
 /*
+ * Stack smashing detected
+ */
+__attribute__((noreturn)) void __stack_chk_fail(void) {
+    gfx_panic(0, KRNL_PANIC_STACK_SMASH_CODE);
+    while(1);
+}
+
+/*
  * The entry point for the kernel
  */
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable){
+    //Set the stack smashing guard
+    __asm__ ("rdrand %%eax; mov %%eax, %0" : "=m" (__stack_chk_guard) : : "eax");
     //Save the system table pointer
     krnl_efi_systable = SystemTable;
     //Disable the watchdog timer

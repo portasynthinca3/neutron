@@ -80,6 +80,8 @@ struct idt_entry {
 #define KRNL_PANIC_PANTEST_MSG             "not an error: called gfx_panic() for testing purposes"
 #define KRNL_PANIC_CPUEXC_CODE             3
 #define KRNL_PANIC_CPUEXC_MSG              "CPU-generated exception"
+#define KRNL_PANIC_STACK_SMASH_CODE        4
+#define KRNL_PANIC_STACK_SMASH_MSG         "Stack Smashing detected"
 #define KRNL_PANIC_UNKNOWN_MSG             "<unknown code>"
 
 //Debug functions

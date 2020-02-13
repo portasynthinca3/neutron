@@ -472,11 +472,13 @@ void gfx_panic(int ip, int code){
         panic_msg = KRNL_PANIC_PANTEST_MSG;
     else if(code == KRNL_PANIC_CPUEXC_CODE)
         panic_msg = KRNL_PANIC_CPUEXC_MSG;
+    else if(code == KRNL_PANIC_STACK_SMASH_CODE)
+        panic_msg = KRNL_PANIC_STACK_SMASH_MSG;
     else
         panic_msg = KRNL_PANIC_UNKNOWN_MSG;
     //Construct the error message
     char text[250];
-    char temp[15];
+    char temp[20];
     text[0] = 0;
     strcat(text, "Kernel panic occured at address 0x");
     strcat(text, sprintub16(temp, ip, 8));

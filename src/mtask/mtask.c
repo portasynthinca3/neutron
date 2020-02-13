@@ -89,8 +89,6 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
         //It should switch to the newly created task
         __asm__ volatile("cli");
         mtask_enabled = 1;
-        char temp[20];
-        gfx_verbose_println(sprintub16(temp, (uint64_t)&mtask_cur_task, 16));
         __asm__ volatile("jmp mtask_restore_state");
     }
 }
