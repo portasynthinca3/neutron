@@ -30,7 +30,14 @@ exc_wrapper_code:
 apic_timer_isr_wrap:
     ;//Disable interrupts
     cli
-    cmp byte ptr [mtask_enabled], 1
+    ;//Save RAX
+    push rax
+    ;//Check if multitasking is enabled
+    call mtask_is_enabled
+    cmp rax, 1
+    ;//Restore RAX
+    pop rax
+    ;//Return if not
     je apic_timer_isr_wrap_cont
     ;//Re-enable interrupts; send EOI; return
     push r15

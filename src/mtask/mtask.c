@@ -12,8 +12,20 @@ uint32_t mtask_cur_task_no;
 uint8_t mtask_enabled;
 task_t* mtask_cur_task;
 
+/*
+ * Returns the current task pointer
+ * (used only by mtask_sw.s)
+ */
 task_t* mtask_get_cur_task(){
     return mtask_cur_task;
+}
+
+/*
+ * Is multitasking enabled?
+ * (used only by mtask_sw.s)
+ */
+uint64_t mtask_is_enabled(){
+    return mtask_enabled;
 }
 
 /*
