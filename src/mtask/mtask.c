@@ -69,10 +69,13 @@ void mtask_stop(void){
  * Creates a task
  * If it's the first task ever created, starts multitasking
  */
-void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
+void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void)){
     task_t* task = &mtask_task_list[mtask_next_task];
     //Asign an UID
     task->uid = mtask_next_uid++;
+    //Assign the priority
+    task->priority = priority;
+    task->prio_cnt = task->priority;
     //Copy the name
     memcpy(task->name, name, strlen(name) + 1);
     //Clear the task registers
@@ -122,13 +125,26 @@ void mtask_stop_task(uint64_t uid){
  * Chooses the next task to be run
  */
 void mtask_schedule(void){
-    while(1){
-        //We scan through the task list to find a next task that's valid and running
-        mtask_cur_task_no++;
-        if(mtask_cur_task_no >= mtask_next_task)
-            mtask_cur_task_no = 0;
-        if(mtask_task_list[mtask_cur_task_no].valid)
-            break;
+    //If the currently running task still has time available
+    if(mtask_cur_task->prio_cnt > 0) {
+        //Decrease its available time
+        mtask_cur_task->prio_cnt--;
+    } else {
+        //If not, restore its time
+        mtask_cur_task->prio_cnt = mtask_cur_task->priority;
+        //Calculate the amount of cycles the task took
+        mtask_cur_task->state.last_cycle = rdtsc();
+        mtask_cur_task->state.cycles = mtask_cur_task->state.last_cycle - mtask_cur_task->state.prev_last_cycle;
+        mtask_cur_task->state.prev_last_cycle = mtask_cur_task->state.last_cycle;
+        //Go find a new task
+        while(1){
+            //We scan through the task list to find a next task that's valid and running
+            mtask_cur_task_no++;
+            if(mtask_cur_task_no >= mtask_next_task)
+                mtask_cur_task_no = 0;
+            if(mtask_task_list[mtask_cur_task_no].valid)
+                break;
+        }
     }
 
     mtask_cur_task = &mtask_task_list[mtask_cur_task_no];

@@ -162,6 +162,8 @@ void _stdgui_task_mgr_updater(){
                 //Append its kilocycle count to the string
                 strcat(temp, " (kC: ");
                 strcat(temp, sprintu(temp2, tasks[i].state.cycles / 1000, 1));
+                strcat(temp, ", prio: ");
+                strcat(temp, sprintu(temp2, tasks[i].priority, 1));
                 strcat(temp, ")\n");
             }
         }
@@ -183,7 +185,7 @@ void stdgui_create_task_manager(void){
     task_mgr_label = gui_create_label(window, (p2d_t){.x = 0, .y = 0}, window_size, "", COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL)->extended;
         task_mgr_label->text = (char*)malloc(1024);
     //Create the update process
-    mtask_create_task(16384, "Task Manager Updater", &_stdgui_task_mgr_updater);
+    mtask_create_task(16384, "Task Manager Updater", 2, &_stdgui_task_mgr_updater);
 }
 
 /*

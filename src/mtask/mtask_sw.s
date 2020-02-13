@@ -24,20 +24,6 @@ mtask_save_state:
     mov [rax+104], r13
     mov [rax+112], r14
     mov [rax+120], r15
-    ;//Load the last task switch TSC into RCX
-    mov rcx, [rax+160]
-    ;//Read TSC into RDX
-    push rax
-    rdtsc ;//Actually reads into EDX:EAX, need to shift
-    shl rdx, 32
-    or  rdx, rax
-    pop rax
-    ;//Store RDX as the new "last switch TSC"
-    mov [rax+160], rdx
-    ;//Subtract RCX from RDX to get the difference
-    sub rdx, rcx
-    ;//Store it as the amount of cycles the task took
-    mov [rax+152], rdx
     ;//Load non-GPRs into GPRs
     mov r8,  cr3
     mov r9,  [rsp+ 8] ;//RIP

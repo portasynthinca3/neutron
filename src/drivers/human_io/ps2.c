@@ -113,7 +113,7 @@ void ps2_alloc_buf(void){
 void ps2_poll(void){
     //Variable holding the I/O port 64h data
     uint8_t p64d;
-    uint32_t timeout = 10;
+    uint32_t timeout = 100;
     //While the time didn't out
     while(timeout--){
         //While there's data ready to be read

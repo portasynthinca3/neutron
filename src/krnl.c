@@ -164,6 +164,8 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, sprintub16(temp2, task->state.last_cycle, 16));
     strcat(temp, " SW_CNT=");
     strcat(temp, sprintub16(temp2, task->state.switch_cnt, 16));
+    strcat(temp, " CYC_PREV_LAST=");
+    strcat(temp, sprintub16(temp2, task->state.prev_last_cycle, 16));
     gfx_verbose_println(temp);
 }
 
@@ -264,10 +266,8 @@ void dummy(void){
  * Multitasking entry point
  */
 void mtask_entry(void){
-    gfx_verbose_println("Multitasking bootstrapper started");
-    
-    mtask_create_task(131072, "System UI", gui_task);
-    mtask_create_task(8192, "Dummy task", dummy);
+    mtask_create_task(131072, "System UI", 10, gui_task);
+    mtask_create_task(8192, "Dummy task", 1, dummy);
     
     mtask_stop_task(mtask_get_uid());
 }
@@ -372,7 +372,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
 
-    mtask_create_task(8192, "Multitasking bootstrapper", mtask_entry);
+    mtask_create_task(8192, "Multitasking bootstrapper", 100, mtask_entry);
     //The multitasking core is designed in such a way that after the
     //  first ever call to mtask_create_task() the execution of the
     //  caller function stops forever, so we won't go any further
