@@ -6,7 +6,7 @@ mtask_save_state:
     ;//Save RAX
     push rax
     ;//Load the current task pointer into RAX
-    mov rax, [mtask_cur_task]
+    call mtask_get_cur_task
     ;//Store RAX
     pop [rax+  0]
     ;//Store the rest of GPRs
@@ -54,7 +54,7 @@ mtask_save_state:
 
 mtask_restore_state:
     ;//Load the current task pointer into RAX
-    mov rax, [mtask_cur_task]
+    call mtask_get_cur_task
     ;//Load RSP
     mov rsp, [rax+ 56]
     ;//Load non-GPRs

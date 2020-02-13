@@ -44,7 +44,7 @@ void abort(){
 /*
  * Initialize the dynamic memory allocator
  */
-void dram_init(void){
+uint64_t dram_init(void){
     //Get the memory map from EFI
     EFI_MEMORY_DESCRIPTOR* buf;
     uint64_t desc_size;
@@ -108,6 +108,9 @@ void dram_init(void){
             (CHAR16*)L"No usable memory was found\r\n");
         while(1);
     }
+
+    //Return the map key
+    return map_key;
 }
 
 /*

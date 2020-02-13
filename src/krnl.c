@@ -261,9 +261,11 @@ void dummy(void){
  * Multitasking entry point
  */
 void mtask_entry(void){
+    gfx_verbose_println("Multitasking bootstrapper started");
+    
     mtask_create_task(131072, "System UI", gui_task);
     mtask_create_task(8192, "Dummy task", dummy);
-
+    
     mtask_stop_task(mtask_get_uid());
 }
 
@@ -283,7 +285,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
-    dram_init();
+    uint64_t efi_map_key = dram_init();
 
     //Set verbose mode
     krnl_verbose = 1;
@@ -328,7 +330,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 	__asm__ volatile("cli");
     krnl_boot_status(">>> Setting up interrupts <<<", 97);
     //Exit UEFI boot services before we can use IDT
-    SystemTable->BootServices->ExitBootServices(ImageHandle, 0);
+    SystemTable->BootServices->ExitBootServices(ImageHandle, efi_map_key);
     //Get the current code selector
     uint16_t cur_cs = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
@@ -357,7 +359,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
 
-    mtask_create_task(4096, "Multitasking bootstrapper", mtask_entry);
+    mtask_create_task(8192, "Multitasking bootstrapper", mtask_entry);
     //The multitasking core is designed in such a way that after the
     //  first ever call to mtask_create_task() the execution of the
     //  caller function stops forever, so we won't go any further

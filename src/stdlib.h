@@ -9,7 +9,7 @@
 #define KRNL_VERSION_STR "v0.4.6"
 
 //Use WC for memcpy() transfers?
-//#define STDLIB_MEMCPY_WC
+#define STDLIB_MEMCPY_WC
 
 //Standard type definitions
 
@@ -107,7 +107,7 @@ void wrmsr(uint32_t msr, uint64_t val);
 
 uint64_t stdlib_usable_ram(void);
 uint64_t stdlib_used_ram(void);
-void dram_init(void);
+uint64_t dram_init(void);
 void* malloc(size_t size);
 void free(void* ptr);
 void* calloc(uint64_t num, size_t size);

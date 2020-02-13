@@ -12,6 +12,10 @@ uint32_t mtask_cur_task_no;
 uint8_t mtask_enabled;
 task_t* mtask_cur_task;
 
+task_t* mtask_get_cur_task(){
+    return mtask_cur_task;
+}
+
 /*
  * Initializes the multitasking system
  */
@@ -85,6 +89,8 @@ void mtask_create_task(uint64_t stack_size, char* name, void(*func)(void)){
         //It should switch to the newly created task
         __asm__ volatile("cli");
         mtask_enabled = 1;
+        char temp[20];
+        gfx_verbose_println(sprintub16(temp, (uint64_t)&mtask_cur_task, 16));
         __asm__ volatile("jmp mtask_restore_state");
     }
 }
