@@ -24,7 +24,7 @@
 
 #include "./fonts/font_neutral.h"
 
-#include "./images/neutron_logo.xbm"
+#include "./images/neutron_logo.h"
 
 #include "./mtask/mtask.h"
 
@@ -318,8 +318,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
         gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(KRNL_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
                  COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), KRNL_VERSION_STR);
     //Draw the neutron logo
-    gfx_draw_xbm((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo_bits,
-                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0));
+    gfx_draw_raw((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo,
+                 (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height});
     //Print the boot process
     krnl_boot_status(">>> Loading <<<", 0);
 
