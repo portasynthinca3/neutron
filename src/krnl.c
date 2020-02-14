@@ -158,14 +158,8 @@ void krnl_dump_task_state(task_t* task){
 
     //Print cycles
     temp[0] = 0;
-    strcat(temp, "  CYC_CONS=");
-    strcat(temp, sprintub16(temp2, task->state.cycles, 16));
-    strcat(temp, " CYC_LAST=");
-    strcat(temp, sprintub16(temp2, task->state.last_cycle, 16));
-    strcat(temp, " SW_CNT=");
+    strcat(temp, "  SW_CNT=");
     strcat(temp, sprintub16(temp2, task->state.switch_cnt, 16));
-    strcat(temp, " CYC_PREV_LAST=");
-    strcat(temp, sprintub16(temp2, task->state.prev_last_cycle, 16));
     gfx_verbose_println(temp);
 }
 
@@ -185,17 +179,27 @@ void krnl_dump(void){
         //If task at that index is valid
         if(tasks[i].valid){
             //Print its details
-            char temp[100];
+            char temp[200];
             temp[0] = 0;
-            char temp2[10];
+            char temp2[20];
             strcat(temp, " ");
             strcat(temp, tasks[i].name);
-            strcat(temp, " <-> UID ");
+            strcat(temp, ", UID ");
             strcat(temp, sprintu(temp2, tasks[i].uid, 1));
             if(tasks[i].uid == mtask_get_uid())
+                strcat(temp, " [DUMP CAUSE]");
+            if(tasks[i].blocked){
+                strcat(temp, " [BLOCKED TILL ");
+                strcat(temp, sprintub16(temp2, tasks[i].blocked_till_cycle, 16));
+                strcat(temp, " / CUR ");
+                strcat(temp, sprintub16(temp2, rdtsc(), 16));
+                strcat(temp, "]");
+            } else {
                 strcat(temp, " [RUNNING]");
+            }
             gfx_verbose_println(temp);
             krnl_dump_task_state(&tasks[i]);
+            gfx_verbose_println("");
         }
     }
 }
@@ -258,8 +262,10 @@ void gui_task(void){
 
 uint64_t dummy_var = 0;
 void dummy(void){
-    while(1)
+    while(1){
         dummy_var++;
+        mtask_dly_cycles(1000000000);
+    }
 }
 
 /*
@@ -301,7 +307,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     uint64_t efi_map_key = dram_init();
 
     //Set verbose mode
-    krnl_verbose = 0;
+    krnl_verbose = 1;
     gfx_set_verbose(krnl_verbose);
 
     //Do some graphics-related initialization stuff
@@ -329,19 +335,16 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Enumerate PCI devices
     krnl_boot_status(">>> Detecting PCI devices <<<", 30);
     pci_enumerate();
-    //Enumerate partitions
-    //krnl_boot_status(">>> Detecting drive partitions <<<", 45);
-    //diskio_init();
     //Initialize ACPI
-    krnl_boot_status(">>> Initializing ACPI <<<", 60);
+    krnl_boot_status(">>> Initializing ACPI <<<", 45);
     acpi_init();
     //Configure GUI
-    krnl_boot_status(">>> Configuring GUI <<<", 95);
+    krnl_boot_status(">>> Configuring GUI <<<", 60);
     gui_init();
     //Set up IDT
 	//Disable interrupts
 	__asm__ volatile("cli");
-    krnl_boot_status(">>> Setting up interrupts <<<", 97);
+    krnl_boot_status(">>> Setting up interrupts <<<", 75);
     //Exit UEFI boot services before we can use IDT
     SystemTable->BootServices->ExitBootServices(ImageHandle, efi_map_key);
     //Get the current code selector

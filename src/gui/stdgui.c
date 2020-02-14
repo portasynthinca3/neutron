@@ -160,11 +160,14 @@ void _stdgui_task_mgr_updater(){
                 //Append its name to the string
                 strcat(temp, tasks[i].name);
                 //Append its kilocycle count to the string
-                strcat(temp, " (kC: ");
-                strcat(temp, sprintu(temp2, tasks[i].state.cycles / 1000, 1));
-                strcat(temp, ", prio: ");
+                strcat(temp, "(prio: ");
                 strcat(temp, sprintu(temp2, tasks[i].priority, 1));
-                strcat(temp, ")\n");
+                strcat(temp, ")");
+                if(tasks[i].blocked)
+                    strcat(temp, " [blocked]");
+                else
+                    strcat(temp, " [running]");
+                strcat(temp, "\n");
             }
         }
         //Copy the temporary string

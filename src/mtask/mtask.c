@@ -92,8 +92,10 @@ void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*
     __asm__ volatile("pushfq; pop %0" : "=m" (rflags));
     task->state.cr3 = cr3;
     task->state.rflags = rflags;
-    //Mark the task as valid
+    //Reset some vars
     task->valid = 1;
+    task->blocked = 0;
+    task->blocked_till_cycle = 0;
 
     //Check if it's the first task ever created
     if(mtask_next_task++ == 0){
@@ -132,20 +134,36 @@ void mtask_schedule(void){
     } else {
         //If not, restore its time
         mtask_cur_task->prio_cnt = mtask_cur_task->priority;
-        //Calculate the amount of cycles the task took
-        mtask_cur_task->state.last_cycle = rdtsc();
-        mtask_cur_task->state.cycles = (mtask_cur_task->state.last_cycle - mtask_cur_task->state.prev_last_cycle) * mtask_cur_task->priority;
-        mtask_cur_task->state.prev_last_cycle = mtask_cur_task->state.last_cycle;
         //Go find a new task
         while(1){
-            //We scan through the task list to find a next task that's valid and running
+            //We scan through the task list to find a next task that's valid and not blocked
             mtask_cur_task_no++;
             if(mtask_cur_task_no >= mtask_next_task)
                 mtask_cur_task_no = 0;
-            if(mtask_task_list[mtask_cur_task_no].valid)
+
+            //Remove blocks on tasks that need to be unblocked
+            if(mtask_task_list[mtask_cur_task_no].blocked){
+                if(rdtsc() >= mtask_task_list[mtask_cur_task_no].blocked_till_cycle){
+                    mtask_task_list[mtask_cur_task_no].blocked = 0;
+                    mtask_task_list[mtask_cur_task_no].blocked_till_cycle = 0;
+                }
+            }
+
+            if(mtask_task_list[mtask_cur_task_no].valid && !mtask_task_list[mtask_cur_task_no].blocked)
                 break;
         }
     }
 
     mtask_cur_task = &mtask_task_list[mtask_cur_task_no];
+}
+
+/*
+ * Blocks the currently running task for a specific amount of CPU cycles
+ */
+void mtask_dly_cycles(uint64_t cycles){
+    //Set the block
+    mtask_cur_task->blocked_till_cycle = rdtsc() + cycles;
+    mtask_cur_task->blocked = 1;
+    //This variable will be set to 0 by the scheduler
+    while(mtask_cur_task->blocked);
 }

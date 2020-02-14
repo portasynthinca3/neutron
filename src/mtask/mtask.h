@@ -6,16 +6,20 @@
 typedef struct {
     uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp;
     uint64_t r8,  r9,  r10, r11, r12, r13, r14, r15;
-    uint64_t cr3, rip, rflags, cycles, last_cycle, switch_cnt, prev_last_cycle;
+    uint64_t cr3, rip, rflags, switch_cnt;
 } __attribute__((packed)) task_state_t;
 
 typedef struct {
     task_state_t state;
-    uint64_t uid;
+
     uint8_t valid;
+    uint64_t uid;
+    char name[64];
+
     uint8_t priority;
     uint8_t prio_cnt;
-    char name[64];
+    volatile uint8_t blocked;
+    uint64_t blocked_till_cycle;
 } __attribute__((packed)) task_t;
 
 #define MTASK_TASK_COUNT            32
@@ -30,5 +34,7 @@ task_t* mtask_get_task_list(void);
 void mtask_save_state(void);
 void mtask_restore_state(void);
 void mtask_schedule(void);
+
+void mtask_dly_cycles(uint64_t cycles);
 
 #endif

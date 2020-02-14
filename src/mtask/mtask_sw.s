@@ -35,7 +35,7 @@ mtask_save_state:
     mov [rax+144], r10
     mov [rax+ 56], r11
     ;//Increment the switch counter
-    inc qword ptr [rax+168]
+    inc qword ptr [rax+152]
     ret
 
 mtask_restore_state:
