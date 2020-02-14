@@ -134,7 +134,7 @@ void mtask_schedule(void){
         mtask_cur_task->prio_cnt = mtask_cur_task->priority;
         //Calculate the amount of cycles the task took
         mtask_cur_task->state.last_cycle = rdtsc();
-        mtask_cur_task->state.cycles = mtask_cur_task->state.last_cycle - mtask_cur_task->state.prev_last_cycle;
+        mtask_cur_task->state.cycles = (mtask_cur_task->state.last_cycle - mtask_cur_task->state.prev_last_cycle) * mtask_cur_task->priority;
         mtask_cur_task->state.prev_last_cycle = mtask_cur_task->state.last_cycle;
         //Go find a new task
         while(1){

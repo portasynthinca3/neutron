@@ -301,7 +301,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     uint64_t efi_map_key = dram_init();
 
     //Set verbose mode
-    krnl_verbose = 1;
+    krnl_verbose = 0;
     gfx_set_verbose(krnl_verbose);
 
     //Do some graphics-related initialization stuff
