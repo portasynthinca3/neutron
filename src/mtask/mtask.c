@@ -94,8 +94,8 @@ void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*
     task->state.rflags = rflags;
     //Reset some vars
     task->valid = 1;
-    task->blocked = 0;
-    task->blocked_till_cycle = 0;
+    task->state_code = TASK_STATE_RUNNING;
+    task->blocked_till = 0;
 
     //Check if it's the first task ever created
     if(mtask_next_task++ == 0){
@@ -142,14 +142,14 @@ void mtask_schedule(void){
                 mtask_cur_task_no = 0;
 
             //Remove blocks on tasks that need to be unblocked
-            if(mtask_task_list[mtask_cur_task_no].blocked){
-                if(rdtsc() >= mtask_task_list[mtask_cur_task_no].blocked_till_cycle){
-                    mtask_task_list[mtask_cur_task_no].blocked = 0;
-                    mtask_task_list[mtask_cur_task_no].blocked_till_cycle = 0;
+            if(mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_BlOCKED_CYCLES){
+                if(rdtsc() >= mtask_task_list[mtask_cur_task_no].blocked_till){
+                    mtask_task_list[mtask_cur_task_no].state_code = TASK_STATE_RUNNING;
+                    mtask_task_list[mtask_cur_task_no].blocked_till = 0;
                 }
             }
 
-            if(mtask_task_list[mtask_cur_task_no].valid && !mtask_task_list[mtask_cur_task_no].blocked)
+            if(mtask_task_list[mtask_cur_task_no].valid && (mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_RUNNING))
                 break;
         }
     }
@@ -162,8 +162,8 @@ void mtask_schedule(void){
  */
 void mtask_dly_cycles(uint64_t cycles){
     //Set the block
-    mtask_cur_task->blocked_till_cycle = rdtsc() + cycles;
-    mtask_cur_task->blocked = 1;
-    //This variable will be set to 0 by the scheduler
-    while(mtask_cur_task->blocked);
+    mtask_cur_task->blocked_till = rdtsc() + cycles;
+    mtask_cur_task->state_code = TASK_STATE_BlOCKED_CYCLES;
+    //This variable will be set by the scheduler
+    while(mtask_cur_task->state_code != TASK_STATE_RUNNING);
 }

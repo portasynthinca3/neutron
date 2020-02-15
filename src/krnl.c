@@ -21,6 +21,7 @@
 #include "./drivers/human_io/ps2.h"
 #include "./drivers/human_io/mouse.h"
 #include "./drivers/acpi.h"
+#include "./drivers/initrd.h"
 
 #include "./fonts/font_neutral.h"
 
@@ -188,9 +189,9 @@ void krnl_dump(void){
             strcat(temp, sprintu(temp2, tasks[i].uid, 1));
             if(tasks[i].uid == mtask_get_uid())
                 strcat(temp, " [DUMP CAUSE]");
-            if(tasks[i].blocked){
+            if(tasks[i].state_code != TASK_STATE_RUNNING){
                 strcat(temp, " [BLOCKED TILL ");
-                strcat(temp, sprintub16(temp2, tasks[i].blocked_till_cycle, 16));
+                strcat(temp, sprintub16(temp2, tasks[i].blocked_till, 16));
                 strcat(temp, " / CUR ");
                 strcat(temp, sprintub16(temp2, rdtsc(), 16));
                 strcat(temp, "]");
@@ -329,6 +330,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Print the boot process
     krnl_boot_status(">>> Loading <<<", 0);
 
+    //Load initrd
+    krnl_boot_status(">>> Reading INITRD <<<", 10);
+    uint8_t initrd_status = initrd_init();
+    if(initrd_status != 0)
+        gfx_verbose_println("INITD read error");
     //Initialize PS/2
     krnl_boot_status(">>> Initializing PS/2 <<<", 15);
     ps2_init();

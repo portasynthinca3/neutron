@@ -18,11 +18,15 @@ typedef struct {
 
     uint8_t priority;
     uint8_t prio_cnt;
-    volatile uint8_t blocked;
-    uint64_t blocked_till_cycle;
+    volatile uint8_t state_code;
+    uint64_t blocked_till;
 } __attribute__((packed)) task_t;
 
-#define MTASK_TASK_COUNT            32
+#define MTASK_TASK_COUNT                    32
+
+#define TASK_STATE_RUNNING                  0
+#define TASK_STATE_BlOCKED_CYCLES           1
+#define TASK_STATE_BLOCKED_MS               2
 
 void mtask_init(void);
 void mtask_stop(void);

@@ -328,6 +328,15 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t co
 }
 
 /*
+ * Blends from background to foreground colors using the alpha value
+ */
+color32_t gfx_blend_colors(color32_t b, color32_t f, uint8_t a){
+    return COLOR32(255, ((((uint32_t)f.r - (uint32_t)b.r) * a) / 255) + (uint32_t)b.r,
+                        ((((uint32_t)f.g - (uint32_t)b.g) * a) / 255) + (uint32_t)b.g,
+                        ((((uint32_t)f.b - (uint32_t)b.b) * a) / 255) + (uint32_t)b.b);
+}
+
+/*
  * Draw a raw image
  */
 void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
@@ -345,7 +354,7 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
             uint8_t a = raw_ptr[pos++];
             //Draw the pixel
             if(a != 0)
-                buf[(y * res_x) + x] = COLOR32(a, r, g, b);
+                buf[(y * res_x) + x] = gfx_blend_colors(buf[(y * res_x) + x], COLOR32(255, r, g, b), a);
         }
     }
 }
@@ -550,14 +559,4 @@ void gfx_verbose_println(char* msg){
  */
 void gfx_set_verbose(uint8_t v){
     verbose_enabled = v;
-}
-
-/*
- * Blends two colors together
- */
-color32_t gfx_blend_colors(color32_t a, color32_t b){
-    return COLOR32(((uint16_t)a.a + (uint16_t)b.a) / 2,
-                   ((uint16_t)a.r + (uint16_t)b.r) / 2,
-                   ((uint16_t)a.g + (uint16_t)b.g) / 2,
-                   ((uint16_t)a.b + (uint16_t)b.b) / 2);
 }

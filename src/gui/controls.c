@@ -145,7 +145,7 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             color32_t bg_color = button->pressed_last_frame ? button->pressed_bg_color : button->bg_color;
             if(gui_mouse_btns().x && gfx_point_in_rect(gui_mouse_coords(), (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                 .y = ptr->position.y + win_ptr->position.y + 12}, ptr->size))
-                    bg_color = gfx_blend_colors(button->pressed_bg_color, button->bg_color);
+                    bg_color = gfx_blend_colors(button->pressed_bg_color, button->bg_color, 128);
             gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,
                                          .y = ptr->position.y + win_ptr->position.y + 12},
                                  ptr->size, bg_color);

@@ -56,6 +56,6 @@ uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz);
 void gfx_verbose_println(char* msg);
 void gfx_set_verbose(uint8_t v);
 
-color32_t gfx_blend_colors(color32_t a, color32_t b);
+color32_t gfx_blend_colors(color32_t b, color32_t f, uint8_t a);
 
 #endif

@@ -19,6 +19,7 @@ src/drivers/ata.c
 src/drivers/apic.c
 src/drivers/timr.c
 src/drivers/acpi.c
+src/drivers/initrd.c
 src/drivers/human_io/kbd.c
 src/drivers/human_io/mouse.c
 src/drivers/human_io/ps2.c
