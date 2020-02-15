@@ -334,7 +334,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status(">>> Reading INITRD <<<", 10);
     uint8_t initrd_status = initrd_init();
     if(initrd_status != 0)
-        gfx_verbose_println("INITD read error");
+        gfx_verbose_println("INITRD read error");
     //Initialize PS/2
     krnl_boot_status(">>> Initializing PS/2 <<<", 15);
     ps2_init();
