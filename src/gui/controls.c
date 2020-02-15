@@ -134,13 +134,13 @@ void gui_render_control(window_t* win_ptr, control_t* ptr){
             //Fetch the extended data
             control_ext_button_t* button = (control_ext_button_t*)ptr->extended;
             //Full transparency = we choose the color on our own
-            if(button->bg_color.a == 0)
-                button->bg_color = COLOR32(0, gui_get_color_scheme()->win_border.r, gui_get_color_scheme()->win_border.g,
+            //if(button->bg_color.a == 0)
+                button->bg_color = COLOR32(255, gui_get_color_scheme()->win_border.r, gui_get_color_scheme()->win_border.g,
                     gui_get_color_scheme()->win_border.b);
-            if(button->border_color.a == 0)
-                button->border_color = COLOR32(0, button->bg_color.r, button->bg_color.g, button->bg_color.b);
-            if(button->pressed_bg_color.a == 0)
-                button->pressed_bg_color = COLOR32(0, button->bg_color.r >> 1, button->bg_color.g >> 1, button->bg_color.b >> 1);
+            //if(button->border_color.a == 0)
+                button->border_color = COLOR32(255, button->bg_color.r, button->bg_color.g, button->bg_color.b);
+            //if(button->pressed_bg_color.a == 0)
+                button->pressed_bg_color = COLOR32(255, button->bg_color.r >> 1, button->bg_color.g >> 1, button->bg_color.b >> 1);
             //Draw the rectangles
             color32_t bg_color = button->pressed_last_frame ? button->pressed_bg_color : button->bg_color;
             if(gui_mouse_btns().x && gfx_point_in_rect(gui_mouse_coords(), (p2d_t){.x = ptr->position.x + win_ptr->position.x + 1,

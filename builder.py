@@ -1,4 +1,6 @@
 import sys, os, time
+from os import listdir
+from os.path import isfile, join
 
 class bcolors:
 	HEADER = '\033[95m'
@@ -47,14 +49,12 @@ for line_no in range(len(config_lines)):
 		if not line.startswith('#'):
 			if line.startswith('.'):
 				config_section = line[1:]
-				if not config_section in ['c', 'fs']:
+				if not config_section in ['c']:
 					print('Error: ' + config_file + ':' + str(line_no + 1) + ': invalid section "' + config_section + '"')
 					sys.exit()
 			else:
 				if config_section == 'c':
 					c_files.append(line)
-				elif config_section == 'fs':
-					fs_files.append(line)
 				else:
 					print('Error: ' + config_file + ':' + str(line_no + 1) + ': data in invalid section "' + config_section + '"')
 					sys.exit()
@@ -69,6 +69,43 @@ for path in c_files:
 
 print_status('Linking')
 execute('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
+
+print_status('Building INITRD')
+initrd_img = bytearray()
+initrd_files = [f for f in listdir('initrd') if isfile(join('initrd', f))]
+initrd_size = 64
+for f in initrd_files:
+	initrd_size = initrd_size + 64 + os.path.getsize(join('initrd', f)) #64 bytes per file entry
+print("INITRD size: " + str(initrd_size) + " bytes (" + str(initrd_size // 1024) + " kB, " + str(len(initrd_files)) + " files)")
+initrd_img = bytearray(initrd_size)
+initrd_file_pos = (len(initrd_files) + 1) * 64
+initrd_file_list_pos = 0
+for f in initrd_files:
+	with open(join('initrd', f), 'rb') as file:
+		f_data = file.read()
+		size_bytes = os.path.getsize(join('initrd', f)).to_bytes(4, byteorder="little")
+		pos_bytes = initrd_file_pos.to_bytes(4, byteorder="little")
+		initrd_img[initrd_file_list_pos + 0] = pos_bytes[0]
+		initrd_img[initrd_file_list_pos + 1] = pos_bytes[1]
+		initrd_img[initrd_file_list_pos + 2] = pos_bytes[2]
+		initrd_img[initrd_file_list_pos + 3] = pos_bytes[3]
+		initrd_file_list_pos = initrd_file_list_pos + 4
+		initrd_img[initrd_file_list_pos + 0] = size_bytes[0]
+		initrd_img[initrd_file_list_pos + 1] = size_bytes[1]
+		initrd_img[initrd_file_list_pos + 2] = size_bytes[2]
+		initrd_img[initrd_file_list_pos + 3] = size_bytes[3]
+		initrd_file_list_pos = initrd_file_list_pos + 4
+		for c in f:
+			initrd_img[initrd_file_list_pos] = ord(c)
+			initrd_file_list_pos = initrd_file_list_pos + 1
+		initrd_img[initrd_file_list_pos] = 0
+		initrd_file_list_pos = initrd_file_list_pos + 56 - len(f)
+		for b in f_data:
+			initrd_img[initrd_file_pos] = b
+			initrd_file_pos = initrd_file_pos + 1
+with open('build/initrd', 'wb') as initrd_file:
+	initrd_file.write(initrd_img)
+
 print_status('Bulding system image')
 print('  Creating image file')
 execute('dd if=/dev/zero of=build/neutron.img count=' + str(image_size_sectors) + ' > /dev/null 2>&1')
@@ -77,7 +114,9 @@ execute('mformat -i build/neutron.img -f ' + str(image_size_sectors / 2))
 print('    Creating EFI executable')
 execute('mmd -i build/neutron.img ::/EFI')
 execute('mmd -i build/neutron.img ::/EFI/BOOT')
+execute('mmd -i build/neutron.img ::/EFI/nOS')
 execute('mcopy -i build/neutron.img build/BOOTX64.EFI ::/EFI/BOOT')
+execute('mcopy -i build/neutron.img build/initrd ::/EFI/nOS/initrd')
 print('  Making ISO')
 execute(f'dd if={image_file} of={iso_file} > /dev/null 2>&1')
 

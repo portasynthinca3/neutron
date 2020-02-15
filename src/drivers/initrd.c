@@ -2,12 +2,12 @@
 //Initrd driver
 //  (initialization ramdisk)
 
+#include "./initrd.h"
+#include "../stdlib.h"
+
 #include <efi.h>
 #include <efilib.h>
 #include <efiprot.h>
-
-#include "../stdlib.h"
-#include "./initrd.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
@@ -45,12 +45,12 @@ uint8_t initrd_init(void){
         if(EFI_ERROR(status))
             return 2;
         //Open the initrd file on it
-        status = root_file_prot->Open(root_file_prot, &initrd_file_prot, (WCHAR*)U"EFI\\nOS\\initrd", EFI_FILE_MODE_READ, 0);
+        status = root_file_prot->Open(root_file_prot, &initrd_file_prot, (CHAR16*)L"EFI\\nOS\\initrd", EFI_FILE_MODE_READ, 0);
         if(EFI_ERROR(status))
             continue; //Skip this partition on error
         //Read its info
         EFI_FILE_INFO info;
-        uint64_t size = sizeof(EFI_FILE_INFO);
+        uint64_t size = sizeof(EFI_FILE_INFO) * 10;
         status = initrd_file_prot->GetInfo(initrd_file_prot, &((EFI_GUID)EFI_FILE_INFO_ID), &size, (void*)&info);
         if(EFI_ERROR(status))
             return 4;
@@ -68,4 +68,30 @@ uint8_t initrd_init(void){
     }
     //No initrd file on all partitions
     return 3;
+}
+
+/*
+ * Reads file info from INITRD
+ */
+initrd_file_t initrd_read(char* name){
+    uint32_t i = 0;
+    initrd_file_t cur;
+    //Scan through the file list
+    //Location = 0 means the end of the list
+    while(cur.location != 0){
+        //Load the dedscriptor
+        cur = ((initrd_file_t*)initrd_raw)[i];
+        //Check the name
+        if(strcmp(name, cur.name) == 0)
+            break;
+    }
+    return cur;
+}
+
+/*
+ * Returns pointer to file contents from INITRD
+ */
+uint8_t* initrd_contents(char* name){
+    uint32_t location = initrd_read(name).location;
+    return (location == 0) ? NULL : (initrd_raw + location);
 }

@@ -276,7 +276,7 @@ void gfx_draw_hor_line(p2d_t pos, uint64_t w, color32_t c){
     uint64_t st = pos.y * res_x;
     //Draw each pixel in the line
     for(uint64_t x = pos.x; x < pos.x + w; x++)
-        buf[st + x] = c;
+        buf[st + x] = gfx_blend_colors(buf[st + x], c, c.a);
 }
 
 /*
@@ -331,9 +331,13 @@ void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t co
  * Blends from background to foreground colors using the alpha value
  */
 color32_t gfx_blend_colors(color32_t b, color32_t f, uint8_t a){
-    return COLOR32(255, ((((uint32_t)f.r - (uint32_t)b.r) * a) / 255) + (uint32_t)b.r,
-                        ((((uint32_t)f.g - (uint32_t)b.g) * a) / 255) + (uint32_t)b.g,
-                        ((((uint32_t)f.b - (uint32_t)b.b) * a) / 255) + (uint32_t)b.b);
+    if(a == 0)
+        return b;
+    if(a == 255)
+        return f;
+    return COLOR32(255, ((((int32_t)f.r - (int32_t)b.r) * a) / 255) + (int32_t)b.r,
+                        ((((int32_t)f.g - (int32_t)b.g) * a) / 255) + (int32_t)b.g,
+                        ((((int32_t)f.b - (int32_t)b.b) * a) / 255) + (int32_t)b.b);
 }
 
 /*
