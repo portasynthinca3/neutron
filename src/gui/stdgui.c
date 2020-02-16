@@ -137,13 +137,19 @@ void stdgui_create_system_win(void){
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_task_mgr_btn_click);
 }
 
-//Task manager window label
-control_ext_label_t* task_mgr_label;
+/*
+ * Task manager window event handler
+ */
+void _stdgui_task_mgr_evt(ui_event_args_t* args){
+    //If the window is being closed, stop the updater process
+    if(args->type == GUI_EVENT_WIN_CLOSE)
+        mtask_stop_task(((window_t*)args->win)->task_uid);
+}
 
 /*
  * The task that updates the task manager
  */
-void _stdgui_task_mgr_updater(){
+void _stdgui_task_mgr_updater(void* task_mgr_label){
     //Get the UID
     uint64_t uid = mtask_get_uid();
     //Temporary string
@@ -171,7 +177,7 @@ void _stdgui_task_mgr_updater(){
             }
         }
         //Copy the temporary string
-        memcpy(task_mgr_label->text, temp, 1024);
+        memcpy(((control_ext_label_t*)task_mgr_label)->text, temp, 1024);
     }
 }
 
@@ -183,12 +189,12 @@ void stdgui_create_task_manager(void){
     //Create the window
     window_t* window = gui_create_window("Task manager", task_mgr_icon, GUI_WIN_FLAGS_STANDARD, (p2d_t){.x = (gfx_res_x() - window_size.x) / 2,
                                                                                                         .y = (gfx_res_y() - window_size.y) / 2},
-        window_size, NULL);
+        window_size, _stdgui_task_mgr_evt);
     //Create the label
-    task_mgr_label = gui_create_label(window, (p2d_t){.x = 0, .y = 0}, window_size, "", COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL)->extended;
+    control_ext_label_t* task_mgr_label = gui_create_label(window, (p2d_t){.x = 0, .y = 0}, window_size, "", COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL)->extended;
         task_mgr_label->text = (char*)malloc(1024);
     //Create the update process
-    mtask_create_task(16384, "Task Manager Updater", 2, &_stdgui_task_mgr_updater);
+    window->task_uid = mtask_create_task(16384, "Task manager", 2, _stdgui_task_mgr_updater, (void*)task_mgr_label);
 }
 
 /*

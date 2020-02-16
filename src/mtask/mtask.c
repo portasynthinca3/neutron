@@ -16,7 +16,7 @@ task_t* mtask_cur_task;
  * Returns the current task pointer
  * (used only by mtask_sw.s)
  */
-task_t* mtask_get_cur_task(){
+task_t* mtask_get_cur_task(void){
     return mtask_cur_task;
 }
 
@@ -24,7 +24,7 @@ task_t* mtask_get_cur_task(){
  * Is multitasking enabled?
  * (used only by mtask_sw.s)
  */
-uint64_t mtask_is_enabled(){
+uint64_t mtask_is_enabled(void){
     return mtask_enabled;
 }
 
@@ -68,8 +68,9 @@ void mtask_stop(void){
 /*
  * Creates a task
  * If it's the first task ever created, starts multitasking
+ * Returns the UID
  */
-void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void)){
+uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void*), void* args){
     task_t* task = &mtask_task_list[mtask_next_task];
     //Asign an UID
     task->uid = mtask_next_uid++;
@@ -78,8 +79,8 @@ void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*
     task->prio_cnt = task->priority;
     //Copy the name
     memcpy(task->name, name, strlen(name) + 1);
-    //Clear the task registers
-    task->state = (task_state_t){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    //Clear the task registers (except for RCX, set it to the argument pointer)
+    task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //Allocate memory for the task stack
     void* task_stack = calloc(stack_size, 1);
     //Assign the task RSP
@@ -108,6 +109,8 @@ void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*
         mtask_enabled = 1;
         __asm__ volatile("jmp mtask_restore_state");
     }
+
+    return task->uid;
 }
 
 /*

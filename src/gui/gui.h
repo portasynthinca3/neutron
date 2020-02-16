@@ -114,6 +114,7 @@ typedef struct {
 #define GUI_EVENT_CLICK                             3
 #define GUI_EVENT_TRACK_BAR_CHANGE                  4
 #define GUI_EVENT_KEYBOARD                          5
+#define GUI_EVENT_WIN_CLOSE                         6
 
 //Image formats
 

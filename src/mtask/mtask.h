@@ -30,7 +30,7 @@ typedef struct {
 
 void mtask_init(void);
 void mtask_stop(void);
-void mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void));
+uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void*), void* args);
 void mtask_stop_task(uint64_t uid);
 uint64_t mtask_get_uid(void);
 task_t* mtask_get_task_list(void);

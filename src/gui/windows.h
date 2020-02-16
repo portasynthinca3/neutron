@@ -39,6 +39,9 @@ typedef struct {
     //Ignore window rendering and processing?
     //(is being set on creation)
     uint8_t ignore;
+    //The process UID that controls this window
+    //(if exists)
+    uint64_t task_uid;
 } window_t;
 
 #include "./controls.h"

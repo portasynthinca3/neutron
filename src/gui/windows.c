@@ -89,6 +89,14 @@ window_t* gui_create_window(char* title, void* icon_8, uint32_t flags, p2d_t pos
  * Removes the window from the window list and frees all memory used by it
  */
 void gui_destroy_window(window_t* win){
+    //Raise the event
+    ui_event_args_t args;
+    args.type = GUI_EVENT_WIN_CLOSE;
+    args.win = win;
+    args.control = NULL;
+    args.extra_data = NULL;
+    if(win->event_handler != NULL)
+        win->event_handler(&args);
     //If the window we're destroying was in focus, reset it
     if(win == window_focused)
         window_focused = NULL;
