@@ -1,5 +1,4 @@
 # Welcome!
-![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
 **So, you somehow got to this page.** I really appreciate it, thank you!
 # What's the purpose?
 Neutron is the result of me trying to get into the low-level stuff.
