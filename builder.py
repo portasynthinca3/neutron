@@ -29,7 +29,6 @@ if '-h' in sys.argv:
 config_file = 'nbuild'
 image_file = 'build/neutron.img'
 iso_file = 'build/neutron.iso'
-image_size_sectors = 2880
 
 config_file_obj = open(config_file, 'r')
 config_contents = config_file_obj.read()
@@ -70,13 +69,17 @@ for path in c_files:
 print_status('Linking')
 execute('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
 
+image_size_sectors_default = 4 * 1024 * 2
+image_size_sectors = 2880
+
 print_status('Building INITRD')
 initrd_img = bytearray()
 initrd_files = [f for f in listdir('initrd') if isfile(join('initrd', f))]
 initrd_size = 64
 for f in initrd_files:
 	initrd_size = initrd_size + 64 + os.path.getsize(join('initrd', f)) #64 bytes per file entry
-print("INITRD size: " + str(initrd_size) + " bytes (" + str(initrd_size // 1024) + " kB, " + str(len(initrd_files)) + " files)")
+print("INITRD size: " + str(initrd_size) + " bytes (" + str(initrd_size // 1024) + " KiB, " + str(len(initrd_files)) + " files)")
+image_size_sectors = max(image_size_sectors_default, (initrd_size // 512) + 1)
 initrd_img = bytearray(initrd_size)
 initrd_file_pos = (len(initrd_files) + 1) * 64
 initrd_file_list_pos = 0
@@ -107,10 +110,11 @@ with open('build/initrd', 'wb') as initrd_file:
 	initrd_file.write(initrd_img)
 
 print_status('Bulding system image')
+print(f'  Image size: {image_size_sectors / 2048} MiB')
 print('  Creating image file')
 execute('dd if=/dev/zero of=build/neutron.img count=' + str(image_size_sectors) + ' > /dev/null 2>&1')
 print('  Creating filesystem')
-execute('mformat -i build/neutron.img -f ' + str(image_size_sectors / 2))
+execute('mformat -i build/neutron.img -T ' + str(image_size_sectors / 2))
 execute('mmd -i build/neutron.img ::/EFI')
 execute('mmd -i build/neutron.img ::/EFI/BOOT')
 execute('mmd -i build/neutron.img ::/EFI/nOS')

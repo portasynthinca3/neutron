@@ -9,7 +9,7 @@
 #include "./controls.h"
 #include "../stdlib.h"
 #include "../drivers/gfx.h"
-#include "../drivers/diskio.h"
+#include "../drivers/initrd.h"
 #include "../drivers/timr.h"
 #include "../drivers/human_io/mouse.h"
 #include "../drivers/human_io/kbd.h"
@@ -35,6 +35,11 @@ char date[64] = "?/?/?\0";
 uint64_t gui_render = 0;
 //The amount of time it took to transfer the last frame to the screen
 uint64_t gui_trans = 0;
+//Wallpaper size
+uint16_t wallpap_width;
+uint16_t wallpap_height;
+//Wallpaper image
+uint8_t* wallpaper;
 
 uint8_t last_frame_ml = 0;
 void krnl_gui_callback_power_pressed(void);
@@ -82,6 +87,16 @@ void gui_init(void){
     gui_render = 0;
 
     gui_init_windows();
+
+    //Find the wallpaper image and copy it if it exists
+    initrd_file_t wallpap_file = initrd_read("wallpap.raw");
+    if(wallpap_file.location != 0){
+        uint8_t* buf = initrd_contents("wallpap.raw");
+        wallpap_width = ((uint16_t*)buf)[0];
+        wallpap_height = ((uint16_t*)buf)[1];
+        wallpaper = (uint8_t*)malloc(4 * wallpap_width * wallpap_height);
+        memcpy(wallpaper, buf, 4 * wallpap_width * wallpap_height);
+    }
 }
 
 /*
@@ -116,6 +131,11 @@ void gui_update(void){
     gui_get_mouse();
     //Draw the desktop
     gfx_fill(color_scheme.desktop);
+    //Draw the wallpaper image if it exists
+    if(wallpap_width != 0){
+        gfx_draw_raw((p2d_t){.x = (gfx_res_x() - wallpap_width) / 2, .y = (gfx_res_y() - wallpap_height) / 2}, wallpaper,
+            (p2d_t){.x = wallpap_width, .y = wallpap_height});
+    }
     //Draw the top bar
     gfx_draw_filled_rect((p2d_t){.x = 0, .y = 0}, (p2d_t){.x = gfx_res_x(), .y = 20}, color_scheme.top_bar);
     
