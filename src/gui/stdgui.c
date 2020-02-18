@@ -104,7 +104,7 @@ void stdgui_create_system_win(void){
                                                  .y = (gfx_res_y() - system_win_size.y) / 2}, system_win_size, NULL);
     //Add the Neutron logo to it
     gui_create_image(window,
-                     (p2d_t){.x = (system_win_size.x - neutron_logo_width) / 2, .y = 13}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height},
+                     (p2d_t){.x = (system_win_size.x - neutron_logo_width) / 2, .y = 8}, (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height},
                      GUI_IMAGE_FORMAT_RAW, neutron_logo, COLOR32(0, 0, 0, 0), COLOR32(255, 255, 255, 255), NULL);
     //Add the name label to it
     char* name_label_text = "Neutron Project. 2019-2020, Andrey Antonenko";

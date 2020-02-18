@@ -23,6 +23,13 @@ typedef struct {
 //Macro for converting R, G and B values to color32_t
 #define COLOR32(A, R, G, B) ((color32_t){.a = A, .r = R, .g = G, .b = B})
 
+//90-deg step rotations
+
+#define GFX_ROT_CW_0               0
+#define GFX_ROT_CW_90              1
+#define GFX_ROT_CW_180             2
+#define GFX_ROT_CW_270             3
+
 uint32_t gfx_res_x(void);
 uint32_t gfx_res_y(void);
 color32_t* gfx_buffer(void);
@@ -30,18 +37,20 @@ color32_t* gfx_buf_another(void);
 
 void gfx_init(void);
 void gfx_find_gop(void);
+void gfx_find_uga(void);
 void gfx_choose_best(void);
 void gfx_flip(void);
 void gfx_set_font(const unsigned char* fnt);
 void gfx_set_buf(unsigned char buf);
 
 void gfx_fill(color32_t color);
-void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_hor_line(p2d_t pos, uint64_t w, color32_t c);
 void gfx_draw_vert_line(p2d_t pos, uint64_t h, color32_t c);
+void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_xbm(p2d_t position, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
 void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size);
+void gfx_draw_raw_key(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size, color32_t color, uint8_t rotate);
 void gfx_shift_up(uint32_t lines);
 
 p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c);

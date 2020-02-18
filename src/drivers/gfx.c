@@ -26,7 +26,9 @@ uint8_t buf_sel;
 //Is gfx_verbose_println() enabled or not?
 uint8_t verbose_enabled;
 //Pointer to the graphics output protocol
-EFI_GRAPHICS_OUTPUT_PROTOCOL* graphics_output;
+EFI_GRAPHICS_OUTPUT_PROTOCOL* graphics_output = NULL;
+//Pointer to the UGA protocol
+//EFI_UGA_DRAW_PROTOCOL* graphics_uga = NULL;
 
 /*
  * Retrieve the horizontal resolution
@@ -62,8 +64,19 @@ void gfx_init(void){
     //If it hadn't been found, print an error
     if(graphics_output == NULL){
         krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
-            (CHAR16*)L"Error: Unable to find the graphics output protocol\r\n");
-        while(1);
+            (CHAR16*)L"Unable to find the graphics output protocol. Trying UGA instead\r\n");
+        //gfx_find_uga();
+        //If no, print an error
+        /*
+        if(graphics_uga == NULL){
+            krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
+                (CHAR16*)L"Error: no way to display graphics was detected. If you are sure that your computer supports graphics, report this error\r\n");
+            while(1);
+        } else {
+            krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
+                (CHAR16*)L"UGA found\r\n");
+        }
+        */
     } else {
         krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"GOP found\r\n");
@@ -80,11 +93,33 @@ void gfx_init(void){
 }
 
 /*
+ * Finds the EFI UGA protocol
+ */
+void gfx_find_uga(void){
+    //Locate the protocol
+    //Firstly, through the ConsoleOut handle
+    /*
+    EFI_STATUS status;
+    status = krnl_get_efi_systable()->BootServices->HandleProtocol( krnl_get_efi_systable()->ConsoleOutHandle,
+        &((EFI_GUID)EFI_UGA_DRAW_PROTOCOL_GUID), (void**)graphics_uga);
+    if(!EFI_ERROR(status))
+        return;
+    //Then, directly
+    status = krnl_get_efi_systable()->BootServices->LocateProtocol(&((EFI_GUID)EFI_UGA_DRAW_PROTOCOL_GUID), NULL,
+        (void**)&graphics_uga);
+    if(!EFI_ERROR(status))
+        return;
+    //Lastly, locate by handle
+    uint64_t handle_count = 0;
+    EFI_HANDLE* handle_buf;
+    */
+
+}
+
+/*
  * Finds the EFI Graphics Output Protocol
  */
 void gfx_find_gop(void){
-    //Set the GOP to NULL
-    graphics_output = NULL;
     //Handle the graphics output protocol
     //Firstly, through the ConsoleOut handle
     EFI_STATUS status;
@@ -104,8 +139,12 @@ void gfx_find_gop(void){
         &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), NULL, &handle_count, &handle);
     if(EFI_ERROR(status))
         return;
-    status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle,
-        &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void*)&graphics_output);
+    for(int i = 0; i < handle_count; i++){
+        status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle[i],
+            &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void*)&graphics_output);
+        if(EFI_ERROR(status))
+            return;
+    }
 }
 
 /*
@@ -289,7 +328,7 @@ void gfx_draw_vert_line(p2d_t pos, uint64_t h, color32_t c){
     uint32_t st = (pos.y * res_x) + pos.x;
     //Draw each pixel in the line
     for(uint64_t o = 0; o <= h * res_x; o += res_x)
-        buf[st + o] = c;
+        buf[st + o] = gfx_blend_colors(buf[st + o], c, c.a);
 }
 
 /*
@@ -359,6 +398,34 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
             //Draw the pixel
             if(a != 0)
                 buf[(y * res_x) + x] = gfx_blend_colors(buf[(y * res_x) + x], COLOR32(255, r, g, b), a);
+        }
+    }
+}
+
+/*
+ * Draw an alpha-key image
+ */
+void gfx_draw_raw_key(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size, color32_t color, uint8_t rotate){
+    //Get the buffer
+    color32_t* buf = gfx_buffer();
+    //Create a counter
+    uint32_t pos = 0;
+    //Determine the initial value and end value
+    int32_t init_x = (rotate == GFX_ROT_CW_0 || rotate == GFX_ROT_CW_90) ? position.x : (position.x + raw_size.x);
+    int32_t init_y = (rotate == GFX_ROT_CW_0 || rotate == GFX_ROT_CW_270) ? position.y : (position.y + raw_size.y);
+    int32_t end_x = (rotate == GFX_ROT_CW_0 || rotate == GFX_ROT_CW_90) ? (position.x + raw_size.x) : position.x;
+    int32_t end_y = (rotate == GFX_ROT_CW_0 || rotate == GFX_ROT_CW_270) ? (position.y + raw_size.y) : position.y;
+    //Go through each pixel
+    //Don't be scared...
+    //We are just determining the step based on which number is larger, end or start
+    for(uint32_t y = init_y; (end_y > init_y) ? (y < end_y) : (y > end_y); (end_y > init_y) ? y++ : y--){
+        for(uint32_t x = init_x; (end_x > init_x) ? (x < end_x) : (x > end_x); (end_x > init_x) ? x++ : x--){
+            //Fetch the data
+            pos += 3;
+            uint8_t a = raw_ptr[pos++];
+            //Draw the pixel
+            if(a != 0)
+                buf[(y * res_x) + x] = gfx_blend_colors(buf[(y * res_x) + x], color, a);
         }
     }
 }

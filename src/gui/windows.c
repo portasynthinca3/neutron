@@ -151,15 +151,15 @@ void gui_render_window(window_t* ptr){
     //Only render the window if it has the visibility flag set
     if(ptr->flags & GUI_WIN_FLAG_VISIBLE){
         //Fill a rectangle with a window background color
-        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
-                             (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, gui_get_color_scheme()->win_bg);
+        gfx_draw_filled_rect((p2d_t){.x = ptr->position.x + 1, .y = ptr->position.y + 11},
+                             (p2d_t){.x = ptr->size.x - 1, .y = ptr->size.y - 11}, gui_get_color_scheme()->win_bg);
+        //Draw the border
+        gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
+                      (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, gui_get_color_scheme()->win_border);
         //Draw the top section background
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
                              (p2d_t){.x = ptr->size.x, .y = 11},
                              (ptr == window_focused) ? gui_get_color_scheme()->win_border : gui_get_color_scheme()->win_border_inactive);
-        //Draw the border
-        gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
-                      (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, gui_get_color_scheme()->win_border);
         //Print its title
         gfx_puts((p2d_t){.x = ptr->position.x + 2 + 8 + 2, .y = ptr->position.y + 2},
             (ptr == window_focused) ? gui_get_color_scheme()->win_title : gui_get_color_scheme()->win_title_inactive, COLOR32(0, 0, 0, 0), ptr->title);

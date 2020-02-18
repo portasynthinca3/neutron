@@ -999,6 +999,75 @@ struct _EFI_GRAPHICS_OUTPUT_PROTOCOL {
 
 
 /*
+ * EFI UGA Draw Protocol
+ * Not in the UEFI Specification nor in the GNU-EFI framework, but is
+ *   required by Neutron for compatibility reasons.
+ * EFI Specification Version 1.10 Section 10.5
+ */
+/*
+INTERFACE_DECL(EFI_UGA_DRAW_PROTCOL);
+
+#define EFI_UGA_DRAW_PROTOCOL_GUID \
+    { 0x982C298B, 0xF4FA, 0x41CB, { 0xB8, 0x38, 0x77, 0xAA, 0x68, 0x8F, 0xB8, 0x39} }
+
+typedef
+EFI_STATUS
+(EFIAPI *EFI_UGA_DRAW_PROTOCOL_GET_MODE) (
+  IN  EFI_UGA_DRAW_PROTOCOL *This,
+  OUT UINT32 *HorizontalResolution,
+  OUT UINT32 *VerticalResolution,
+  OUT UINT32 *ColorDepth,
+  OUT UINT32 *RefreshRate
+  );
+
+typedef
+EFI_STATUS
+(EFIAPI *EFI_UGA_DRAW_PROTOCOL_SET_MODE) (
+  IN  EFI_UGA_DRAW_PROTOCOL  *This,
+  IN UINT32                   HorizontalResolution,
+  IN UINT32                   VerticalResolution,
+  IN UINT32                   ColorDepth,
+  IN UINT32                   RefreshRate
+  ); 
+
+typedef struct {
+  UINT8   Blue;
+  UINT8   Green;
+  UINT8   Red;
+  UINT8   Reserved;
+} EFI_UGA_PIXEL;
+
+typedef struct {
+  EfiUgaVideoFill,
+  EfiUgaVideoToBltBuffer,
+  EfiUgaBltBufferToVideo,
+  EfiUgaVideoToVideo,
+  EfiUgaBltMax
+} EFI_UGA_BLT_OPERATION;
+
+typedef
+EFI_STATUS
+(EFIAPI *EFI_UGA_DRAW_PROTOCOL_BLT) (
+  IN EFI_UGA_DRAW_PROTOCOL     *This,
+  IN OUT EFI_UGA_PIXEL         *BltBuffer, OPTIONAL
+  IN  EFI_UGA_BLT_OPERATION    BltOperation,
+  IN UINTN                     SourceX,
+  IN UINTN                     SourceY,
+  IN UINTN                     DestinationX,
+  IN UINTN                     DestinationY,
+  IN UINTN                     Width,
+  IN UINTN                     Height,
+  IN UINTN                     Delta       OPTIONAL   );
+
+typedef struct EFI_UGA_DRAW_PROTCOL {
+  EFI_UGA_DRAW_PROTOCOL_GET_MODE        GetMode;
+  EFI_UGA_DRAW_PROTOCOL_SET_MODE        SetMode;
+  EFI_UGA_DRAW_PROTOCOL_BLT             Blt;
+} EFI_UGA_DRAW_PROTOCOL;
+*/
+
+
+/*
  * EFI EDID Discovered Protocol
  * UEFI Specification Version 2.5 Section 11.9
  */

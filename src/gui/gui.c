@@ -78,7 +78,7 @@ void gui_init(void){
     color_scheme.win_minimize_btn =         COLOR32(255, 255, 255, 255);
     color_scheme.win_unavailable_btn =      COLOR32(255, 128, 128, 128);
     color_scheme.desktop =                  COLOR32(255, 20, 20, 20);
-    color_scheme.top_bar =                  COLOR32(255, 71, 71, 71);
+    color_scheme.top_bar =                  COLOR32(240, 71, 71, 71);
     color_scheme.cursor =                   COLOR32(255, 255, 255, 255);
     color_scheme.selection =                color_scheme.win_border;
     color_scheme.time =                     COLOR32(255, 255, 255, 255);
