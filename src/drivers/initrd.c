@@ -80,7 +80,7 @@ initrd_file_t initrd_read(char* name){
     //Location = 0 means the end of the list
     while(cur.location != 0){
         //Load the dedscriptor
-        cur = ((initrd_file_t*)initrd_raw)[i];
+        cur = ((initrd_file_t*)initrd_raw)[i++];
         //Check the name
         if(strcmp(name, cur.name) == 0)
             break;
