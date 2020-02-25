@@ -57,7 +57,7 @@ p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c);
 void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s);
 p2d_t gfx_text_bounds(char* s);
 
-void gfx_panic(int ip, int code);
+void gfx_panic(uint64_t ip, uint64_t code);
 void gfx_memdump(unsigned int addr, int amount);
 
 uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz);

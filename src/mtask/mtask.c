@@ -4,6 +4,7 @@
 #include "./mtask.h"
 #include "../stdlib.h"
 #include "../drivers/timr.h"
+#include "../drivers/gfx.h"
 
 task_t* mtask_task_list;
 uint32_t mtask_next_task;
@@ -33,7 +34,11 @@ uint64_t mtask_is_enabled(void){
  */
 void mtask_init(void){
     //Allocate a buffer for the task list
-    mtask_task_list = (task_t*)calloc(MTASK_TASK_COUNT, sizeof(task_t));
+    mtask_task_list = (task_t*)malloc((MTASK_TASK_COUNT * sizeof(task_t)) + 16);
+    //Clear it
+    memset(mtask_task_list, 0, (MTASK_TASK_COUNT * sizeof(task_t)) + 16);
+    //It needs to be 16-byte aligned
+    mtask_task_list = (task_t*)((uint64_t)mtask_task_list + (uint64_t)(16 - ((uint64_t)mtask_task_list % 16)));
     
     mtask_cur_task_no = 0;
     mtask_next_task = 0;
@@ -83,6 +88,8 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //Allocate memory for the task stack
     void* task_stack = calloc(stack_size, 1);
+    //It needs to be 16-byte aligned
+    task_stack += 16 - ((uint64_t)task_stack % 16);
     //Assign the task RSP
     task->state.rsp = (uint64_t)(task_stack + stack_size - 1);
     //Assign the task RIP

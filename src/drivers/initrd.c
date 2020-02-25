@@ -49,13 +49,22 @@ uint8_t initrd_init(void){
         if(EFI_ERROR(status))
             continue; //Skip this partition on error
         //Read its info
-        EFI_FILE_INFO info;
-        uint64_t size = sizeof(EFI_FILE_INFO) * 10;
-        status = initrd_file_prot->GetInfo(initrd_file_prot, &((EFI_GUID)EFI_FILE_INFO_ID), &size, (void*)&info);
-        if(EFI_ERROR(status))
+        uint64_t size = sizeof(EFI_FILE_INFO);
+        EFI_FILE_INFO* info = (EFI_FILE_INFO*)malloc(size);
+    initrd_rd_retry:
+        status = initrd_file_prot->GetInfo(initrd_file_prot, &((EFI_GUID)EFI_FILE_INFO_ID), &size, (void*)info);
+        if(status == EFI_BUFFER_TOO_SMALL){
+            info = (EFI_FILE_INFO*)malloc(size += sizeof(EFI_FILE_INFO));
+            goto initrd_rd_retry;
+        } else if(EFI_ERROR(status)) {
             return 4;
+        }
+        //Get the initrd file
+        for(uint32_t i = 0; i < size / sizeof(EFI_FILE_INFO); i++)
+            if(info[i].FileName[0] == 'i')
+                info = &info[i];
         //Get the size and allocate the buffer
-        initrd_size = info.FileSize;
+        initrd_size = info->FileSize;
         initrd_raw = (uint8_t*)malloc(initrd_size);
         //Read the file
         status = initrd_file_prot->Read(initrd_file_prot, &initrd_size, (void*)initrd_raw);
@@ -75,7 +84,7 @@ uint8_t initrd_init(void){
  */
 initrd_file_t initrd_read(char* name){
     uint32_t i = 0;
-    initrd_file_t cur;
+    initrd_file_t cur = ((initrd_file_t*)initrd_raw)[0];
     //Scan through the file list
     //Location = 0 means the end of the list
     while(cur.location != 0){

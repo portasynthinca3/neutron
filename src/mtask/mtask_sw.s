@@ -34,6 +34,8 @@ mtask_save_state:
     mov [rax+136], r9
     mov [rax+144], r10
     mov [rax+ 56], r11
+    ;//Save MM, XMM and ST registers
+    fxsave [rax+160]
     ;//Increment the switch counter
     inc qword ptr [rax+152]
     ret
@@ -50,6 +52,8 @@ mtask_restore_state:
     mov cr3, rbx
     push     rcx
     push     rdx
+    ;//Load MM, XMM and ST registers
+    fxrstor [rax+160]
     ;//Load GPRs
     mov rbx, [rax+  8]
     mov rcx, [rax+ 16]

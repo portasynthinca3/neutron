@@ -7,6 +7,7 @@ typedef struct {
     uint64_t rax, rbx, rcx, rdx, rsi, rdi, rbp, rsp;
     uint64_t r8,  r9,  r10, r11, r12, r13, r14, r15;
     uint64_t cr3, rip, rflags, switch_cnt;
+    uint8_t xstate[512];
 } __attribute__((packed)) task_state_t;
 
 typedef struct {
@@ -20,6 +21,8 @@ typedef struct {
     uint8_t prio_cnt;
     volatile uint8_t state_code;
     uint64_t blocked_till;
+
+    uint8_t padding[12];
 } __attribute__((packed)) task_t;
 
 #define MTASK_TASK_COUNT                    32

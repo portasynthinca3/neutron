@@ -32,9 +32,30 @@
 struct idt_desc idt_d;
 
 extern void enable_a20(void);
-extern void exc_wrapper(void);
-extern void exc_wrapper_code(void);
 extern void apic_timer_isr_wrap(void);
+
+//Exception wrapper definitions
+extern void exc_0(void);
+extern void exc_1(void);
+extern void exc_2(void);
+extern void exc_3(void);
+extern void exc_4(void);
+extern void exc_5(void);
+extern void exc_6(void);
+extern void exc_7(void);
+extern void exc_8(void);
+extern void exc_9(void);
+extern void exc_10(void);
+extern void exc_11(void);
+extern void exc_12(void);
+extern void exc_13(void);
+extern void exc_14(void);
+extern void exc_16(void);
+extern void exc_17(void);
+extern void exc_18(void);
+extern void exc_19(void);
+extern void exc_20(void);
+extern void exc_30(void);
 
 //Stack Smashing Protection guard
 uint64_t __stack_chk_guard;
@@ -212,11 +233,17 @@ void krnl_exc(void){
     //Get the exception address from RDX
     uint64_t ip;
     __asm__ volatile("mov %%rdx, %0" : "=m" (ip));
+    //Get the exception code from RCX
+    uint64_t code;
+    __asm__ volatile("mov %%rcx, %0" : "=m" (code));
+    //Get the extra exception data from RBX
+    uint64_t data;
+    __asm__ volatile("mov %%rbx, %0" : "=m" (data));
     //Stop the schaeduler
     mtask_stop();
     //Print some info
     krnl_dump();
-    gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE);
+    gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE | (code << 8) | (data << 16));
 
     //Load 0xDEADBEEF into EAX for ease of debugging
     __asm__ volatile("mov $0xDEADBEEF, %eax");
@@ -328,13 +355,26 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     gfx_draw_raw((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height});
     //Print the boot process
-    krnl_boot_status(">>> Loading <<<", 0);
+    krnl_boot_status(">>> Starting the boot sequence <<<", 0);
 
+    //Enable SSE instructions
+    krnl_boot_status(">>> Enabling SSE <<<", 5);
+    uint64_t sse_temp;
+    __asm__ volatile("mov %%cr0, %0" : "=r" (sse_temp));
+    sse_temp &= ~(1 << 2);
+    sse_temp |=  (1 << 1);
+    __asm__ volatile("mov %0, %%cr0" : : "r" (sse_temp));
+    __asm__ volatile("mov %%cr4, %0" : "=r" (sse_temp));
+    sse_temp |=  (1 << 9);
+    //sse_temp |=  (1 << 10);
+    __asm__ volatile("mov %0, %%cr4" : : "r" (sse_temp));
     //Load initrd
     krnl_boot_status(">>> Reading INITRD <<<", 10);
     uint8_t initrd_status = initrd_init();
-    if(initrd_status != 0)
+    if(initrd_status != 0){
         gfx_verbose_println("INITRD read error");
+        while(1);
+    }
     //Initialize PS/2
     krnl_boot_status(">>> Initializing PS/2 <<<", 15);
     ps2_init();
@@ -358,13 +398,28 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
     //Set up IDT
     struct idt_entry* idt = (struct idt_entry*)calloc(256, sizeof(struct idt_entry));
-    //Set every exception IDT entry using the same pattern
-    for(int i = 0; i < 32; i++){
-        uint64_t wrapper_address = (uint64_t)&exc_wrapper;
-        if(i == 8 || (i >= 10 && i <= 14) || i == 17 || i == 30) //Set a special wrapper for exceptions that push error code onto stack
-            wrapper_address = (uint64_t)&exc_wrapper_code;
-        idt[i] = IDT_ENTRY_ISR(wrapper_address, cur_cs);
-    }
+    //Set up gates for exceptions
+    idt[0] = IDT_ENTRY_ISR((uint64_t)&exc_0, cur_cs);
+    idt[1] = IDT_ENTRY_ISR((uint64_t)&exc_1, cur_cs);
+    idt[2] = IDT_ENTRY_ISR((uint64_t)&exc_2, cur_cs);
+    idt[3] = IDT_ENTRY_ISR((uint64_t)&exc_3, cur_cs);
+    idt[4] = IDT_ENTRY_ISR((uint64_t)&exc_4, cur_cs);
+    idt[5] = IDT_ENTRY_ISR((uint64_t)&exc_5, cur_cs);
+    idt[6] = IDT_ENTRY_ISR((uint64_t)&exc_6, cur_cs);
+    idt[7] = IDT_ENTRY_ISR((uint64_t)&exc_7, cur_cs);
+    idt[8] = IDT_ENTRY_ISR((uint64_t)&exc_8, cur_cs);
+    idt[9] = IDT_ENTRY_ISR((uint64_t)&exc_9, cur_cs);
+    idt[10] = IDT_ENTRY_ISR((uint64_t)&exc_10, cur_cs);
+    idt[11] = IDT_ENTRY_ISR((uint64_t)&exc_11, cur_cs);
+    idt[12] = IDT_ENTRY_ISR((uint64_t)&exc_12, cur_cs);
+    idt[13] = IDT_ENTRY_ISR((uint64_t)&exc_13, cur_cs);
+    idt[14] = IDT_ENTRY_ISR((uint64_t)&exc_14, cur_cs);
+    idt[16] = IDT_ENTRY_ISR((uint64_t)&exc_16, cur_cs);
+    idt[17] = IDT_ENTRY_ISR((uint64_t)&exc_17, cur_cs);
+    idt[18] = IDT_ENTRY_ISR((uint64_t)&exc_18, cur_cs);
+    idt[19] = IDT_ENTRY_ISR((uint64_t)&exc_19, cur_cs);
+    idt[20] = IDT_ENTRY_ISR((uint64_t)&exc_20, cur_cs);
+    idt[30] = IDT_ENTRY_ISR((uint64_t)&exc_30, cur_cs);
     //Set up gates for interrupts
     idt[32] = IDT_ENTRY_ISR((uint64_t)&apic_timer_isr_wrap, cur_cs);
     //Load IDT

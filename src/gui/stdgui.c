@@ -200,7 +200,7 @@ void stdgui_create_task_manager(void){
 /*
  * Creates a color picker
  */
-uint8_t stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t start){
+void stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t start){
     p2d_t win_size = (p2d_t){.x = 157, 80};
     cpick_color = start;
     //Create the window

@@ -20,8 +20,8 @@ void timr_init(void){
     //And we will count 100M CPU cycles for that
     uint64_t tsc_start = rdtsc();
     apic_reg_wr(LAPIC_REG_TIMR_INITCNT, 0xFFFFFFFF); //Set an initial count of uint32_t_max-1
-    //Wait for 100M cycles to pass
-    while(rdtsc() - tsc_start < 1000000);
+    //Wait for 10M cycles to pass
+    while(rdtsc() - tsc_start < 100000);
     //Stop the APIC timer
     apic_reg_wr(LAPIC_REG_LVT_TIM, 0x10000);
     //Get the counter value

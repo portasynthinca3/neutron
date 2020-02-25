@@ -273,6 +273,7 @@ void* memmove(void* dest, const void* src, size_t count){
         //Use another, non-optimized algorithm
         for(int i = count; i >= 0; i--)
             *(uint8_t*)(dest + i) = *(uint8_t*)(src + i);
+        return dest;
     }
 }
 
@@ -457,7 +458,7 @@ uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16
     //If bit 7 is set, we wait for it to reset and then read the time OR 10k iterations and return
     while(status_a & (1 << 7) && (i++ <= 10000)){
         outb(0x70, 0x0A);
-        uint8_t status_a = inb(0x71);
+        status_a = inb(0x71);
     }
     if(i++ >= 10000)
         return 0;

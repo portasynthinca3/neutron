@@ -236,7 +236,7 @@ void gui_process_control(window_t* win_ptr, control_t* ptr, uint8_t handle_point
             uint8_t clicked = 0;
             if(pressed && !button->pressed_last_frame)
                 clicked = 1;
-            button->pressed_last_frame = pressed;
+            button->pressed_last_frame = pressed && handle_pointer;
             //Call the event handler in case of a click
             if(clicked && ptr->event_handler != NULL){
                 ui_event_args_t event;

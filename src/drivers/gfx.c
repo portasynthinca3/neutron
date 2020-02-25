@@ -374,9 +374,9 @@ color32_t gfx_blend_colors(color32_t b, color32_t f, uint8_t a){
         return b;
     if(a == 255)
         return f;
-    return COLOR32(255, ((((int32_t)f.r - (int32_t)b.r) * a) / 255) + (int32_t)b.r,
-                        ((((int32_t)f.g - (int32_t)b.g) * a) / 255) + (int32_t)b.g,
-                        ((((int32_t)f.b - (int32_t)b.b) * a) / 255) + (int32_t)b.b);
+    return COLOR32(255, ((((int32_t)f.r - (int32_t)b.r) * (int32_t)a) / 255) + (int32_t)b.r,
+                        ((((int32_t)f.g - (int32_t)b.g) * (int32_t)a) / 255) + (int32_t)b.g,
+                        ((((int32_t)f.b - (int32_t)b.b) * (int32_t)a) / 255) + (int32_t)b.b);
 }
 
 /*
@@ -448,10 +448,16 @@ p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c){
         uint8_t font_col = font[font_offset + i];
         //And for each pixel in that column
         for(uint8_t j = 0; j < 8; j++){
+            if((font_col >> j) & 1)
+                buf[buf_offset + i + (j * res_x)] = gfx_blend_colors(buf[buf_offset + i + (j * res_x)], color, color.a);
+            else
+                buf[buf_offset + i + (j * res_x)] = gfx_blend_colors(buf[buf_offset + i + (j * res_x)], bcolor, bcolor.a);
+            /*
             if(((font_col >> j) & 1) && (color.a != 0))
                 buf[buf_offset + i + (j * res_x)] = color; //Draw it
             else if(bcolor.a != 0)
                 buf[buf_offset + i + (j * res_x)] = bcolor; //Or clear it
+                */
         }
         //Increment the character width
         c_width++;
@@ -528,7 +534,7 @@ p2d_t gfx_text_bounds(char* s){
 /*
  * Draw a panic screen
  */
-void gfx_panic(int ip, int code){
+void gfx_panic(uint64_t ip, uint64_t code){
     //Flip the main buffer to the working one
     gfx_set_buf(GFX_BUF_VBE);
     gfx_flip();
@@ -540,8 +546,8 @@ void gfx_panic(int ip, int code){
     for(uint32_t y = 0; y < res_y; y++){
         for(uint32_t x = 0; x < res_x; x++){
             color32_t orig = buf[(y * res_x) + x];
-            //But while giving a small red tint to it
-            buf[(y * res_x) + x] = COLOR32(orig.a >> 2, orig.r >> 1, orig.g >> 2, orig.b >> 2);
+            //But while giving a red tint to it
+            buf[(y * res_x) + x] = gfx_blend_colors(orig, COLOR32(255, 128, 0, 0), 64);
         }
     }
     //Determine the error message that needs to be printed
@@ -550,26 +556,33 @@ void gfx_panic(int ip, int code){
         panic_msg = KRNL_PANIC_NOMEM_MSG;
     else if(code == KRNL_PANIC_PANTEST_CODE)
         panic_msg = KRNL_PANIC_PANTEST_MSG;
-    else if(code == KRNL_PANIC_CPUEXC_CODE)
+    else if((code & 0xFF) == KRNL_PANIC_CPUEXC_CODE)
         panic_msg = KRNL_PANIC_CPUEXC_MSG;
     else if(code == KRNL_PANIC_STACK_SMASH_CODE)
         panic_msg = KRNL_PANIC_STACK_SMASH_MSG;
     else
         panic_msg = KRNL_PANIC_UNKNOWN_MSG;
     //Construct the error message
-    char text[250];
+    char text[300];
     char temp[20];
     text[0] = 0;
     strcat(text, "Kernel panic occured at address 0x");
-    strcat(text, sprintub16(temp, ip, 8));
+    strcat(text, sprintub16(temp, ip, 16));
     strcat(text, "\nerrcode ");
-    strcat(text, sprintu(temp, code, 1));
+    strcat(text, sprintu(temp, code & 0xFF, 1));
     strcat(text, ": ");
     strcat(text, panic_msg);
+    //Add a line for CPU exceptions
+    if((code & 0xFF) == KRNL_PANIC_CPUEXC_CODE){
+        strcat(text, "\nCPU exc. ");
+        strcat(text, sprintu(temp, (code >> 8) & 0xFF, 2));
+        strcat(text, " ex. data ");
+        strcat(text, sprintu(temp, (code >> 16) & 0xFFFFFFFF, 2));
+    }
     //Get its bounds
     p2d_t msg_bounds = gfx_text_bounds(text);
     //Print it
-    gfx_puts((p2d_t){.x = (gfx_res_x() - msg_bounds.x) / 2, .y = (gfx_res_y() - msg_bounds.y) / 2}, COLOR32(255, 255, 255, 255), COLOR32(255, 0, 0, 0), text);
+    gfx_puts((p2d_t){.x = (gfx_res_x() - msg_bounds.x) / 2, .y = (gfx_res_y() - msg_bounds.y) / 2}, COLOR32(255, 255, 255, 255), COLOR32(128, 0, 0, 0), text);
     //Display it
     gfx_flip();
     //Hang
@@ -618,7 +631,7 @@ void gfx_verbose_println(char* msg){
         verbose_position -= text_bounds.y;
     }
     //Print the string
-    gfx_puts((p2d_t){.x = 0, .y = verbose_position}, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), msg);
+    gfx_puts((p2d_t){.x = 0, .y = verbose_position}, COLOR32(255, 255, 255, 255), COLOR32(128, 0, 0, 0), msg);
     //Go to the next position
     verbose_position += text_bounds.y;
     //Flip the buffers
