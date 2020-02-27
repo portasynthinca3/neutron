@@ -65,7 +65,7 @@ uint8_t initrd_init(void){
                 info = &info[i];
         //Get the size and allocate the buffer
         initrd_size = info->FileSize;
-        initrd_raw = (uint8_t*)malloc(initrd_size);
+        initrd_raw = (uint8_t*)malloc(4 * 1024 * 1024);
         //Read the file
         status = initrd_file_prot->Read(initrd_file_prot, &initrd_size, (void*)initrd_raw);
         if(EFI_ERROR(status))

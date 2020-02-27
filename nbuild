@@ -5,6 +5,7 @@ src/isr_wrapper.s
 src/stdlib.c
 src/mtask/mtask.c
 src/mtask/mtask_sw.s
+src/vmem/vmem.c
 #GUI stuff
 src/gui/gui.c
 src/gui/windows.c

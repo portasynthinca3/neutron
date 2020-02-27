@@ -94,8 +94,7 @@ void gui_init(void){
         uint8_t* buf = initrd_contents("wallpap.raw");
         wallpap_width = ((uint16_t*)buf)[0];
         wallpap_height = ((uint16_t*)buf)[1];
-        wallpaper = (uint8_t*)malloc(4 * wallpap_width * wallpap_height);
-        memcpy(wallpaper, buf, 4 * wallpap_width * wallpap_height);
+        wallpaper = buf + 4;
     }
 }
 

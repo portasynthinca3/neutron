@@ -81,7 +81,6 @@ void sys_color_change(ui_event_args_t* args){
     //Get and assign the color
     gui_get_color_scheme()->win_border = color;
     //Get and assign another color
-    gui_get_color_scheme()->win_border_inactive = COLOR32(color.a, color.r + 30, color.g + 30, color.b + 30);
     //Close the window
     gui_destroy_window(args->win);
 }
@@ -300,10 +299,14 @@ void dummy(void* args){
  * Multitasking entry point
  */
 void mtask_entry(void* args){
+    /*
     mtask_create_task(131072, "System UI", 10, gui_task, NULL);
     mtask_create_task(8192, "Dummy task", 1, dummy, NULL);
     
     mtask_stop_task(mtask_get_uid());
+    */
+
+    while(1);
 }
 
 /*
@@ -373,7 +376,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     uint8_t initrd_status = initrd_init();
     if(initrd_status != 0){
         gfx_verbose_println("INITRD read error");
-        while(1);
+        //while(1);
     }
     //Initialize PS/2
     krnl_boot_status(">>> Initializing PS/2 <<<", 15);
