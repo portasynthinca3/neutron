@@ -299,14 +299,10 @@ void dummy(void* args){
  * Multitasking entry point
  */
 void mtask_entry(void* args){
-    /*
     mtask_create_task(131072, "System UI", 10, gui_task, NULL);
     mtask_create_task(8192, "Dummy task", 1, dummy, NULL);
     
     mtask_stop_task(mtask_get_uid());
-    */
-
-    while(1);
 }
 
 /*
