@@ -81,7 +81,7 @@ uint64_t dram_init(void){
     void* best_block_start = NULL;
     uint64_t best_block_size = 0;
     //Fetch the next descriptor
-    while((void*)desc < (void*)buf + size){
+    while((uint8_t*)desc < (uint8_t*)buf + size){
         mapping_size = desc->NumberOfPages * EFI_PAGE_SIZE;
 
         //If a new free memory block was found, record it
@@ -122,7 +122,7 @@ void* malloc(size_t size){
     //  free memory "heap", allocate it there
     if(gen_free_top - gen_free_base >= size){
         void* saved_base = gen_free_base;
-        gen_free_base += size;
+        gen_free_base = (uint8_t*)gen_free_base + size;
         return saved_base;
     }
     
@@ -272,7 +272,7 @@ void* memmove(void* dest, const void* src, size_t count){
     } else {
         //Use another, non-optimized algorithm
         for(int i = count; i >= 0; i--)
-            *(uint8_t*)(dest + i) = *(uint8_t*)(src + i);
+            *(uint8_t*)((uint8_t*)dest + i) = *(uint8_t*)((uint8_t*)src + i);
         return dest;
     }
 }
@@ -634,7 +634,7 @@ void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint
     //Set base[15:0]
     *(uint16_t*)(entry_ptr + 2) = base & 0xFFFF;
     //Set base[23:16]
-    *(uint16_t*)(entry_ptr + 4) = (base >> 16) & 0xFF;
+    *(uint16_t*)((uint8_t*)entry_ptr + 4) = (base >> 16) & 0xFF;
     //Set access byte
     *(uint8_t*)(entry_ptr + 5) = access;
     //Set limit[19:16]
