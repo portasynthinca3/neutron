@@ -100,7 +100,7 @@ uint64_t dram_init(void){
 
     //Set up general free heap
     gen_free_base = best_block_start;
-    gen_free_top = best_block_start + best_block_size;
+    gen_free_top = (uint8_t*)best_block_start + best_block_size;
     total_ram_size += best_block_size;
 
     if(gen_free_top == NULL){
@@ -636,7 +636,7 @@ void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint
     //Set base[23:16]
     *(uint16_t*)((uint8_t*)entry_ptr + 4) = (base >> 16) & 0xFF;
     //Set access byte
-    *(uint8_t*)(entry_ptr + 5) = access;
+    *(uint8_t*)((uint8_t*)entry_ptr + 5) = access;
     //Set limit[19:16]
     *(uint8_t*)(entry_ptr + 6) = (limit >> 16) & 0xF;
     //Set flags
