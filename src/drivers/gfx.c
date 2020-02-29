@@ -294,6 +294,32 @@ void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
 }
 
 /*
+ * Draw a blurred rectangle
+ */
+void gfx_draw_blurred_rect(p2d_t pos, p2d_t size, color32_t c){
+    //Create a temporary buffer
+    color32_t buf[size.x * size.y];
+    //Go through each pixel in the temporary buffer
+    for(uint32_t y = 0; y < size.y; y++){
+        for(uint32_t x = 0; x < size.x; x++){
+            //Get the original color
+            color32_t col = gfx_buffer()[((pos.y + y) * res_x) + pos.x + x];
+            //And mix it with the neighboring ones
+            for(uint32_t y_m = y - 1; y_m <= y + 1; y_m++)
+                for(uint32_t x_m = x - 1; x_m <= x + 1; x_m++)
+                    col = gfx_blend_colors(col, gfx_buffer()[((pos.y + y_m) * res_x) + pos.x + x_m], 128);
+            //Color it
+            col = gfx_blend_colors(col, c, c.a);
+            //Apply the pixel to the temporary buffer
+            buf[(y * size.x) + x] = col;
+        }
+    }
+    //Copy the temporary buffer to the main one
+    for(uint32_t y_offs = 0; y_offs < size.y; y_offs++)
+        memcpy(&gfx_buffer()[((pos.y + y_offs) * res_x) + pos.x], &buf[y_offs * size.x], size.x * sizeof(color32_t));
+}
+
+/*
  * Draw a rectangle
  */
 void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c){

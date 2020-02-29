@@ -151,7 +151,7 @@ void _stdgui_task_mgr_evt(ui_event_args_t* args){
  */
 void _stdgui_task_mgr_updater(void* task_mgr_label){
     //Temporary string
-    char temp[1024];
+    char temp[4096];
     char temp2[128];
     while(1){
         //Construct the temporary string
@@ -190,7 +190,7 @@ void stdgui_create_task_manager(void){
         window_size, _stdgui_task_mgr_evt);
     //Create the label
     control_ext_label_t* task_mgr_label = gui_create_label(window, (p2d_t){.x = 0, .y = 0}, window_size, "", COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL)->extended;
-        task_mgr_label->text = (char*)malloc(1024);
+    task_mgr_label->text = (char*)malloc(4096);
     //Create the update process
     window->task_uid = mtask_create_task(16384, "Task manager", 2, _stdgui_task_mgr_updater, (void*)task_mgr_label);
 }

@@ -90,13 +90,9 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     //Create a new PML4 and assign the CR3
     uint64_t cr3 = vmem_create_pml4(task->uid);
     task->state.cr3 = cr3;
-    //vmem_map(cr3, task, (void*)task + 4096, (virt_addr_t)(4ULL * 1024 * 1024 * 1024));
     //Allocate memory for the task stack
     void* task_stack = calloc(stack_size, 1);
-    //It needs to be 16-byte aligned
-    task_stack = (uint8_t*)task_stack + 16 - ((uint64_t)task_stack % 16);
-    //Map the stack
-    //vmem_map(cr3, task_stack, task_stack + stack_size, task_stack);
+    //Map the memory
     vmem_map(cr3, 0, (phys_addr_t)(4ULL * 1024 * 1024 * 1024), 0);
     //Assign the task RSP
     task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 1);

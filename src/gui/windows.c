@@ -76,7 +76,7 @@ window_t* gui_create_window(char* title, void* icon_8, uint32_t flags, p2d_t pos
     while((&windows[i++])->title);
     i--;
     //Assign the window
-    win.task_uid = 0;
+    win.task_uid = -1;
     windows[i] = win;
     //Mark the end of the list
     windows[i + 1].title = NULL;
@@ -158,9 +158,13 @@ void gui_render_window(window_t* ptr){
         gfx_draw_filled_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y}, 
                              (p2d_t){.x = ptr->size.x, .y = 11},
                              (ptr == window_focused) ? gui_get_color_scheme()->win_border : gui_get_color_scheme()->win_border_inactive);
-        //Draw the border
-        gfx_draw_rect((p2d_t){.x = ptr->position.x, .y = ptr->position.y},
-                      (p2d_t){.x = ptr->size.x, .y = ptr->size.y}, gui_get_color_scheme()->win_border);
+        //Draw the glow around the top section
+        gfx_draw_hor_line((p2d_t){.x = ptr->position.x - 1, .y = ptr->position.y - 1}, ptr->size.x + 2,
+                          COLOR32A(60, (ptr == window_focused) ? gui_get_color_scheme()->win_border : gui_get_color_scheme()->win_border_inactive));
+        gfx_draw_vert_line((p2d_t){.x = ptr->position.x - 1, .y = ptr->position.y}, 10,
+                           COLOR32A(60, (ptr == window_focused) ? gui_get_color_scheme()->win_border : gui_get_color_scheme()->win_border_inactive));
+        gfx_draw_vert_line((p2d_t){.x = ptr->position.x + ptr->size.x, .y = ptr->position.y}, 10,
+                           COLOR32A(60, (ptr == window_focused) ? gui_get_color_scheme()->win_border : gui_get_color_scheme()->win_border_inactive));
         //Print its title
         gfx_puts((p2d_t){.x = ptr->position.x + 2 + 8 + 2, .y = ptr->position.y + 2},
             (ptr == window_focused) ? gui_get_color_scheme()->win_title : gui_get_color_scheme()->win_title_inactive, COLOR32(0, 0, 0, 0), ptr->title);

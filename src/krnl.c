@@ -78,10 +78,10 @@ EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
  */
 void sys_color_change(ui_event_args_t* args){
     color32_t color = stdgui_cpick_get_color();
-    //Get and assign the color
+    color = COLOR32(240, color.r, color.g, color.b);
+    //Assign the color
     gui_get_color_scheme()->win_border = color;
-    //Get and assign another color
-    //Close the window
+    //Close the picker window
     gui_destroy_window(args->win);
 }
 
@@ -311,6 +311,13 @@ void mtask_entry(void* args){
 __attribute__((noreturn)) void __stack_chk_fail(void) {
     gfx_panic(0, KRNL_PANIC_STACK_SMASH_CODE);
     while(1);
+}
+
+/*
+ * What is THIS for? I have _absolutely_ no idea :)
+ */
+void ___chkstk_ms(void){
+    
 }
 
 /*

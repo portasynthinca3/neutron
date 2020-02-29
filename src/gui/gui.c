@@ -68,17 +68,17 @@ void gui_init(void){
     my = gfx_res_y() / 2;
     gfx_verbose_println("Initializing color scheme");
     //Set the default color scheme
-    color_scheme.win_bg =                   COLOR32(240, 32, 32, 32);
+    color_scheme.win_bg =                   COLOR32(240, 10, 10, 10);
     color_scheme.win_title =                COLOR32(255, 255, 255, 255);
-    color_scheme.win_title_inactive =       COLOR32(255, 200, 200, 200);
-    color_scheme.win_border =               COLOR32(255, 236, 78, 32);
-    color_scheme.win_border_inactive =      COLOR32(255, 39, 39, 39);
+    color_scheme.win_title_inactive =       COLOR32(255, 255, 255, 255);
+    color_scheme.win_border =               COLOR32(240, 236, 78, 32);
+    color_scheme.win_border_inactive =      COLOR32(140, 15, 15, 15);
     color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 255);
     color_scheme.win_minimize_btn =         COLOR32(255, 255, 255, 255);
     color_scheme.win_unavailable_btn =      COLOR32(255, 128, 128, 128);
-    color_scheme.desktop =                  COLOR32(255, 20, 20, 20);
-    color_scheme.top_bar =                  COLOR32(240, 71, 71, 71);
+    color_scheme.desktop =                  COLOR32(255, 5, 5, 5);
+    color_scheme.top_bar =                  COLOR32(240, 20, 20, 20);
     color_scheme.cursor =                   COLOR32(255, 255, 255, 255);
     color_scheme.selection =                color_scheme.win_border;
     color_scheme.time =                     COLOR32(255, 255, 255, 255);
