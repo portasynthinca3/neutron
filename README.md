@@ -1,4 +1,5 @@
 # Welcome
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3db2b0cbdd72413a944b0a5004dc3dd8)](https://app.codacy.com/manual/portasynthinca3/neutron?utm_source=github.com&utm_medium=referral&utm_content=portasynthinca3/neutron&utm_campaign=Badge_Grade_Dashboard)
 ![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
 **So, you somehow got to this page.** I really appreciate it, thank you!
 # The purpose of the project
