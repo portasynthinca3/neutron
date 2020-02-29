@@ -1,5 +1,9 @@
 ![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3db2b0cbdd72413a944b0a5004dc3dd8)](https://app.codacy.com/manual/portasynthinca3/neutron?utm_source=github.com&utm_medium=referral&utm_content=portasynthinca3/neutron&utm_campaign=Badge_Grade_Dashboard)
+![Codacy grade](https://img.shields.io/codacy/grade/3db2b0cbdd72413a944b0a5004dc3dd8)
+![GitHub search hit counter](https://img.shields.io/github/search/portasynthinca3/neutron/goto)
+![GitHub All Releases](https://img.shields.io/github/downloads/portasynthinca3/neutron/total)
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/portasynthinca3/neutron?include_prereleases)
+![batteries](https://img.shields.io/badge/batteries-included-brightgreen)
 ## The purpose of the project
 Neutron is the result of me trying to get into the low-level stuff.
 This project is **not** intended to do some crazy stuff like replacing the giants like Windows, Linux and macOS. That's just not possible. However, it doesn't mean i don't have an end goal. **The end goal is to write a simple 64-bit UEFI-powered OS that can run 3rd party applications and its GUI system, while requiring as little disk space, RAM and processor resources as possible.** Oh, and also, I just want to have fun :)

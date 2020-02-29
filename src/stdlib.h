@@ -6,7 +6,7 @@
 #endif
 
 //The kernel version
-#define KRNL_VERSION_STR "v0.4.11"
+#define KRNL_VERSION_STR "v0.5.0"
 
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC
