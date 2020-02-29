@@ -122,7 +122,7 @@ void* malloc(size_t size){
     //  free memory "heap", allocate it there
     if(gen_free_top - gen_free_base >= size){
         void* saved_base = gen_free_base;
-        gen_free_base = gen_free_base + size;
+        gen_free_base = (uint8_t*)gen_free_base + size;
         return saved_base;
     }
     

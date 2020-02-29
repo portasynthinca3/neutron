@@ -81,7 +81,7 @@ void ehci_write_opreg_dw(unsigned char ehci_no, unsigned char reg, int val){
     //Read capability register length
     int caplen = (unsigned char)ehci_read_capreg(ehci_no, EHCI_CAPREG_CAPLEN);
     //Get the address
-    int* ptr = (int*)((uint8_t*)((uint8_t*)ehci_conts[ehci_no].capreg_addr + caplen) + reg);
+    int* ptr = (int*)((uint8_t*)((uint64_t)ehci_conts[ehci_no].capreg_addr + (uint64_t)caplen) + reg);
     //Byteswap the value
     int val2 = val;
     //bswap_dw(&val2);
