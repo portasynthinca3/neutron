@@ -81,7 +81,7 @@ uint64_t dram_init(void){
     void* best_block_start = NULL;
     uint64_t best_block_size = 0;
     //Fetch the next descriptor
-    while((uint8_t*)desc < (uint8_t*)buf + size){
+    while((void*)desc < (void*)buf + size){
         mapping_size = desc->NumberOfPages * EFI_PAGE_SIZE;
 
         //If a new free memory block was found, record it
@@ -94,7 +94,7 @@ uint64_t dram_init(void){
             bad_ram_size += mapping_size;
         }
 
-        desc = (uint8_t*)desc + desc_size;
+        desc = (void*)desc + desc_size;
         i++;
     }
 
@@ -122,7 +122,7 @@ void* malloc(size_t size){
     //  free memory "heap", allocate it there
     if(gen_free_top - gen_free_base >= size){
         void* saved_base = gen_free_base;
-        gen_free_base = (uint8_t*)gen_free_base + size;
+        gen_free_base = gen_free_base + size;
         return saved_base;
     }
     
@@ -217,10 +217,10 @@ void* calloc(uint64_t num, size_t size){
  */
 void* memset(void* dst, int ch, size_t size){
     //Convert ch to 8 bits
-    unsigned char c = (unsigned char)ch;
+    uint8_t c = (uint8_t)ch;
     //Fill the chunk with them
     while(size--)
-        *(unsigned char*)(dst + size) = c;
+        *(uint8_t*)((uint8_t*)dst + size) = c;
     //Return dst
     return dst;
 }
@@ -294,15 +294,15 @@ void bswap_dw(int* value){
 /*
  * Output doubleword to I/O port
  */
-void outl(unsigned short port, unsigned int value){
+void outl(uint16_t port, uint32_t value){
     __asm__ volatile("outl %%eax, %%dx" : : "a" (value), "d" (port));
 }
 
 /*
  * Read doubleword from I/O port
  */
-unsigned int inl(unsigned short port){
-    unsigned int value;
+uint32_t inl(uint16_t port){
+    uint32_t value;
     __asm__ volatile("inl %%dx, %%eax" : "=a" (value) : "d" (port));
     return value;
 }
@@ -310,15 +310,15 @@ unsigned int inl(unsigned short port){
 /*
  * Output word to I/O port
  */
-void outw(unsigned short port, unsigned short value){
+void outw(uint16_t port, uint16_t value){
     __asm__ volatile("outw %%ax, %%dx" : : "a" (value), "d" (port));
 }
 
 /*
  * Read word from I/O port
  */
-unsigned short inw(unsigned short port){
-    unsigned short value;
+uint16_t inw(uint16_t port){
+    uint16_t value;
     __asm__ volatile("inw %%dx, %%ax" : "=a" (value) : "d" (port));
     return value;
 }
@@ -333,15 +333,15 @@ void rep_insw(uint16_t port, uint32_t count, uint16_t* buf){
 /*
  * Output byte to I/O port
  */
-void outb(unsigned short port, unsigned char value){
+void outb(uint16_t port, uint8_t value){
     __asm__ volatile("outb %%al, %%dx" : : "a" (value), "d" (port));
 }
 
 /*
  * Read byte from I/O port
  */
-unsigned char inb(unsigned short port){
-    unsigned char value;
+uint8_t inb(uint16_t port){
+    uint8_t value;
     __asm__ volatile("inb %%dx, %%al" : "=a" (value) : "d" (port));
     return value;
 }
@@ -368,15 +368,15 @@ void wrmsr(uint32_t msr, uint64_t val){
 /*
  * Manages pushing bytes into the FIFO buffer
  */
-void fifo_pushb(unsigned char* buffer, unsigned short* head, unsigned char value){
+void fifo_pushb(uint8_t* buffer, uint16_t* head, uint8_t value){
     buffer[(*head)++] = value;
 }
 
 /*
  * Manages popping bytes from the FIFO buffer
  */
-unsigned char fifo_popb(unsigned char* buffer, unsigned short* head, unsigned short* tail){
-    unsigned char value = buffer[(*tail)++];
+uint8_t fifo_popb(uint8_t* buffer, uint16_t* head, uint16_t* tail){
+    uint8_t value = buffer[(*tail)++];
     if(*tail >= *head)
         *tail = *head = 0;
     return value;
@@ -385,7 +385,7 @@ unsigned char fifo_popb(unsigned char* buffer, unsigned short* head, unsigned sh
 /*
  * Returns the amount of bytes available for reading in the FIFO buffer
  */
-unsigned char fifo_av(unsigned short* head, unsigned short* tail){
+uint8_t fifo_av(uint16_t* head, uint16_t* tail){
     return *head - *tail;
 }
 
@@ -627,22 +627,22 @@ void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint
     //Calculate the entry base pointer
     struct idt_desc desc;
     __asm__ volatile("sgdt %0" : : "m" (desc)); //Store the GDT descriptor
-    void* entry_ptr = desc.base + (sel * 8);
+    void* entry_ptr = (uint8_t*)desc.base + (sel * 8);
 
     //Set limit[15:0]
-    *(uint16_t*)(entry_ptr + 0) = limit & 0xFFFF;
+    *(uint16_t*)((uint8_t*)entry_ptr + 0) = limit & 0xFFFF;
     //Set base[15:0]
-    *(uint16_t*)(entry_ptr + 2) = base & 0xFFFF;
+    *(uint16_t*)((uint8_t*)entry_ptr + 2) = base & 0xFFFF;
     //Set base[23:16]
     *(uint16_t*)((uint8_t*)entry_ptr + 4) = (base >> 16) & 0xFF;
     //Set access byte
     *(uint8_t*)((uint8_t*)entry_ptr + 5) = access;
     //Set limit[19:16]
-    *(uint8_t*)(entry_ptr + 6) = (limit >> 16) & 0xF;
+    *(uint8_t*)((uint8_t*)entry_ptr + 6) = (limit >> 16) & 0xF;
     //Set flags
-    *(uint8_t*)(entry_ptr + 6) |= (flags & 0xF) << 4;
+    *(uint8_t*)((uint8_t*)entry_ptr + 6) |= (flags & 0xF) << 4;
     //Set base[31:24]
-    *(uint8_t*)(entry_ptr + 4) = (base >> 24) & 0xFF;
+    *(uint8_t*)((uint8_t*)entry_ptr + 4) = (base >> 24) & 0xFF;
 
     //Load GDT
     if(desc.limit < sel * 8) //Increase the limit if it won't fit
