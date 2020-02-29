@@ -81,20 +81,20 @@ uint64_t dram_init(void){
     void* best_block_start = NULL;
     uint64_t best_block_size = 0;
     //Fetch the next descriptor
-    while((void*)desc < (void*)buf + size){
+    while((uint8_t*)desc < ((uint8_t*)buf + size)){
         mapping_size = desc->NumberOfPages * EFI_PAGE_SIZE;
 
         //If a new free memory block was found, record it
         if(desc->Type == EfiConventionalMemory && mapping_size > best_block_size){
             best_block_size = mapping_size;
-            best_block_start = (void*)desc->PhysicalStart;
+            best_block_start = (uint8_t*)(desc->PhysicalStart);
         }
         //Record bad RAM
         else if(desc->Type == EfiUnusableMemory){
             bad_ram_size += mapping_size;
         }
 
-        desc = (void*)desc + desc_size;
+        desc = (EFI_MEMORY_DESCRIPTOR*)((uint8_t*)desc + desc_size);
         i++;
     }
 

@@ -8,7 +8,7 @@ using System.IO;
 
 namespace NeutronFontConv
 {
-    protected class Program
+    static class Program
     {
         const string inFile = "neutral.png";
         const string outFile = "neutral.nfnt";
