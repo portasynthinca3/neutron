@@ -21,7 +21,7 @@ void vmem_init(void){
 uint64_t vmem_create_pml4(uint16_t pcid){
     uint64_t cr3 = 0;
     phys_addr_t pml4 = calloc(8192, 1); //allocate 8 kB even though we only need 4
-    pml4 += 4096 - ((uint64_t)pml4 % 4096); //align by 4 kB
+    pml4 = (uint8_t*)pml4 + 4096 - ((uint64_t)pml4 % 4096); //align by 4 kB
     //Set the PML4 pointer
     cr3 = (uint64_t)pml4;
     //Set the PCID
@@ -42,10 +42,10 @@ void vmem_create_pdpt(uint64_t cr3, virt_addr_t at){
     //Extract entry index from "at"
     uint64_t pml4e_idx = (uint64_t)at >> 39;
     //Calculate the address of the entry
-    phys_addr_t pml4e_addr = pml4_addr + (pml4e_idx * 8);
+    phys_addr_t pml4e_addr = (uint8_t*)pml4_addr + (pml4e_idx * 8);
     //Allocate space for the PDPT
     phys_addr_t pdpt = calloc(8192, 1); //allocate 8 kB even though we only need 4
-    pdpt += 4096 - ((uint64_t)pdpt % 4096); //align by 4 kB
+    pdpt = (uint8_t*)pdpt + 4096 - ((uint64_t)pdpt % 4096); //align by 4 kB
     //Generate the entry
     uint64_t pml4e = 0;
     pml4e |= (1 << 0); //it's present
@@ -68,7 +68,7 @@ uint8_t vmem_present_pdpt(uint64_t cr3, virt_addr_t at){
     //Extract PML4 entry index from "at"
     uint64_t pml4e_idx = (uint64_t)at >> 39;
     //Check its "present" bit
-    return *(uint64_t*)(pml4_addr + (pml4e_idx * 8)) & 1;
+    return *(uint64_t*)((uint8_t*)pml4_addr + (pml4e_idx * 8)) & 1;
 }
 
 /*
@@ -97,7 +97,7 @@ void vmem_create_pd(uint64_t cr3, virt_addr_t at){
     
     //Allocate space for the PD
     phys_addr_t pd = calloc(8192, 1); //allocate 8 kB even though we only need 4
-    pd += 4096 - ((uint64_t)pd % 4096); //align by 4 kB
+    pd = (uint8_t*)pd + 4096 - ((uint64_t)pd % 4096); //align by 4 kB
     //Extract entry index from "at"
     uint64_t pdpte_idx = ((uint64_t)at >> 30) & 0x1FF;
     //Calculate the address of the entry
@@ -136,7 +136,7 @@ phys_addr_t vmem_addr_pd(uint64_t cr3, virt_addr_t at){
     //Calculate the entry index
     uint64_t pdpte_idx = ((uint64_t)at >> 30) & 0x1FF;
     //Extract its address
-    return (phys_addr_t)(*(uint64_t*)(pdpt + (pdpte_idx * 8)) & 0x7FFFFFFFFFFFF000);
+    return (phys_addr_t)(*(uint64_t*)((uint8_t*)pdpt + (pdpte_idx * 8)) & 0x7FFFFFFFFFFFF000);
 }
 
 
@@ -153,11 +153,11 @@ void vmem_create_pt(uint64_t cr3, virt_addr_t at){
     
     //Allocate space for the PT
     phys_addr_t pt = calloc(8192, 1); //allocate 8 kB even though we only need 4
-    pt += 4096 - ((uint64_t)pt % 4096); //align by 4 kB
+    pt = (uint8_t*)pt + 4096 - ((uint64_t)pt % 4096); //align by 4 kB
     //Extract entry index from "at"
     uint64_t pde_idx = ((uint64_t)at >> 21) & 0x1FF;
     //Calculate the address of the entry
-    phys_addr_t pde_addr = vmem_addr_pd(cr3, at) + (pde_idx * 8);
+    phys_addr_t pde_addr = (uint8_t*)vmem_addr_pd(cr3, at) + (pde_idx * 8);
     //Generate the entry
     uint64_t pde = 0;
     pde |= (1 << 0); //it's present
@@ -180,7 +180,7 @@ uint8_t vmem_present_pt(uint64_t cr3, virt_addr_t at){
     //Calculate the entry index
     uint64_t pde_idx = ((uint64_t)at >> 21) & 0x1FF;
     //Check its "present" bit
-    return *(uint64_t*)(pd + (pde_idx * 8)) & 1;
+    return *(uint64_t*)((uint8_t*)pd + (pde_idx * 8)) & 1;
 }
 
 /*
@@ -192,7 +192,7 @@ phys_addr_t vmem_addr_pt(uint64_t cr3, virt_addr_t at){
     //Calculate the entry index
     uint64_t pde_idx = ((uint64_t)at >> 21) & 0x1FF;
     //Extract its address
-    return (phys_addr_t)(*(uint64_t*)(pd + (pde_idx * 8)) & 0x7FFFFFFFFFFFF000);
+    return (phys_addr_t)(*(uint64_t*)((uint8_t*)pd + (pde_idx * 8)) & 0x7FFFFFFFFFFFF000);
 }
 
 
@@ -210,7 +210,7 @@ void vmem_create_page(uint64_t cr3, virt_addr_t at, phys_addr_t from){
     //Extract entry index from "at"
     uint64_t pte_idx = ((uint64_t)at >> 12) & 0x1FF;
     //Calculate the address of the entry
-    phys_addr_t pte_addr = vmem_addr_pt(cr3, at) + (pte_idx * 8);
+    phys_addr_t pte_addr = (uint8_t*)vmem_addr_pt(cr3, at) + (pte_idx * 8);
     //Generate the entry
     uint64_t pte = 0;
     pte |= (1 << 0); //it's present
@@ -233,7 +233,7 @@ uint8_t vmem_present_page(uint64_t cr3, virt_addr_t at){
     //Calculate the entry index
     uint64_t pte_idx = ((uint64_t)at >> 12) & 0x1FF;
     //Check its "present" bit
-    return *(uint64_t*)(pt + (pte_idx * 8)) & 1;
+    return *(uint64_t*)((uint8_t*)pt + (pte_idx * 8)) & 1;
 }
 
 /*
@@ -258,6 +258,6 @@ void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_s
     //Loop through the range
     for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
         //Map one page
-        vmem_create_page(cr3, v_st + offs, p_st + offs);
+        vmem_create_page(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
     }
 }

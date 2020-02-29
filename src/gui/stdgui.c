@@ -150,8 +150,6 @@ void _stdgui_task_mgr_evt(ui_event_args_t* args){
  * The task that updates the task manager
  */
 void _stdgui_task_mgr_updater(void* task_mgr_label){
-    //Get the UID
-    uint64_t uid = mtask_get_uid();
     //Temporary string
     char temp[1024];
     char temp2[128];
@@ -228,7 +226,6 @@ void stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t st
                          255, 128, _stdgui_cb_color_b)->extended;
     track_bar_b->val = start.b;
     //Create an OK button
-    control_ext_button_t* ok_btn = (control_ext_button_t*)
     gui_create_button(window, (p2d_t){.x = 5, .y = 50}, (p2d_t){.x = 145, .y = 12}, "OK",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), callback)->extended;
 }

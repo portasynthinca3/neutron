@@ -68,6 +68,7 @@ window_t* gui_create_window(char* title, void* icon_8, uint32_t flags, p2d_t pos
     win.position = pos;
     win.size_real = size;
     win.event_handler = event_handler;
+    win.task_uid = 0;
     //Allocate some space for window controls
     win.controls = (control_t*)calloc(128, sizeof(control_t));
     win.controls[0].type = 0;
