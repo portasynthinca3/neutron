@@ -44,10 +44,11 @@ namespace NeutronFontConv
                         bw.Write(curByte);
 
                         sw.Write(curByte.ToString());
-                        if (x != charWidth - 1)
+                        if (x != charWidth - 1){
                             sw.Write(", ");
-                        else
+                        } else {
                             sw.WriteLine();
+                        }
                     }
                 }
             }
