@@ -94,7 +94,7 @@ uint64_t dram_init(void){
             bad_ram_size += mapping_size;
         }
 
-        desc = (void*)desc + desc_size;
+        desc = (uint8_t*)desc + desc_size;
         i++;
     }
 

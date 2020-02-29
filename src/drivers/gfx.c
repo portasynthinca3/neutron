@@ -199,8 +199,8 @@ void gfx_choose_best(void){
             //If the error is "not started"
             if(status == EFI_NOT_STARTED){
                 //Start it and query mode info once again
-                status = graphics_output->SetMode(graphics_output, graphics_output->Mode->Mode);
-                status = graphics_output->QueryMode(graphics_output, i, &mode_info_size, &mode_info);
+                graphics_output->SetMode(graphics_output, graphics_output->Mode->Mode);
+                graphics_output->QueryMode(graphics_output, i, &mode_info_size, &mode_info);
             } else {
                 //In case of any other error, skip this mode
                 continue;

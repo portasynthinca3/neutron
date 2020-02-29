@@ -111,11 +111,11 @@ void ps2_alloc_buf(void){
  * Polls the PS/2 controller
  */
 void ps2_poll(void){
-    //Variable holding the I/O port 64h data
-    uint8_t p64d;
     uint32_t timeout = 100;
-    //While the time didn't out
+    //While we still have time
     while(timeout--){
+        //Variable holding the I/O port 64h data
+        uint8_t p64d;
         //While there's data ready to be read
         if((p64d = inb(0x64)) & 1){
             //If bit 5 is set, it's a mouse data byte
