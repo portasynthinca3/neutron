@@ -97,7 +97,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     task_stack = (uint8_t*)task_stack + 16 - ((uint64_t)task_stack % 16);
     //Map the stack
     //vmem_map(cr3, task_stack, task_stack + stack_size, task_stack);
-    vmem_map(cr3, 0, 4ULL * 1024 * 1024 * 1024, 0);
+    vmem_map(cr3, 0, (phys_addr_t)(4ULL * 1024 * 1024 * 1024), 0);
     //Assign the task RSP
     task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 1);
     //Assign the task RIP

@@ -172,8 +172,8 @@ void gfx_choose_best(void){
         //Go through them
         if(!EFI_ERROR(status)){
             for(uint32_t base = 54; base <= 108; base += 18){
-                uint32_t mon_res_x = *(uint8_t*)(edid->Edid + base + 2) << 4;
-                uint32_t mon_res_y = *(uint8_t*)(edid->Edid + base + 5) << 4;
+                uint32_t mon_res_x = (uint32_t)*(uint8_t*)(edid->Edid + base + 2) << 4;
+                uint32_t mon_res_y = (uint32_t)*(uint8_t*)(edid->Edid + base + 5) << 4;
                 if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
                     mon_best_res_x = mon_res_x;
                     mon_best_res_y = mon_res_y;

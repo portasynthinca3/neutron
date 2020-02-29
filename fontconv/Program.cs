@@ -8,7 +8,7 @@ using System.IO;
 
 namespace NeutronFontConv
 {
-    class Program
+    protected class Program
     {
         const string inFile = "neutral.png";
         const string outFile = "neutral.nfnt";
@@ -17,8 +17,6 @@ namespace NeutronFontConv
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Neutron font builder");
-
             Bitmap input = (Bitmap)Image.FromFile(inFile);
             BinaryWriter bw = new BinaryWriter(File.OpenWrite(outFile));
             StreamWriter sw = new StreamWriter(File.OpenWrite(outFile + ".asm"));

@@ -80,7 +80,7 @@ phys_addr_t vmem_addr_pdpt(uint64_t cr3, virt_addr_t at){
     //Extract PML4 entry index from "at"
     uint64_t pml4e_idx = (uint64_t)at >> 39;
     //Extract PDPT entry address
-    return (phys_addr_t)(*(uint64_t*)(pml4_addr + (pml4e_idx * 8)) & 0x7FFFFFFFFFFFF000);
+    return (phys_addr_t)(*(uint64_t*)((uint8_t*)pml4_addr + (pml4e_idx * 8)) & 0x7FFFFFFFFFFFF000);
 }
 
 
@@ -101,7 +101,7 @@ void vmem_create_pd(uint64_t cr3, virt_addr_t at){
     //Extract entry index from "at"
     uint64_t pdpte_idx = ((uint64_t)at >> 30) & 0x1FF;
     //Calculate the address of the entry
-    phys_addr_t pdpte_addr = vmem_addr_pdpt(cr3, at) + (pdpte_idx * 8);
+    phys_addr_t pdpte_addr = (uint8_t*)vmem_addr_pdpt(cr3, at) + (pdpte_idx * 8);
     //Generate the entry
     uint64_t pdpte = 0;
     pdpte |= (1 << 0); //it's present
@@ -124,7 +124,7 @@ uint8_t vmem_present_pd(uint64_t cr3, virt_addr_t at){
     //Calculate the entry index
     uint64_t pdpte_idx = ((uint64_t)at >> 30) & 0x1FF;
     //Check its "present" bit
-    return *(uint64_t*)(pdpt + (pdpte_idx * 8)) & 1;
+    return *(uint64_t*)((uint8_t*)pdpt + (pdpte_idx * 8)) & 1;
 }
 
 /*
@@ -245,7 +245,7 @@ phys_addr_t vmem_addr_page(uint64_t cr3, virt_addr_t at){
     //Calculate the entry index
     uint64_t pte_idx = ((uint64_t)at >> 12) & 0x1FF;
     //Extract its address
-    return (phys_addr_t)(*(uint64_t*)(pt + (pte_idx * 8)) & 0x7FFFFFFFFFFFF000);
+    return (phys_addr_t)(*(uint64_t*)((uint8_t*)pt + (pte_idx * 8)) & 0x7FFFFFFFFFFFF000);
 }
 
 
