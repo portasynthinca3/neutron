@@ -8,6 +8,11 @@
  * Initializes the virtual memory manager: configures the CPU, etc.
  */
 void vmem_init(void){
+    //Clear lowest 12 bits of CR3 before enabling PCIDs
+    uint64_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
+    cr3 &= ~0xFFFULL; //full pls :>
+    __asm__ volatile("mov %0, %%cr3" : : "r" (cr3));
     //Enable Process Context Identifiers (PCIDs) and 4-level paging
     uint64_t cr4;
     __asm__ volatile("mov %%cr4, %0" : "=r" (cr4));
