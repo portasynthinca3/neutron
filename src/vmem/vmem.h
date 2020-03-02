@@ -3,6 +3,8 @@
 typedef void* virt_addr_t;
 typedef void* phys_addr_t;
 
+uint8_t vmem_pcid_supported(void);
+
 void vmem_init(void);
 
 uint64_t vmem_create_pml4(uint16_t pcid);

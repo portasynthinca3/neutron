@@ -5,6 +5,7 @@
 #include <efilib.h>
 
 #include "./stdlib.h"
+#include "./cpuid.h"
 
 #include "./gui/gui.h"
 #include "./gui/windows.h"
@@ -352,6 +353,16 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     gfx_verbose_println(KRNL_VERSION_STR);
     gfx_verbose_println("Verbose mode is on");
+
+    //Print CPU info
+    gfx_verbose_println("CPU info:");
+    char buf[64];
+    //Print vendor
+    cpuid_get_vendor(buf, NULL);
+    gfx_verbose_println(buf);
+    //Print brand string
+    cpuid_get_brand(buf);
+    gfx_verbose_println(buf);
 
     //Print the krnl version
     if(!krnl_verbose)

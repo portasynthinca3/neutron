@@ -20,11 +20,10 @@ In theory, it should work on any modern system. Here they are:
 They are in the `screens` directory
 ## Building
 1.  You need to install the `x86_64-w64-mingw32-gcc` compiler. You can get it from the Arch User Repository or
-some other place. Example:\
-`$ pamac build mingw-w64-gcc-base`
+some other place. Example: `$ pamac build mingw-w64-gcc-base`
 
 2.  You need to have python version 3 installed.
 
-3.  Run the\
-`$ python3 builder.py`\
-command inside the directory that contains the project. The ISO file will be inside the `build` directory.
+3.  You need to have MTools installed.
+
+4.  Run the `$ python3 builder.py` command inside the directory that contains the project. The ISO file will be inside the `build` directory.

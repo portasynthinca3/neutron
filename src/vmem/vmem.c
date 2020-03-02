@@ -3,6 +3,14 @@
 
 #include "./vmem.h"
 #include "../stdlib.h"
+#include "../cpuid.h"
+
+//A flag that indicates whether PCIDs are supported or not
+uint8_t pcid_supported = 0;
+
+uint8_t vmem_pcid_supported(void){
+    return pcid_supported;
+}
 
 /*
  * Initializes the virtual memory manager: configures the CPU, etc.
@@ -16,7 +24,13 @@ void vmem_init(void){
     //Enable Process Context Identifiers (PCIDs) and 4-level paging
     uint64_t cr4;
     __asm__ volatile("mov %%cr4, %0" : "=r" (cr4));
-    cr4 |= (1 << 17) | (1 << 5);
+    cr4 |= (1 << 5); //4-level paging
+    //Detect if PCIDs are supported by the CPU
+    uint32_t ecx;
+    cpuid_get_feat(NULL, &ecx);
+    pcid_supported = (ecx & CPUID_FEAT_ECX_PCID) > 0;
+    if(pcid_supported)
+        cr4 |= (1 << 17); //Then enable it
     __asm__ volatile("mov %0, %%cr4" : : "r" (cr4));
 }
 
@@ -30,7 +44,8 @@ uint64_t vmem_create_pml4(uint16_t pcid){
     //Set the PML4 pointer
     cr3 = (uint64_t)pml4;
     //Set the PCID
-    cr3 |= pcid & 0x0FFF; //only let the lower 12 bits through
+    if(pcid_supported)
+        cr3 |= pcid & 0x0FFF; //only let the lower 12 bits through
     return cr3;
 }
 
