@@ -30,6 +30,8 @@
 
 #include "./mtask/mtask.h"
 
+#include "./vmem/vmem.h"
+
 struct idt_desc idt_d;
 
 extern void enable_a20(void);
@@ -356,13 +358,13 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     //Print CPU info
     gfx_verbose_println("CPU info:");
-    char buf[64];
+    char cpuid_buf[64];
     //Print vendor
-    cpuid_get_vendor(buf, NULL);
-    gfx_verbose_println(buf);
+    cpuid_get_vendor(cpuid_buf, NULL);
+    gfx_verbose_println(cpuid_buf);
     //Print brand string
-    cpuid_get_brand(buf);
-    gfx_verbose_println(buf);
+    cpuid_get_brand(cpuid_buf);
+    gfx_verbose_println(cpuid_buf);
 
     //Print the krnl version
     if(!krnl_verbose)
