@@ -6,6 +6,7 @@
 typedef void* virt_addr_t;
 typedef void* phys_addr_t;
 
+uint64_t vmem_get_cr3(void);
 uint8_t vmem_pcid_supported(void);
 
 void vmem_init(void);

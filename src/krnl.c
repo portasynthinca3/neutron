@@ -366,6 +366,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     cpuid_get_brand(cpuid_buf);
     gfx_verbose_println(cpuid_buf);
 
+    vmem_pat_set_range(vmem_get_cr3(), gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
+    vmem_pat_print();
+
     //Print the krnl version
     if(!krnl_verbose)
         gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(KRNL_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},

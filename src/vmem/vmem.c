@@ -382,3 +382,12 @@ void vmem_pat_set_range(uint64_t cr3, virt_addr_t st, virt_addr_t end, uint8_t m
         *pte |= ((pat_idx & 4) >> 2) << 7;
     }
 }
+
+/*
+ * Reads the current CR3 value
+ */
+uint64_t vmem_get_cr3(void){
+    uint64_t cr3 = 0;
+    __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
+    return cr3;
+}

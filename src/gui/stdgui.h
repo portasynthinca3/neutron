@@ -9,6 +9,7 @@ void stdgui_create_shutdown_prompt(void);
 void stdgui_create_system_win(void);
 void stdgui_create_task_manager(void);
 void stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t start);
+void stdgui_create_cpuid(void);
 color32_t stdgui_cpick_get_color(void);
 
 #endif
