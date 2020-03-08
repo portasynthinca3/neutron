@@ -388,8 +388,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     __asm__ volatile("mov %0, %%cr0" : : "r" (sse_temp));
     __asm__ volatile("mov %%cr4, %0" : "=r" (sse_temp));
     sse_temp |=  (1 << 9);
+    sse_temp |=  (1 << 18);
     //sse_temp |=  (1 << 10);
     __asm__ volatile("mov %0, %%cr4" : : "r" (sse_temp));
+    //Set extended control register
+    uint64_t xcr0 = (1 << 0) | (1 << 1);
+    __asm__ volatile("mov %0, %%ecx;"
+                     "mov %1, %%edx;"
+                     "mov %2, %%eax;"
+                     "xsetbv" : : "r" ((uint32_t)0), "r" ((uint32_t)(xcr0 >> 32)), "r" ((uint32_t)xcr0) : "eax", "ecx", "edx");
     //Load initrd
     krnl_boot_status(">>> Reading INITRD <<<", 10);
     uint8_t initrd_status = initrd_init();

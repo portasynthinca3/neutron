@@ -97,7 +97,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     //Set the framebuffer memory type as write-combining
     vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
     //Assign the task RSP
-    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 1);
+    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 6);
     //Assign the task RIP
     task->state.rip = (uint64_t)func;
     //Assign the task and RFLAGS
