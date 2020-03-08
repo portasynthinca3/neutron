@@ -3,6 +3,7 @@
 
 #include "./stdgui.h"
 #include "../stdlib.h"
+#include "../cpuid.h"
 #include "../drivers/gfx.h"
 #include "./gui.h"
 #include "./windows.h"
@@ -11,6 +12,7 @@
 
 #include "../images/neutron_logo.h"
 #include "../images/task_mgr.h"
+#include "../images/cpu_logos.h"
 
 //These are defined in the Kernel
 void krnl_shutdown(void);
@@ -93,6 +95,10 @@ void _stdgui_task_mgr_btn_click(ui_event_args_t* args){
     }
 }
 
+void _stdgui_cpuid_btn_click(ui_event_args_t* args){
+    stdgui_create_cpuid();
+}
+
 /*
  * Creates a system control window
  */
@@ -132,9 +138,12 @@ void stdgui_create_system_win(void){
     //Add the system color change button to it
     gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 45}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Change system color",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), krnl_open_sys_color_picker);
-    //Add the system task manager button to it
+    //Add the task manager button to it
     gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 62}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "Task manager",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_task_mgr_btn_click);
+    //Add the task CPUID button to it
+    gui_create_button(window, (p2d_t){.x = 2, .y = 13 + neutron_logo_height + 79}, (p2d_t){.x = system_win_size.x - 2 - 4, .y = 15}, "CPUID",
+                      COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), _stdgui_cpuid_btn_click);
 }
 
 /*
@@ -228,6 +237,73 @@ void stdgui_create_color_picker(void (*callback)(ui_event_args_t*), color32_t st
     //Create an OK button
     gui_create_button(window, (p2d_t){.x = 5, .y = 50}, (p2d_t){.x = 145, .y = 12}, "OK",
                       COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), callback)->extended;
+}
+
+/*
+ * Creates a window with information about the CPU
+ */
+void stdgui_create_cpuid(void){
+    p2d_t win_size = (p2d_t){.x = 400, 250};
+    //Create the window
+    window_t* window = gui_create_window("CPUID", cpuid_icon, GUI_WIN_FLAGS_STANDARD,
+                                         (p2d_t){.x = (gfx_res_x() - win_size.x) / 2,
+                                                 .y = (gfx_res_y() - win_size.y) / 2}, win_size, NULL);
+    //Read CPU info
+    char vendor[16];
+    char brand[80];
+    cpuid_get_vendor(vendor, NULL);
+    cpuid_get_brand(brand);
+    //Determine the vendor logo
+    void* logo = NULL;
+    if(strcmp(vendor, CPUID_VENDOR_INTEL) == 0)
+        logo = intel_logo;
+    if(strcmp(vendor, CPUID_VENDOR_AMD) == 0)
+        logo = amd_logo;
+    if(strcmp(vendor, CPUID_VENDOR_VMWARE) == 0)
+        logo = vmware_logo;
+    //Create the logo image
+    gui_create_image(window, (p2d_t){.x = win_size.x - 80, .y = 1}, (p2d_t){.x = 64, .y = 64}, GUI_IMAGE_FORMAT_RAW, logo,
+        COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), NULL);
+    //Create the vendor and brand strings
+    p2d_t vendor_sz = gfx_text_bounds(vendor);
+    gui_create_label(window, (p2d_t){1, 1}, vendor_sz, vendor, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
+    p2d_t brand_sz = gfx_text_bounds(brand);
+    gui_create_label(window, (p2d_t){1, 10}, brand_sz, brand, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
+
+    //Create feature string
+    char cpu_feat[1024] = "CPU instructions: ";
+    uint32_t feat_edx, feat_ecx;
+    cpuid_get_feat(&feat_edx, &feat_ecx);
+    if(feat_edx & CPUID_FEAT_EDX_MMX)
+        strcat(cpu_feat, "MMX ");
+    if(feat_edx & CPUID_FEAT_EDX_SSE)
+        strcat(cpu_feat, "SSE ");
+    if(feat_edx & CPUID_FEAT_EDX_SSE2)
+        strcat(cpu_feat, "SSE2 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSE3)
+        strcat(cpu_feat, "SSE3 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSSE3)
+        strcat(cpu_feat, "SSSE3 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSE4_1)
+        strcat(cpu_feat, "SSE4.1 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSE4_2)
+        strcat(cpu_feat, "SSE4.2 ");
+    if(feat_ecx & CPUID_FEAT_ECX_AVX)
+        strcat(cpu_feat, "AVX ");
+    strcat(cpu_feat, "\nCPU features: ");
+    if(feat_edx & CPUID_FEAT_EDX_FPU)
+        strcat(cpu_feat, "FPU ");
+    if(feat_edx & CPUID_FEAT_EDX_SYSCALL)
+        strcat(cpu_feat, "SYSCALL ");
+    if(feat_edx & CPUID_FEAT_EDX_MTRR)
+        strcat(cpu_feat, "MTRR ");
+    if(feat_edx & CPUID_FEAT_EDX_PAT)
+        strcat(cpu_feat, "PAT ");
+    if(feat_ecx & CPUID_FEAT_ECX_XSAVE)
+        strcat(cpu_feat, "XSAVE ");
+
+    p2d_t feat_sz = gfx_text_bounds(cpu_feat);
+    gui_create_label(window, (p2d_t){1, 19}, feat_sz, cpu_feat, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
 }
 
 /*

@@ -93,9 +93,11 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     //Allocate memory for the task stack
     void* task_stack = calloc(stack_size, 1);
     //Map the memory
-    vmem_map(cr3, 0, (phys_addr_t)(4ULL * 1024 * 1024 * 1024), 0);
+    vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
+    //Set the framebuffer memory type as write-combining
+    vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
     //Assign the task RSP
-    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 1);
+    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 6);
     //Assign the task RIP
     task->state.rip = (uint64_t)func;
     //Assign the task and RFLAGS

@@ -101,10 +101,6 @@ int memcmp(const void* lhs, const void* rhs, size_t cnt);
 uint64_t rdmsr(uint32_t msr);
 void wrmsr(uint32_t msr, uint64_t val);
 
-//Model-Specific Registers (MSRs) definitions
-
-#define MSR_PAT                             0x277
-
 //Dynamic memory allocation functions
 
 uint64_t stdlib_usable_ram(void);

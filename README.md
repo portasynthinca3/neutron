@@ -15,7 +15,7 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 In theory, it should work on any modern system. Here they are:
 *   CPU: x86-64 architecture
 *   System: UEFI class 2 or 3
-*   RAM: 64 MB
+*   RAM: 256 MB (this is temporary for version 5.0.1, will be reduced back to 64MB in a next release)
 ## Screenshots
 They are in the `screens` directory
 ## Building

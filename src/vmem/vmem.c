@@ -4,6 +4,7 @@
 #include "./vmem.h"
 #include "../stdlib.h"
 #include "../cpuid.h"
+#include "../drivers/gfx.h"
 
 //A flag that indicates whether PCIDs are supported or not
 uint8_t pcid_supported = 0;
@@ -280,4 +281,113 @@ void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_s
         //Map one page
         vmem_create_page(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
     }
+}
+
+
+
+
+/*
+ * Prints Page Attribute Table for debugging
+ */
+void vmem_pat_print(void){
+    gfx_verbose_println("PAT debug");
+    //Read PAT MSR
+    uint64_t pat = rdmsr(MSR_IA32_PAT);
+    //For each entry
+    for(uint8_t i = 0; i < 8; i++){
+        //Fetch an entry
+        uint8_t entry = *(((uint8_t*)&pat) + i);
+        //Construct the string
+        char temp[50];
+        temp[0] = 0;
+        char temp2[5];
+        strcat(temp, "  entry ");
+        strcat(temp, sprintu(temp2, i, 1));
+        strcat(temp, ": ");
+        switch(entry){
+            case 0:
+                strcat(temp, "UC");
+                break;
+            case 1:
+                strcat(temp, "WC");
+                break;
+            case 2:
+                strcat(temp, "RSVD (2)");
+                break;
+            case 3:
+                strcat(temp, "RSVD (3)");
+                break;
+            case 4:
+                strcat(temp, "WT");
+                break;
+            case 5:
+                strcat(temp, "WP");
+                break;
+            case 6:
+                strcat(temp, "WB");
+                break;
+            case 7:
+                strcat(temp, "UC-");
+                break;
+            default:
+                strcat(temp, "RSVD (8-255)");
+                break;
+        }
+        //Print it
+        gfx_verbose_println(temp);
+    }
+}
+
+/*
+ * Sets an entry in Page Attribute Table
+ */
+void vmem_pat_set(uint8_t idx, uint8_t mem_type){
+    //Fetch PAT
+    uint64_t pat = rdmsr(MSR_IA32_PAT);
+    //Clear the entry
+    pat &= ~(0xFFULL << (idx * 8));
+    //Set the entry
+    pat |= ((uint64_t)mem_type << (idx * 8));
+    //Write PAT
+    wrmsr(MSR_IA32_PAT, pat);
+}
+
+/*
+ * For a specific descriptor (CR3), sets memory type in a virtual memory address range
+ */
+void vmem_pat_set_range(uint64_t cr3, virt_addr_t st, virt_addr_t end, uint8_t mem_type){
+    //Fetch PAT
+    uint64_t pat = rdmsr(MSR_IA32_PAT);
+    //Go through it to see if the memory type we need exists
+    uint8_t pat_idx = 7;
+    for(uint8_t idx = 0; idx < 8; idx++)
+        if(((pat >> (idx * 8)) & 0xFF) == mem_type)
+            pat_idx = idx;
+    //pat_idx is now set to the entry number in PAT with
+    //  the memory type we need. If no such entries
+    //  exist, overwrite the 7th (counting from 0) entry
+    if(pat_idx == 7)
+        vmem_pat_set(pat_idx, mem_type);
+    //Go through addresses
+    for(uint64_t offs = 0; offs <= end - st; offs += 4 * 1024){
+        //From CR3, get the PT entry describing a page
+        uint64_t* pt = vmem_addr_pt(cr3, st);
+        //Calculate the entry offset
+        uint64_t* pte = pt + (((uint64_t)((uint64_t)st + offs) >> 12) & 0x1FF);
+        //Clear PWT, PCD and PAT bits of the entry
+        *pte &= ~((1 << 3) | (1 << 4) | (1 << 7));
+        //Set bits according to the PAT index
+        *pte |= (pat_idx & 1) << 3;
+        *pte |= ((pat_idx & 2) >> 1) << 4;
+        *pte |= ((pat_idx & 4) >> 2) << 7;
+    }
+}
+
+/*
+ * Reads the current CR3 value
+ */
+uint64_t vmem_get_cr3(void){
+    uint64_t cr3 = 0;
+    __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
+    return cr3;
 }

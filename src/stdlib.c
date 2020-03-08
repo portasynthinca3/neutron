@@ -352,7 +352,10 @@ uint8_t inb(uint16_t port){
 uint64_t rdmsr(uint32_t msr){
     uint64_t val_h;
     uint64_t val_l;
-    __asm__ volatile("rdmsr" : "=d" (val_h), "=a" (val_l) : "c" (msr));
+    __asm__ volatile("mov %0, %%ecx" : : "m" (msr));
+    __asm__ volatile("rdmsr" : : : "eax", "edx");
+    __asm__ volatile("mov %%edx, %0" : "=m" (val_h));
+    __asm__ volatile("mov %%eax, %0" : "=m" (val_l));
     return (val_h << 32) | val_l;
 }
 
@@ -362,7 +365,10 @@ uint64_t rdmsr(uint32_t msr){
 void wrmsr(uint32_t msr, uint64_t val){
     uint32_t val_h = val >> 32;
     uint32_t val_l = val & 0xFFFFFFFF;
-    __asm__ volatile("wrmsr" : : "d" (val_h), "a" (val_l), "c" (msr));
+    __asm__ volatile("mov %0, %%ecx" : : "m" (msr));
+    __asm__ volatile("mov %0, %%edx" : : "m" (val_h));
+    __asm__ volatile("mov %0, %%eax" : : "m" (val_l));
+    __asm__ volatile("wrmsr");
 }
 
 /*
