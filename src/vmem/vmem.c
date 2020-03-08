@@ -373,7 +373,7 @@ void vmem_pat_set_range(uint64_t cr3, virt_addr_t st, virt_addr_t end, uint8_t m
         //From CR3, get the PT entry describing a page
         uint64_t* pt = vmem_addr_pt(cr3, st);
         //Calculate the entry offset
-        uint64_t* pte = pt + (((uint64_t)(st + offs) >> 12) & 0x1FF);
+        uint64_t* pte = pt + (((uint64_t)((uint64_t)st + offs) >> 12) & 0x1FF);
         //Clear PWT, PCD and PAT bits of the entry
         *pte &= ~((1 << 3) | (1 << 4) | (1 << 7));
         //Set bits according to the PAT index
