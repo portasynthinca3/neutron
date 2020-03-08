@@ -27,6 +27,7 @@
 #include "./fonts/font_neutral.h"
 
 #include "./images/neutron_logo.h"
+#include "./images/boot_err.h"
 
 #include "./mtask/mtask.h"
 
@@ -366,8 +367,40 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     cpuid_get_brand(cpuid_buf);
     gfx_verbose_println(cpuid_buf);
 
+    //Check required CPU features
+    uint32_t edx_feat, ecx_feat;
+    cpuid_get_feat(&edx_feat, &ecx_feat);
+    uint32_t cant_boot = 0;
+    if(!(edx_feat & CPUID_FEAT_EDX_PAT))
+        cant_boot |= 1;
+    if(!(edx_feat & CPUID_FEAT_EDX_SYSCALL))
+        cant_boot |= 2;
+    if(cant_boot){
+        //Darken the screen
+        gfx_draw_filled_rect((p2d_t){0, 0}, (p2d_t){gfx_res_x(), gfx_res_y()}, COLOR32(128, 0, 0, 0));
+        //Draw the boot error image
+        gfx_draw_raw((p2d_t){(gfx_res_x() - 64) / 2, (gfx_res_y() - 64) / 2}, boot_err, (p2d_t){64, 64});
+        //Print the error text
+        char* error_text = "Unfortunately, Neutron can't be booted on this computer due to lack of requred CPU features:";
+        p2d_t error_sz = gfx_text_bounds(error_text);
+        gfx_puts((p2d_t){(gfx_res_x() - error_sz.x) / 2, (gfx_res_y() - 8) / 2 + 64}, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), error_text);
+        //Construct the reason text
+        char reason_text[256] = "";
+        if(cant_boot & 1)
+            strcat(reason_text, "PAT ");
+        if(cant_boot & 2)
+            strcat(reason_text, "SYSCALL ");
+        //Print it
+        p2d_t reason_sz = gfx_text_bounds(reason_text);
+        gfx_puts((p2d_t){(gfx_res_x() - reason_sz.x) / 2, (gfx_res_y() - 8) / 2 + 74}, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), reason_text);
+        //Draw the buffer
+        gfx_flip();
+        //Hang
+        while(1);
+    }
+
+    //Set video buffer memory type
     vmem_pat_set_range(vmem_get_cr3(), gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
-    vmem_pat_print();
 
     //Print the krnl version
     if(!krnl_verbose)
@@ -464,7 +497,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
-
+    
     mtask_create_task(8192, "Multitasking bootstrapper", 100, mtask_entry, NULL);
     //The multitasking core is designed in such a way that after the
     //  first ever call to mtask_create_task() the execution of the

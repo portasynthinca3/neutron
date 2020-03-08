@@ -71,7 +71,7 @@ void gui_init(void){
     color_scheme.win_bg =                   COLOR32(240, 10, 10, 10);
     color_scheme.win_title =                COLOR32(255, 255, 255, 255);
     color_scheme.win_title_inactive =       COLOR32(255, 255, 255, 255);
-    color_scheme.win_border =               COLOR32(240, 236, 78, 32);
+    color_scheme.win_border =               COLOR32(240, 255, 82, 107);
     color_scheme.win_border_inactive =      COLOR32(140, 15, 15, 15);
     color_scheme.win_exit_btn =             COLOR32(255, 255, 0, 0);
     color_scheme.win_state_btn =            COLOR32(255, 255, 255, 255);
