@@ -269,6 +269,41 @@ void stdgui_create_cpuid(void){
     gui_create_label(window, (p2d_t){1, 1}, vendor_sz, vendor, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
     p2d_t brand_sz = gfx_text_bounds(brand);
     gui_create_label(window, (p2d_t){1, 10}, brand_sz, brand, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
+
+    //Create feature string
+    char cpu_feat[1024] = "CPU instructions: ";
+    uint32_t feat_edx, feat_ecx;
+    cpuid_get_feat(&feat_edx, &feat_ecx);
+    if(feat_edx & CPUID_FEAT_EDX_MMX)
+        strcat(cpu_feat, "MMX ");
+    if(feat_edx & CPUID_FEAT_EDX_SSE)
+        strcat(cpu_feat, "SSE ");
+    if(feat_edx & CPUID_FEAT_EDX_SSE2)
+        strcat(cpu_feat, "SSE2 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSE3)
+        strcat(cpu_feat, "SSE3 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSSE3)
+        strcat(cpu_feat, "SSSE3 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSE4_1)
+        strcat(cpu_feat, "SSE4.1 ");
+    if(feat_ecx & CPUID_FEAT_ECX_SSE4_2)
+        strcat(cpu_feat, "SSE4.2 ");
+    if(feat_ecx & CPUID_FEAT_ECX_AVX)
+        strcat(cpu_feat, "AVX ");
+    strcat(cpu_feat, "\nCPU features: ");
+    if(feat_edx & CPUID_FEAT_EDX_FPU)
+        strcat(cpu_feat, "FPU ");
+    if(feat_edx & CPUID_FEAT_EDX_SYSCALL)
+        strcat(cpu_feat, "SYSCALL ");
+    if(feat_edx & CPUID_FEAT_EDX_MTRR)
+        strcat(cpu_feat, "MTRR ");
+    if(feat_edx & CPUID_FEAT_EDX_PAT)
+        strcat(cpu_feat, "PAT ");
+    if(feat_ecx & CPUID_FEAT_ECX_XSAVE)
+        strcat(cpu_feat, "XSAVE ");
+
+    p2d_t feat_sz = gfx_text_bounds(cpu_feat);
+    gui_create_label(window, (p2d_t){1, 19}, feat_sz, cpu_feat, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), NULL);
 }
 
 /*
