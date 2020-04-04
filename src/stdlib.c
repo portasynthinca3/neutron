@@ -655,3 +655,12 @@ void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint
         desc.limit = sel * 8;
     __asm__ volatile("lgdt %0" : : "m" (desc));
 }
+
+/*
+ * Generates a random number
+ */
+uint32_t rand(void){
+    uint32_t num;
+    __asm__ volatile("rdrand %%eax; mov %%eax, %0" : "=m"(num) : : "eax");
+    return num;
+}

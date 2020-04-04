@@ -1,4 +1,0 @@
-#define win_state_width 8
-#define win_state_height 8
-static unsigned char win_state_bits[] = {
-   0x00, 0xff, 0xff, 0x81, 0x81, 0x81, 0xff, 0x00 };

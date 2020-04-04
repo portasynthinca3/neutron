@@ -7,24 +7,16 @@
 #include "./stdlib.h"
 #include "./cpuid.h"
 
-#include "./gui/gui.h"
-#include "./gui/windows.h"
-#include "./gui/controls.h"
-#include "./gui/stdgui.h"
-
 #include "./drivers/gfx.h"
 #include "./drivers/diskio.h"
 #include "./drivers/pci.h"
-#include "./drivers/usb.h"
-#include "./drivers/ata.h"
 #include "./drivers/apic.h"
 #include "./drivers/timr.h"
-#include "./drivers/human_io/ps2.h"
 #include "./drivers/human_io/mouse.h"
 #include "./drivers/acpi.h"
 #include "./drivers/initrd.h"
 
-#include "./fonts/font_neutral.h"
+#include "./fonts/jb-mono-10.h"
 
 #include "./images/neutron_logo.h"
 #include "./images/boot_err.h"
@@ -32,6 +24,8 @@
 #include "./mtask/mtask.h"
 
 #include "./vmem/vmem.h"
+
+#include "./app_drv/elf/elf.h"
 
 struct idt_desc idt_d;
 
@@ -75,53 +69,6 @@ EFI_SYSTEM_TABLE* krnl_efi_systable;
  */
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
     return krnl_efi_systable;
-}
-
-/*
- * This function is called whenever the user chooses the system color
- */
-void sys_color_change(ui_event_args_t* args){
-    color32_t color = stdgui_cpick_get_color();
-    color = COLOR32(240, color.r, color.g, color.b);
-    //Assign the color
-    gui_get_color_scheme()->win_border = color;
-    //Close the picker window
-    gui_destroy_window(args->win);
-}
-
-/*
- * This function is caled whenever the user requests the system color picker
- */
-void krnl_open_sys_color_picker(ui_event_args_t* args){
-    stdgui_create_color_picker(sys_color_change, gui_get_color_scheme()->win_border);
-}
-
-/*
- * This function is called whenever someone requests to shutdown
- */
-void krnl_shutdown(void){
-    acpi_shutdown();
-}
-
-/*
- * This function is called whenever someone requests to restart
- */
-void krnl_reboot(void){
-    acpi_reboot();
-}
-
-/*
- * This function is called whenewer the user presses a GUI power button
- */
-void krnl_gui_callback_power_pressed(void){
-    stdgui_create_shutdown_prompt();
-}
-
-/*
- * This function is called whenewer the user presses a GUI system button
- */
-void krnl_gui_callback_system_pressed(void){
-    stdgui_create_system_win();
 }
 
 /*
@@ -278,24 +225,11 @@ void krnl_boot_status(char* str, uint32_t progress){
     }
 }
 
-/*
- * GUI task code
- */
-void gui_task(void* args){
-    gfx_fill(COLOR32(255, 0, 0, 0));
-    gfx_flip();
-    while(1){
-        ps2_poll();
-        gui_update();
-        mouse_frame_end();
-    }
-}
-
 uint64_t dummy_var = 0;
 void dummy(void* args){
     while(1){
         dummy_var++;
-        mtask_dly_cycles(1000000000);
+        mtask_dly_cycles(100000000);
     }
 }
 
@@ -303,10 +237,12 @@ void dummy(void* args){
  * Multitasking entry point
  */
 void mtask_entry(void* args){
-    mtask_create_task(131072, "System UI", 10, gui_task, NULL);
-    mtask_create_task(8192, "Dummy task", 1, dummy, NULL);
+    //Launch a dummy task
+    mtask_create_task(8192, "Dummy task", 1, 1, 1, dummy, NULL);
     
+    //Exit the entry point
     mtask_stop_task(mtask_get_uid());
+    while(1);
 }
 
 /*
@@ -318,7 +254,7 @@ __attribute__((noreturn)) void __stack_chk_fail(void) {
 }
 
 /*
- * What is THIS for? I have _absolutely_ no idea :)
+ * What is THIS for? I have no idea :)
  */
 void ___chkstk_ms(void){
     
@@ -352,10 +288,12 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     gfx_init();
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
     gfx_fill(COLOR32(255, 0, 0, 0));
-    gfx_set_font(font_neutral);
+    gfx_set_font(jb_mono_10);
 
     gfx_verbose_println(KRNL_VERSION_STR);
     gfx_verbose_println("Verbose mode is on");
+    gfx_verbose_println("Тестируем Юникод (testing Unicode)");
+    gfx_verbose_println("!!!BEWARE!!! this is almost a coplete rewrite version of the system.");
 
     //Print CPU info
     gfx_verbose_println("CPU info:");
@@ -402,7 +340,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Set video buffer memory type
     vmem_pat_set_range(vmem_get_cr3(), gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
 
-    //Print the krnl version
+    //Print the kernel version
     if(!krnl_verbose)
         gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(KRNL_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
                  COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), KRNL_VERSION_STR);
@@ -430,29 +368,37 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
                      "mov %1, %%edx;"
                      "mov %2, %%eax;"
                      "xsetbv" : : "r" ((uint32_t)0), "r" ((uint32_t)(xcr0 >> 32)), "r" ((uint32_t)xcr0) : "eax", "ecx", "edx");
-    //Load initrd
+
+    //Load INITRD
     krnl_boot_status(">>> Reading INITRD <<<", 10);
     uint8_t initrd_status = initrd_init();
     if(initrd_status != 0){
         gfx_verbose_println("INITRD read error");
-        //while(1);
+        while(1);
     }
-    //Initialize PS/2
-    krnl_boot_status(">>> Initializing PS/2 <<<", 15);
-    ps2_init();
-    //Enumerate PCI devices
-    krnl_boot_status(">>> Detecting PCI devices <<<", 30);
-    pci_enumerate();
+    //Mount INITRD
+    diskio_init();
+    diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_INITRD, .device_no = 0}, "/initrd/");
+    //Try to load the font
+    gfx_verbose_println("Loading the Noto Sans Semibold font from INITRD");
+    file_handle_t font_file;
+    if(diskio_open("/initrd/noto-sans-semi-10.vlw", &font_file, DISKIO_FILE_ACCESS_READ) == DISKIO_STATUS_OK){
+        uint8_t* font_buf = (uint8_t*)malloc(font_file.info.size);
+        diskio_read(&font_file, font_buf, font_file.info.size);
+        diskio_close(&font_file);
+        gfx_set_font(font_buf);
+    } else {
+        gfx_verbose_println("Failed to load the font");
+    }
+
     //Initialize ACPI
     krnl_boot_status(">>> Initializing ACPI <<<", 45);
     acpi_init();
-    //Configure GUI
-    krnl_boot_status(">>> Configuring GUI <<<", 60);
-    gui_init();
+
     //Set up IDT
+    krnl_boot_status(">>> Setting up interrupts <<<", 75);
 	//Disable interrupts
 	__asm__ volatile("cli");
-    krnl_boot_status(">>> Setting up interrupts <<<", 75);
     //Exit UEFI boot services before we can use IDT
     SystemTable->BootServices->ExitBootServices(ImageHandle, efi_map_key);
     //Get the current code selector
@@ -488,17 +434,21 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(struct idt_entry);
     load_idt(&idt_d);
+
     //Initialize the APIC
     krnl_boot_status(">>> Initializing APIC <<<", 98);
     apic_init();
+
     //Initialize the multitasking system
     krnl_boot_status(">>> Initializing multitasking <<<", 99);
     mtask_init();
 
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
+
+    elf_load("/initrd/rax_counter.elf", 1);
     
-    mtask_create_task(8192, "Multitasking bootstrapper", 100, mtask_entry, NULL);
+    //mtask_create_task(8192, "Multitasking bootstrapper", 100, 1, 1, mtask_entry, NULL);
     //The multitasking core is designed in such a way that after the
     //  first ever call to mtask_create_task() the execution of the
     //  caller function stops forever, so we won't go any further

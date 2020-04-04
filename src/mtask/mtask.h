@@ -31,10 +31,11 @@ typedef struct {
 #define TASK_STATE_RUNNING                  0
 #define TASK_STATE_BlOCKED_CYCLES           1
 #define TASK_STATE_BLOCKED_MS               2
+#define TASK_STATE_WAITING_TO_RUN           3
 
 void mtask_init(void);
 void mtask_stop(void);
-uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void*), void* args);
+uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint8_t start, void(*func)(void*), void* args);
 void mtask_stop_task(uint64_t uid);
 uint64_t mtask_get_uid(void);
 task_t* mtask_get_task_list(void);

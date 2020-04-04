@@ -76,7 +76,7 @@ void mtask_stop(void){
  * If it's the first task ever created, starts multitasking
  * Returns the UID
  */
-uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, void(*func)(void*), void* args){
+uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint8_t start, void(*func)(void*), void* args){
     task_t* task = &mtask_task_list[mtask_next_task];
     //Clear the task registers (except for RCX, set it to the argument pointer)
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -92,10 +92,12 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     task->state.cr3 = cr3;
     //Allocate memory for the task stack
     void* task_stack = calloc(stack_size, 1);
-    //Map the memory
-    vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
-    //Set the framebuffer memory type as write-combining
-    vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
+    if(identity_map){
+        //Map the memory
+        vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
+        //Set the framebuffer memory type as write-combining
+        vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
+    }
     //Assign the task RSP
     task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 6);
     //Assign the task RIP
@@ -106,7 +108,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, vo
     task->state.rflags = rflags;
     //Reset some vars
     task->valid = 1;
-    task->state_code = TASK_STATE_RUNNING;
+    task->state_code = start ? TASK_STATE_RUNNING : TASK_STATE_WAITING_TO_RUN;
     task->blocked_till = 0;
 
     //Check if it's the first task ever created

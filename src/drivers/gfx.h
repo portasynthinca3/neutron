@@ -56,8 +56,8 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size);
 void gfx_draw_raw_key(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size, color32_t color, uint8_t rotate);
 void gfx_shift_up(uint32_t lines);
 
-p2d_t gfx_putch(p2d_t pos, color32_t color, color32_t bcolor, char c);
-void gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s);
+p2d_t gfx_glyph(p2d_t pos, color32_t color, color32_t bcolor, uint32_t c);
+p2d_t gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s);
 p2d_t gfx_text_bounds(char* s);
 
 void gfx_panic(uint64_t ip, uint64_t code);

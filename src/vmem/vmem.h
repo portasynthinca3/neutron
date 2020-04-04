@@ -34,3 +34,5 @@ void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_s
 void vmem_pat_print(void);
 void vmem_pat_set(uint8_t idx, uint8_t mem_type);
 void vmem_pat_set_range(uint64_t cr3, virt_addr_t st, virt_addr_t end, uint8_t mem_type);
+
+uint16_t vmem_create_pcid(void);

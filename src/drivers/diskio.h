@@ -1,41 +1,56 @@
 #ifndef DISKIO_H
 #define DISKIO_H
 
-#include "./ata.h"
+#include "../stdlib.h"
 
-//Size of the buffer dedicated to disk I/O
-#define DISK_IO_BUFFER_SIZE                 4096
+//Definitions
 
-//The device type
-typedef enum {DISK_FLOPPY,
-              DISK_PATA, DISK_PATAPI, DISK_SATA, DISK_SATAPI,
-              DISK_UHCI, DISK_OHCI, DISK_EHCI, DISK_XHCI} device_type_t;
+#define DISKIO_FILE_ACCESS_READ                     1
+#define DISKIO_FILE_ACCESS_WRITE                    2
+#define DISKIO_FILE_ACCESS_READ_WRITE               (DISKIO_FILE_ACCESS_READ | DISKIO_FILE_ACCESS_WRITE)
 
-typedef enum {DISKIO_STATUS_OK = 0, DISKIO_STATUS_INVALID_PART = 1, 
-              DISKIO_STATUS_UNSUPPORTED_FS = 2, DISKIO_STATUS_FILE_NOT_FOUND = 3, DISKIO_STATUS_OOB = 4} diskio_status_t;
+#define DISKIO_STATUS_OK                            0
+#define DISKIO_STATUS_FILE_NOT_FOUND                1
+#define DISKIO_STATUS_WRITE_PROTECTED               2
 
-//Structure describing a partition on a drive
+#define DISKIO_BUS_INITRD                           0
+
+//Settings
+
+#define DISKIO_MAX_MAPPINGS                         64
+
+//Structures
+
 typedef struct {
-    //Device type the partition is stored on
-    device_type_t device_type;
-    //Device number (numbering depends on the device's type)
-    uint32_t device_no;
-    //GPT entry number
-    uint8_t mbr_entry_no;
-    //LBA of the partition's start
-    uint64_t lba_start;
-    //Size of the partition in sectors
+    uint16_t bus_type;
+    uint64_t device_no;
+} diskio_dev_t;
+
+typedef struct {
+    uint8_t used;
+    diskio_dev_t device;
+    char mapped_at[256];
+} diskio_map_t;
+
+typedef struct {
+    char name[256];
     uint64_t size;
-    //Partition type
-    uint8_t type;
-    //Flag indicating whether the entry is valid
-    uint8_t valid;
-} disk_part_t;
+    uint64_t medium_start;
+    diskio_dev_t device;
+} file_info_t;
+
+typedef struct {
+    file_info_t info;
+    uint8_t mode;
+    uint64_t position;
+} file_handle_t;
+
+//Function prototypes
 
 void diskio_init(void);
-
-void diskio_read_sect(uint16_t part_no, uint32_t sect, uint8_t count, uint8_t from_part);
-
-uint8_t diskio_fs_read_file(uint8_t part_no, char* name, uint8_t* dest_buffer);
+void diskio_mount(diskio_dev_t device, char* path);
+uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode);
+uint8_t diskio_read(file_handle_t* handle, void* buf, uint64_t len);
+void diskio_close(file_handle_t* handle);
 
 #endif

@@ -8,6 +8,8 @@
 
 //A flag that indicates whether PCIDs are supported or not
 uint8_t pcid_supported = 0;
+//The next available PCID
+uint16_t pcid_next = 0;
 
 uint8_t vmem_pcid_supported(void){
     return pcid_supported;
@@ -390,4 +392,11 @@ uint64_t vmem_get_cr3(void){
     uint64_t cr3 = 0;
     __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
     return cr3;
+}
+
+/*
+ * Creates a new PCID
+ */
+uint16_t vmem_create_pcid(void){
+    return pcid_next++;
 }
