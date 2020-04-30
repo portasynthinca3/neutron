@@ -189,22 +189,23 @@ void gfx_choose_best(void){
             for(uint32_t base = 54; base <= 108; base += 18){
                 uint32_t mon_res_x = (uint32_t)*(uint8_t*)(edid->Edid + base + 2) << 4;
                 uint32_t mon_res_y = (uint32_t)*(uint8_t*)(edid->Edid + base + 5) << 4;
-                if(mon_res_x > mon_best_res_x || mon_res_y > mon_best_res_y){
+                if((mon_res_x * mon_res_y) > (mon_best_res_x * mon_best_res_y)){
                     mon_best_res_x = mon_res_x;
                     mon_best_res_y = mon_res_y;
                 }
             }
         }
     } else {
-        mon_best_res_x = 10000;
-        mon_best_res_y = 10000;
+        mon_best_res_x = 1280;
+        mon_best_res_y = 720;
     }
 
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info;
     uint64_t mode_info_size;
-    uint32_t best_res_x;
-    uint32_t best_res_y;
-    uint32_t best_mode_num;
+    uint32_t best_res_x = 0;
+    uint32_t best_res_y = 0;
+    uint32_t best_mode_num = 0;
+    uint8_t best_mode_is_rgb = 0;
     //Go through each mode and query its properties
     for(uint32_t i = 0; i < graphics_output->Mode->MaxMode; i++){
         //Query mode information
@@ -217,24 +218,24 @@ void gfx_choose_best(void){
                 graphics_output->SetMode(graphics_output, graphics_output->Mode->Mode);
                 graphics_output->QueryMode(graphics_output, i, &mode_info_size, &mode_info);
             } else {
+                krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
+                    (CHAR16*)L"Mode error\r\n");
                 //In case of any other error, skip this mode
                 continue;
             }
         }
 
-        //Only choose RGBReserved modes
-        if(mode_info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor){
-            //Fetch mode resolution and compare it with the best one currently discovered
-            //Do not exceed the display resolution
-            uint32_t mode_res_x = mode_info->HorizontalResolution;
-            uint32_t mode_res_y = mode_info->VerticalResolution;
-            if((mode_res_x > best_res_x || mode_res_y > best_res_y) &&
-               mode_res_y <= mon_best_res_y && mode_res_x <= mon_best_res_x){
-                //Record the new best mode
-                best_res_y = mode_res_y;
-                best_res_x = mode_res_x;
-                best_mode_num = i;
-            }
+        //Fetch mode resolution and compare it with the best one currently discovered
+        //Do not exceed the display resolution
+        uint32_t mode_res_x = mode_info->HorizontalResolution;
+        uint32_t mode_res_y = mode_info->VerticalResolution;
+        if((mode_res_x * mode_res_y > best_res_x * best_res_y) &&
+            (mode_res_y <= mon_best_res_y) && (mode_res_x <= mon_best_res_x)){
+            //Record the new best mode
+            best_res_y = mode_res_y;
+            best_res_x = mode_res_x;
+            best_mode_num = i;
+            best_mode_is_rgb = (mode_info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor);
         }
     }
     //Set the mode
@@ -519,7 +520,7 @@ p2d_t gfx_glyph(p2d_t pos, color32_t color, color32_t bcolor, uint32_t c){
         gfx_draw_rect((p2d_t){pos.x + 1, pos.y - font.ascent}, (p2d_t){font.size / 2, font.ascent + font.descent - 3}, color);
         return (p2d_t){font.size / 2 + 2, font.size};
     } else if(c == ' ') //Treat the missing space character specially
-        return (p2d_t){font.size / 4, font.size};
+        return (p2d_t){font.size / 3, font.size};
     //Get the glyph properties
     int32_t height = *(int32_t*)(glyph_ptr + 4); bswap_dw(&height);
     int32_t width = *(int32_t*)(glyph_ptr + 8); bswap_dw(&width);
@@ -649,6 +650,7 @@ void gfx_panic(uint64_t ip, uint64_t code){
     gfx_flip();
     gfx_set_buf(GFX_BUF_SEC);
     //Darken the screen
+    /*
     color32_t* buf = gfx_buffer();
     uint32_t res_x = gfx_res_x();
     uint32_t res_y = gfx_res_y();
@@ -659,6 +661,8 @@ void gfx_panic(uint64_t ip, uint64_t code){
             buf[(y * res_x) + x] = gfx_blend_colors(orig, COLOR32(255, 128, 0, 0), 64);
         }
     }
+    */
+    gfx_draw_filled_rect((p2d_t){0, 0}, (p2d_t){res_x, res_y}, COLOR32(32, 255, 128, 0));
     //Determine the error message that needs to be printed
     char* panic_msg = NULL;
     if(code == KRNL_PANIC_NOMEM_CODE)
@@ -691,7 +695,7 @@ void gfx_panic(uint64_t ip, uint64_t code){
     //Get its bounds
     p2d_t msg_bounds = gfx_text_bounds(text);
     //Print it
-    gfx_puts((p2d_t){.x = (gfx_res_x() - msg_bounds.x) / 2, .y = (gfx_res_y() - msg_bounds.y) / 2}, COLOR32(255, 255, 255, 255), COLOR32(128, 0, 0, 0), text);
+    gfx_puts((p2d_t){.x = (gfx_res_x() - msg_bounds.x) / 2, .y = (gfx_res_y() - msg_bounds.y) / 2}, COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), text);
     //Display it
     gfx_flip();
     //Hang

@@ -35,7 +35,9 @@ typedef struct {
 
 void mtask_init(void);
 void mtask_stop(void);
-uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint8_t start, void(*func)(void*), void* args);
+uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
+        void* suggested_stack, uint8_t start, void(*func)(void*), void* args);
+task_t* mtask_get_by_uid(uint64_t uid);
 void mtask_stop_task(uint64_t uid);
 uint64_t mtask_get_uid(void);
 task_t* mtask_get_task_list(void);

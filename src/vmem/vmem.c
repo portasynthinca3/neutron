@@ -1,6 +1,9 @@
 //Neutron Project
 //VMem - Virtual memory manager and paging controller
 
+#include "../krnl.h"
+#include <efi.h>
+#include <efilib.h>
 #include "./vmem.h"
 #include "../stdlib.h"
 #include "../cpuid.h"
@@ -24,7 +27,8 @@ void vmem_init(void){
     __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
     cr3 &= ~0xFFFULL; //full pls :>
     __asm__ volatile("mov %0, %%cr3" : : "r" (cr3));
-    //Enable Process Context Identifiers (PCIDs) and 4-level paging
+
+    //Enable Process Context Identifiers (PCIDs) and 4-level paging, disable SMAP and PKE
     uint64_t cr4;
     __asm__ volatile("mov %%cr4, %0" : "=r" (cr4));
     cr4 |= (1 << 5); //4-level paging
@@ -34,7 +38,14 @@ void vmem_init(void){
     pcid_supported = (ecx & CPUID_FEAT_ECX_PCID) > 0;
     if(pcid_supported)
         cr4 |= (1 << 17); //Then enable it
+    cr4 &= ~((1ULL << 21) | (1ULL << 22)); //Disable SMAP and PKE
     __asm__ volatile("mov %0, %%cr4" : : "r" (cr4));
+
+    //Disable write protection for supervisor access
+    uint64_t cr0;
+    __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
+    cr0 &= ~(1 << 16);
+    __asm__ volatile("mov %0, %%cr0" : : "r" (cr0));
 }
 
 /*
@@ -42,7 +53,7 @@ void vmem_init(void){
  */
 uint64_t vmem_create_pml4(uint16_t pcid){
     uint64_t cr3 = 0;
-    phys_addr_t pml4 = calloc(8192, 1); //allocate 8 kB even though we only need 4
+    phys_addr_t pml4 = vmem_addr_page(cr3, calloc(8192, 1)); //allocate 8 kB even though we only need 4
     pml4 = (uint8_t*)pml4 + 4096 - ((uint64_t)pml4 % 4096); //align by 4 kB
     //Set the PML4 pointer
     cr3 = (uint64_t)pml4;
@@ -63,17 +74,17 @@ void vmem_create_pdpt(uint64_t cr3, virt_addr_t at){
     //Extract PML4 address from CR3
     phys_addr_t pml4_addr = (phys_addr_t)(cr3 & 0xFFFFFFFFFFFFF000);
     //Extract entry index from "at"
-    uint64_t pml4e_idx = (uint64_t)at >> 39;
+    uint64_t pml4e_idx = ((uint64_t)at >> 39) & 0x1FF;
     //Calculate the address of the entry
     phys_addr_t pml4e_addr = (uint8_t*)pml4_addr + (pml4e_idx * 8);
     //Allocate space for the PDPT
-    phys_addr_t pdpt = calloc(8192, 1); //allocate 8 kB even though we only need 4
+    phys_addr_t pdpt = vmem_addr_page(cr3, calloc(8192, 1)); //allocate 8 kB even though we only need 4
     pdpt = (uint8_t*)pdpt + 4096 - ((uint64_t)pdpt % 4096); //align by 4 kB
     //Generate the entry
     uint64_t pml4e = 0;
     pml4e |= (1 << 0); //it's present
     pml4e |= (1 << 1); //writes are allowed
-    pml4e |= (1 << 2); //user access is allowed
+    //pml4e |= (1 << 2); //user access is allowed
     pml4e &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PDPT
     pml4e &= ~(1 << 5); //clear the "accessed" bit
     pml4e |= (uint64_t)pdpt & 0xFFFFFFFFFFFFF000; //set the address
@@ -89,7 +100,7 @@ uint8_t vmem_present_pdpt(uint64_t cr3, virt_addr_t at){
     //Extract PML4 address from CR3
     phys_addr_t pml4_addr = (phys_addr_t)(cr3 & 0xFFFFFFFFFFFFF000);
     //Extract PML4 entry index from "at"
-    uint64_t pml4e_idx = (uint64_t)at >> 39;
+    uint64_t pml4e_idx = ((uint64_t)at >> 39) & 0x1FF;
     //Check its "present" bit
     return *(uint64_t*)((uint8_t*)pml4_addr + (pml4e_idx * 8)) & 1;
 }
@@ -101,7 +112,7 @@ phys_addr_t vmem_addr_pdpt(uint64_t cr3, virt_addr_t at){
     //Extract PML4 address from CR3
     phys_addr_t pml4_addr = (phys_addr_t)(cr3 & 0xFFFFFFFFFFFFF000);
     //Extract PML4 entry index from "at"
-    uint64_t pml4e_idx = (uint64_t)at >> 39;
+    uint64_t pml4e_idx = ((uint64_t)at >> 39) & 0x1FF;
     //Extract PDPT entry address
     return (phys_addr_t)(*(uint64_t*)((uint8_t*)pml4_addr + (pml4e_idx * 8)) & 0x7FFFFFFFFFFFF000);
 }
@@ -119,7 +130,7 @@ void vmem_create_pd(uint64_t cr3, virt_addr_t at){
         vmem_create_pdpt(cr3, at); //Create it if not
     
     //Allocate space for the PD
-    phys_addr_t pd = calloc(8192, 1); //allocate 8 kB even though we only need 4
+    phys_addr_t pd = vmem_addr_page(cr3, calloc(8192, 1)); //allocate 8 kB even though we only need 4
     pd = (uint8_t*)pd + 4096 - ((uint64_t)pd % 4096); //align by 4 kB
     //Extract entry index from "at"
     uint64_t pdpte_idx = ((uint64_t)at >> 30) & 0x1FF;
@@ -129,7 +140,7 @@ void vmem_create_pd(uint64_t cr3, virt_addr_t at){
     uint64_t pdpte = 0;
     pdpte |= (1 << 0); //it's present
     pdpte |= (1 << 1); //writes are allowed
-    pdpte |= (1 << 2); //user access is allowed
+    //pdpte |= (1 << 2); //user access is allowed
     pdpte &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PDPT
     pdpte &= ~(1 << 5); //clear the "accessed" bit
     pdpte |= (uint64_t)pd & 0xFFFFFFFFFFFFF000; //set the address
@@ -175,7 +186,7 @@ void vmem_create_pt(uint64_t cr3, virt_addr_t at){
         vmem_create_pd(cr3, at); //Create it if not
     
     //Allocate space for the PT
-    phys_addr_t pt = calloc(8192, 1); //allocate 8 kB even though we only need 4
+    phys_addr_t pt = vmem_addr_page(cr3, calloc(8192, 1)); //allocate 8 kB even though we only need 4
     pt = (uint8_t*)pt + 4096 - ((uint64_t)pt % 4096); //align by 4 kB
     //Extract entry index from "at"
     uint64_t pde_idx = ((uint64_t)at >> 21) & 0x1FF;
@@ -185,7 +196,7 @@ void vmem_create_pt(uint64_t cr3, virt_addr_t at){
     uint64_t pde = 0;
     pde |= (1 << 0); //it's present
     pde |= (1 << 1); //writes are allowed
-    pde |= (1 << 2); //user access is allowed
+    //pde |= (1 << 2); //user access is allowed
     pde &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PDPT
     pde &= ~(1 << 5); //clear the "accessed" bit
     pde |= (uint64_t)pt & 0xFFFFFFFFFFFFF000; //set the address
@@ -238,7 +249,7 @@ void vmem_create_page(uint64_t cr3, virt_addr_t at, phys_addr_t from){
     uint64_t pte = 0;
     pte |= (1 << 0); //it's present
     pte |= (1 << 1); //writes are allowed
-    pte |= (1 << 2); //user access is allowed
+    //pte |= (1 << 2); //user access is allowed
     pte &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PDPT
     pte &= ~(1 << 5); //clear the "accessed" bit
     pte |= (uint64_t)from & 0xFFFFFFFFFFFFF000; //set the address
@@ -267,8 +278,9 @@ phys_addr_t vmem_addr_page(uint64_t cr3, virt_addr_t at){
     phys_addr_t pt = vmem_addr_pt(cr3, at);
     //Calculate the entry index
     uint64_t pte_idx = ((uint64_t)at >> 12) & 0x1FF;
-    //Extract its address
-    return (phys_addr_t)(*(uint64_t*)((uint8_t*)pt + (pte_idx * 8)) & 0x7FFFFFFFFFFFF000);
+    //Extract its base address and add the offset
+    return (phys_addr_t*)((uint64_t)(*(uint64_t*)((uint8_t*)pt + (pte_idx * 8)) & 0x7FFFFFFFFFFFF000)
+                        + (uint64_t)((uint64_t)at & 0xFFF));
 }
 
 

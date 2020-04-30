@@ -2,6 +2,7 @@
 //ELF support
 
 #include "./elf.h"
+#include "../../krnl.h"
 #include "../../stdlib.h"
 #include "../../drivers/diskio.h"
 #include "../../drivers/gfx.h"
@@ -49,6 +50,8 @@ uint8_t elf_load(char* path, uint8_t debug){
     }
     //Create a virtual memory space
     uint64_t cr3 = vmem_create_pml4(vmem_create_pcid());
+    //Map the kernel in the upper half
+    vmem_map(cr3, (void*)krnl_get_pos().offset, (void*)(krnl_get_pos().offset + krnl_get_pos().size), (void*)(0xFFFF800000000000ULL));
     //Go through the sections
     for(uint32_t i = 0; i < elf_hdr.hdr.sect_hdr_entry_cnt; i++){
         uint32_t offs = elf_hdr.hdr.sec_hdr_table_pos + (i * elf_hdr.hdr.sect_hdr_entry_sz);
@@ -100,4 +103,10 @@ uint8_t elf_load(char* path, uint8_t debug){
             }
         }
     }
+    if(debug) gfx_verbose_println("\nELF: executing the process");
+    //Allocate some memory for the stack and map it
+    void* stack = calloc(8192, 1);
+    vmem_map(cr3, stack, (void*)((uint8_t*)stack + 8192), (void*)(1ULL << 23));
+    //Create a new task
+    uint64_t task_uid = mtask_create_task(8192, path, 1, 0, cr3, (void*)(1ULL << 23), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL);
 }

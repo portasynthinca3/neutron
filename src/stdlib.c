@@ -7,10 +7,12 @@
 #include "./stdlib.h"
 #include "./drivers/gfx.h"
 #include "./mtask/mtask.h"
+#include "./vmem/vmem.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
 free_block_t* first_free_block;
+void* gen_free_base_initial;
 void* gen_free_base;
 void* gen_free_top;
 uint64_t bad_ram_size = 0;
@@ -100,6 +102,7 @@ uint64_t dram_init(void){
 
     //Set up general free heap
     gen_free_base = best_block_start;
+    gen_free_base_initial = gen_free_base;
     gen_free_top = (uint8_t*)best_block_start + best_block_size;
     total_ram_size += best_block_size;
 
@@ -111,6 +114,18 @@ uint64_t dram_init(void){
 
     //Return the map key
     return map_key;
+}
+
+/*
+ * Shifts the dynamic memory region in the current address space to the higher quarter
+ */
+void dram_shift(void){
+    //Map the range
+    vmem_map(vmem_get_cr3(), gen_free_base_initial, gen_free_top, (void*)0xFFFFC00000000000ULL);
+    //Shift the ranges
+    //gen_free_top = (void*)((uint64_t)gen_free_top - (uint64_t)gen_free_base + 0xFFFFC00000000000ULL);
+    //gen_free_base = (void*)((uint64_t)gen_free_base - (uint64_t)gen_free_base_initial + 0xFFFFC00000000000ULL);
+    //gen_free_base_initial = (void*)0xFFFFC00000000000ULL;
 }
 
 /*
@@ -159,45 +174,6 @@ void* malloc(size_t size){
  * Free a memory block allocated by malloc(), calloc() and others
  */
 void free(void* ptr){
-    /*
-    //Find a used block with a pointer equal to the provided one
-    int32_t blk = -1;
-    for(uint32_t i = 0; i < STDLIB_DRAM_MEMBLOCKS; i++){
-        if(_mem_blocks[i].used && _mem_blocks[i].ptr == ptr){
-            blk = i;
-            break;
-        }
-    }
-    //If no such blocks were found, the caller is a LIAR!
-    if(blk == -1)
-        return;
-    //Mark the found block as unused
-    _mem_blocks[blk].used = 0;
-    //If this isn't the first block, merge it with the previous one if it's unused too
-    if(blk > 0){
-        if(!_mem_blocks[blk - 1].used){
-            struct _mem_block blk_new;
-            blk_new.ptr = _mem_blocks[blk - 1].ptr;
-            blk_new.size = _mem_blocks[blk - 1].size + _mem_blocks[blk].size;
-            blk_new.used = 0;
-            _mem_blocks[blk] = blk_new;
-            //Mark the previous block as invalid
-            _mem_blocks[blk - 1].ptr = NULL;
-        }
-    }
-    //If this isn't the last block, merge it with the next one if it's unused too
-    if(blk < STDLIB_DRAM_MEMBLOCKS - 1){
-        if(!_mem_blocks[blk + 1].used){
-            struct _mem_block blk_new;
-            blk_new.ptr = _mem_blocks[blk].ptr;
-            blk_new.size = _mem_blocks[blk + 1].size + _mem_blocks[blk].size;
-            blk_new.used = 0;
-            _mem_blocks[blk] = blk_new;
-            //Mark the next block as invalid
-            _mem_blocks[blk + 1].ptr = NULL;
-        }
-    }
-    */
 }
 
 /*
@@ -213,7 +189,7 @@ void* calloc(uint64_t num, size_t size){
 }
 
 /*
- * Fill a chunk of memory with certain values
+ * Fill a chunk of memory with given values
  */
 void* memset(void* dst, int ch, size_t size){
     //Convert ch to 8 bits

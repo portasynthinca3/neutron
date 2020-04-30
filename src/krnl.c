@@ -1,11 +1,13 @@
 //Neutron Project
 //The kernel
 
-#include <efi.h>
-#include <efilib.h>
+#include "./krnl.h"
 
 #include "./stdlib.h"
 #include "./cpuid.h"
+
+#include <efi.h>
+#include <efilib.h>
 
 #include "./drivers/gfx.h"
 #include "./drivers/diskio.h"
@@ -55,6 +57,9 @@ extern void exc_19(void);
 extern void exc_20(void);
 extern void exc_30(void);
 
+//Where the kernel is loaded in memory
+krnl_pos_t krnl_pos;
+
 //Stack Smashing Protection guard
 uint64_t __stack_chk_guard;
 
@@ -69,6 +74,13 @@ EFI_SYSTEM_TABLE* krnl_efi_systable;
  */
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
     return krnl_efi_systable;
+}
+
+/*
+ * Returns the information about where the in memory the kernel is located
+ */
+krnl_pos_t krnl_get_pos(void){
+    return krnl_pos;
 }
 
 /*
@@ -237,11 +249,12 @@ void dummy(void* args){
  * Multitasking entry point
  */
 void mtask_entry(void* args){
-    //Launch a dummy task
-    mtask_create_task(8192, "Dummy task", 1, 1, 1, dummy, NULL);
+    gfx_verbose_println("Hello from mtask_entry");
+    //Load a simple program
+    elf_load("/initrd/rax_counter.elf", 1);
     
     //Exit the entry point
-    mtask_stop_task(mtask_get_uid());
+    //mtask_stop_task(mtask_get_uid());
     while(1);
 }
 
@@ -272,6 +285,12 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
     krnl_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron is starting up\r\n");
+
+    //Using the loaded image protocol, find out where we are loaded in the memory
+    EFI_LOADED_IMAGE_PROTOCOL* efi_lip = NULL;
+    SystemTable->BootServices->HandleProtocol(ImageHandle, &(EFI_GUID)EFI_LOADED_IMAGE_PROTOCOL_GUID, (void**)&efi_lip);
+    krnl_pos.offset = (uint64_t)efi_lip->ImageBase;
+    krnl_pos.size = efi_lip->ImageSize;
 
 	//Disable interrupts
 	__asm__ volatile("cli");
@@ -344,7 +363,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     if(!krnl_verbose)
         gfx_puts((p2d_t){.x = (gfx_res_x() - gfx_text_bounds(KRNL_VERSION_STR).x) / 2, .y = gfx_res_y() - 8},
                  COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), KRNL_VERSION_STR);
-    //Draw the neutron logo
+    //Draw the logo
     gfx_draw_raw((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo,
                  (p2d_t){.x = neutron_logo_width, .y = neutron_logo_height});
     //Print the boot process
@@ -397,10 +416,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     //Set up IDT
     krnl_boot_status(">>> Setting up interrupts <<<", 75);
+    //Exit UEFI boot services
+    SystemTable->BootServices->ExitBootServices(ImageHandle, efi_map_key);
 	//Disable interrupts
 	__asm__ volatile("cli");
-    //Exit UEFI boot services before we can use IDT
-    SystemTable->BootServices->ExitBootServices(ImageHandle, efi_map_key);
     //Get the current code selector
     uint16_t cur_cs = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
@@ -429,7 +448,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt[20] = IDT_ENTRY_ISR((uint64_t)&exc_20, cur_cs);
     idt[30] = IDT_ENTRY_ISR((uint64_t)&exc_30, cur_cs);
     //Set up gates for interrupts
-    idt[32] = IDT_ENTRY_ISR((uint64_t)&apic_timer_isr_wrap, cur_cs);
+    idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
     //Load IDT
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(struct idt_entry);
@@ -439,19 +458,31 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status(">>> Initializing APIC <<<", 98);
     apic_init();
 
+    //Shift the DRAM region
+    vmem_init();
+    dram_shift();
+
     //Initialize the multitasking system
     krnl_boot_status(">>> Initializing multitasking <<<", 99);
     mtask_init();
 
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
-
-    elf_load("/initrd/rax_counter.elf", 1);
     
-    //mtask_create_task(8192, "Multitasking bootstrapper", 100, 1, 1, mtask_entry, NULL);
-    //The multitasking core is designed in such a way that after the
-    //  first ever call to mtask_create_task() the execution of the
-    //  caller function stops forever, so we won't go any further
-    //But just to double-check,
+    //Create a virtual memory space
+    uint64_t cr3 = vmem_create_pml4(vmem_create_pcid());
+    //Map the kernel in the upper half
+    {
+        //But first, print the debug info about where we are
+        char temp[128] = "Kernel loaded at 0x";
+        char temp2[64];
+        char temp3[64];
+        gfx_verbose_println(strcat(strcat(strcat(temp, sprintub16(temp2, krnl_pos.offset, 1)), " / size 0x"), sprintub16(temp3, krnl_pos.size, 1)));
+    }
+    //Map the kernel in the upper half
+    vmem_map(cr3, (void*)krnl_pos.offset, (void*)(krnl_pos.offset + krnl_pos.size), (void*)(0xFFFF800000000000ULL));
+    //Identity map the first 8GB of the memory
+    vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
+    mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, cr3, NULL, 1, (void(*)(void*))((uint64_t)(mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
     while(1);
 }

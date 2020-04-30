@@ -5,9 +5,6 @@
 #define NULL ((void*)0)
 #endif
 
-//The kernel version
-#define KRNL_VERSION_STR "v0.6.0"
-
 //Use WC for memcpy() transfers?
 #define STDLIB_MEMCPY_WC
 
@@ -107,6 +104,7 @@ uint32_t rand(void);
 uint64_t stdlib_usable_ram(void);
 uint64_t stdlib_used_ram(void);
 uint64_t dram_init(void);
+void dram_shift(void);
 void* malloc(size_t size);
 void free(void* ptr);
 void* calloc(uint64_t num, size_t size);

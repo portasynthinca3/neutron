@@ -1,3 +1,5 @@
+#!/bin/python
+
 import sys, os, time
 from os import listdir
 from os.path import isfile, join
@@ -23,7 +25,7 @@ def execute(cmd):
 build_start = time.time()
 
 if '-h' in sys.argv:
-	print('Additional arguments:\n  -h    display this message\n  -v    print every command being executed')
+	print('Additional arguments:\n  -h    display this message\n  -v    print every command executed\n  -d    replace -Os GCC option with -Og')
 	exit()
 
 config_file = 'nbuild'
@@ -58,13 +60,17 @@ for line_no in range(len(config_lines)):
 					print('Error: ' + config_file + ':' + str(line_no + 1) + ': data in invalid section "' + config_section + '"')
 					sys.exit()
 
+print_status('Cleaning the build directory')
+execute('rm -rf build/*')
+
 c_obj = list()
 print_status('Compiling C sources')
 for path in c_files:
 	path_obj = 'build/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path)
-	execute('x86_64-w64-mingw32-gcc -ffreestanding -mcmodel=large -mno-red-zone -m64 -msse2 -mstackrealign -Os -fstack-protector -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
+	execute('x86_64-w64-mingw32-gcc -ffreestanding -mcmodel=large -mno-red-zone -m64 -mno-sse2 -mstackrealign ' + ('-Og' if '-d' in sys.argv else '-Os') +
+			' -fstack-protector -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
 
 print_status('Linking')
 execute('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))

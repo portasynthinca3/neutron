@@ -73,7 +73,7 @@ exc_wrapper:
     ;//Save the state of the currently running task
     ;//For ease of debugging
     add rsp, 8
-    call mtask_save_state
+    ;//call mtask_save_state
     sub rsp, 8
     ;//Get exception number
     pop rcx
@@ -90,7 +90,7 @@ exc_wrapper_code:
     ;//Save the state of the currently running task
     ;//For ease of debugging
     add rsp, 16
-    call mtask_save_state
+    ;//call mtask_save_state
     sub rsp, 16
     ;//Get exception number
     pop rcx

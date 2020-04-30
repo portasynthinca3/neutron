@@ -76,7 +76,9 @@ void mtask_stop(void){
  * If it's the first task ever created, starts multitasking
  * Returns the UID
  */
-uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint8_t start, void(*func)(void*), void* args){
+uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
+        void* suggested_stack, uint8_t start, void(*func)(void*), void* args){
+
     task_t* task = &mtask_task_list[mtask_next_task];
     //Clear the task registers (except for RCX, set it to the argument pointer)
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -87,22 +89,24 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     task->prio_cnt = task->priority;
     //Copy the name
     memcpy(task->name, name, strlen(name) + 1);
-    //Create a new PML4 and assign the CR3
-    uint64_t cr3 = vmem_create_pml4(task->uid);
+    //Create a new address space or assign the given CR3
+    uint64_t cr3 = _cr3;
+    if(cr3 == 0)
+        cr3 = vmem_create_pml4(task->uid);
     task->state.cr3 = cr3;
-    //Allocate memory for the task stack
-    void* task_stack = calloc(stack_size, 1);
-    if(identity_map){
-        //Map the memory
+    if(identity_map)
         vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
-        //Set the framebuffer memory type as write-combining
-        vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
-    }
+    //Allocate memory for the task stack
+    void* task_stack = suggested_stack;
+    if(task_stack == NULL)
+        task_stack = calloc(stack_size, 1);
+    //Set the framebuffer memory type as write-combining
+    vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
     //Assign the task RSP
-    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 6);
+    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 1);
     //Assign the task RIP
     task->state.rip = (uint64_t)func;
-    //Assign the task and RFLAGS
+    //Assign the task RFLAGS
     uint64_t rflags;
     __asm__ volatile("pushfq; pop %0" : "=m" (rflags));
     task->state.rflags = rflags;
@@ -112,7 +116,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     task->blocked_till = 0;
 
     //Check if it's the first task ever created
-    if(mtask_next_task++ == 0){
+    if((mtask_next_task++ == 0) && start){
         //Assign the current task
         mtask_cur_task = task;
         mtask_cur_task_no = 0;
@@ -120,7 +124,6 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
         //It should switch to the newly created task
         __asm__ volatile("cli");
         mtask_enabled = 1;
-        vmem_init();
         __asm__ volatile("jmp mtask_restore_state");
     }
 
@@ -128,7 +131,16 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
 }
 
 /*
- * Destroys the task with a certain UID
+ * Gets the task by the UID
+ */
+task_t* mtask_get_by_uid(uint64_t uid){
+    for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
+        if(mtask_task_list[i].uid == uid)
+            return &mtask_task_list[i];
+}
+
+/*
+ * Stops the task with by the UID
  */
 void mtask_stop_task(uint64_t uid){
     //Find the task and destoy it
