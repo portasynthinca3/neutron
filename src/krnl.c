@@ -1,5 +1,5 @@
 //Neutron Project
-//The kernel
+//The main file
 
 #include "./krnl.h"
 
@@ -28,8 +28,6 @@
 #include "./vmem/vmem.h"
 
 #include "./app_drv/elf/elf.h"
-
-struct idt_desc idt_d;
 
 extern void enable_a20(void);
 extern void apic_timer_isr_wrap(void);
@@ -66,8 +64,10 @@ uint64_t __stack_chk_guard;
 //Is the kernel in verbose mode or not?
 uint8_t krnl_verbose;
 
-//Pointer to the EFI system table
+//EFI stuff
 EFI_SYSTEM_TABLE* krnl_efi_systable;
+EFI_HANDLE krnl_efi_img_handle;
+uint64_t krnl_efi_map_key;
 
 /*
  * Gets the EFI system table pointer
@@ -249,13 +249,12 @@ void dummy(void* args){
  * Multitasking entry point
  */
 void mtask_entry(void* args){
-    gfx_verbose_println("Hello from mtask_entry");
+    gfx_verbose_println("Hello from mtask_entry\nLoading test ELF file");
     //Load a simple program
-    elf_load("/initrd/rax_counter.elf", 1);
+    elf_load("/initrd/elftest.elf", 1);
     
     //Exit the entry point
-    //mtask_stop_task(mtask_get_uid());
-    while(1);
+    mtask_stop_task(mtask_get_uid());
 }
 
 /*
@@ -281,6 +280,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     __asm__ ("rdrand %%eax; mov %%eax, %0" : "=m" (__stack_chk_guard) : : "eax");
     //Save the system table pointer
     krnl_efi_systable = SystemTable;
+    krnl_efi_img_handle = ImageHandle;
     //Disable the watchdog timer
     krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
@@ -297,7 +297,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Initialize x87 FPU
     __asm__ volatile("finit");
     //Do some initialization stuff
-    uint64_t efi_map_key = dram_init();
+    krnl_efi_map_key = dram_init();
+    vmem_init();
+    dram_shift();
 
     //Set verbose mode
     krnl_verbose = 1;
@@ -311,8 +313,28 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     gfx_verbose_println(KRNL_VERSION_STR);
     gfx_verbose_println("Verbose mode is on");
-    gfx_verbose_println("Тестируем Юникод (testing Unicode)");
-    gfx_verbose_println("!!!BEWARE!!! this is almost a coplete rewrite version of the system.");
+
+    //Print debug info about where we are
+    {
+        char temp[256] = "Kernel is loaded at 0x";
+        char temp2[64];
+        char temp3[64];
+        char temp4[64];
+        char temp5[64];
+        strcat(strcat(strcat(temp, sprintub16(temp2, krnl_pos.offset, 1)), " / size 0x"), sprintub16(temp3, krnl_pos.size, 1));
+        strcat(temp, " / entry 0x");
+        strcat(temp, sprintub16(temp4, (uint64_t)&efi_main, 1));
+        gfx_verbose_println(temp);
+
+        memset(temp, 0, 256);
+        memcpy(temp, "Dynamic memory physbase: 0x", strlen("Dynamic memory physbase: 0x"));
+        strcat(temp, sprintub16(temp5, (uint64_t)stdlib_physbase(), 0));
+        gfx_verbose_println(temp);
+    }
+
+    //Map default regions
+    vmem_map_defaults(vmem_get_cr3());
+    gfx_shift_buf();
 
     //Print CPU info
     gfx_verbose_println("CPU info:");
@@ -357,7 +379,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     }
 
     //Set video buffer memory type
-    vmem_pat_set_range(vmem_get_cr3(), gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
+    //vmem_pat_set_range(vmem_get_cr3(), gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
 
     //Print the kernel version
     if(!krnl_verbose)
@@ -417,72 +439,85 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Set up IDT
     krnl_boot_status(">>> Setting up interrupts <<<", 75);
     //Exit UEFI boot services
-    SystemTable->BootServices->ExitBootServices(ImageHandle, efi_map_key);
+    krnl_get_efi_systable()->BootServices->ExitBootServices(krnl_efi_img_handle, krnl_efi_map_key);
 	//Disable interrupts
 	__asm__ volatile("cli");
     //Get the current code selector
     uint16_t cur_cs = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
     //Set up IDT
-    struct idt_entry* idt = (struct idt_entry*)calloc(256, sizeof(struct idt_entry));
+    idt_entry* idt = (idt_entry*)calloc(256, sizeof(idt_entry));
+    idt_desc idt_d;
     //Set up gates for exceptions
-    idt[0] = IDT_ENTRY_ISR((uint64_t)&exc_0, cur_cs);
-    idt[1] = IDT_ENTRY_ISR((uint64_t)&exc_1, cur_cs);
-    idt[2] = IDT_ENTRY_ISR((uint64_t)&exc_2, cur_cs);
-    idt[3] = IDT_ENTRY_ISR((uint64_t)&exc_3, cur_cs);
-    idt[4] = IDT_ENTRY_ISR((uint64_t)&exc_4, cur_cs);
-    idt[5] = IDT_ENTRY_ISR((uint64_t)&exc_5, cur_cs);
-    idt[6] = IDT_ENTRY_ISR((uint64_t)&exc_6, cur_cs);
-    idt[7] = IDT_ENTRY_ISR((uint64_t)&exc_7, cur_cs);
-    idt[8] = IDT_ENTRY_ISR((uint64_t)&exc_8, cur_cs);
-    idt[9] = IDT_ENTRY_ISR((uint64_t)&exc_9, cur_cs);
-    idt[10] = IDT_ENTRY_ISR((uint64_t)&exc_10, cur_cs);
-    idt[11] = IDT_ENTRY_ISR((uint64_t)&exc_11, cur_cs);
-    idt[12] = IDT_ENTRY_ISR((uint64_t)&exc_12, cur_cs);
-    idt[13] = IDT_ENTRY_ISR((uint64_t)&exc_13, cur_cs);
-    idt[14] = IDT_ENTRY_ISR((uint64_t)&exc_14, cur_cs);
-    idt[16] = IDT_ENTRY_ISR((uint64_t)&exc_16, cur_cs);
-    idt[17] = IDT_ENTRY_ISR((uint64_t)&exc_17, cur_cs);
-    idt[18] = IDT_ENTRY_ISR((uint64_t)&exc_18, cur_cs);
-    idt[19] = IDT_ENTRY_ISR((uint64_t)&exc_19, cur_cs);
-    idt[20] = IDT_ENTRY_ISR((uint64_t)&exc_20, cur_cs);
-    idt[30] = IDT_ENTRY_ISR((uint64_t)&exc_30, cur_cs);
+    idt[0] = IDT_ENTRY_ISR((uint64_t)(&exc_0 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[1] = IDT_ENTRY_ISR((uint64_t)(&exc_1 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[2] = IDT_ENTRY_ISR((uint64_t)(&exc_2 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[3] = IDT_ENTRY_ISR((uint64_t)(&exc_3 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[4] = IDT_ENTRY_ISR((uint64_t)(&exc_4 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[5] = IDT_ENTRY_ISR((uint64_t)(&exc_5 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[6] = IDT_ENTRY_ISR((uint64_t)(&exc_6 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[7] = IDT_ENTRY_ISR((uint64_t)(&exc_7 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[8] = IDT_ENTRY_ISR((uint64_t)(&exc_8 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[9] = IDT_ENTRY_ISR((uint64_t)(&exc_9 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[10] = IDT_ENTRY_ISR((uint64_t)(&exc_10 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[11] = IDT_ENTRY_ISR((uint64_t)(&exc_11 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[12] = IDT_ENTRY_ISR((uint64_t)(&exc_12 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[13] = IDT_ENTRY_ISR((uint64_t)(&exc_13 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[14] = IDT_ENTRY_ISR((uint64_t)(&exc_14 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[16] = IDT_ENTRY_ISR((uint64_t)(&exc_16 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[17] = IDT_ENTRY_ISR((uint64_t)(&exc_17 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[18] = IDT_ENTRY_ISR((uint64_t)(&exc_18 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[19] = IDT_ENTRY_ISR((uint64_t)(&exc_19 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[20] = IDT_ENTRY_ISR((uint64_t)(&exc_20 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[30] = IDT_ENTRY_ISR((uint64_t)(&exc_30 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
     //Set up gates for interrupts
     idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
     //Load IDT
     idt_d.base = (void*)idt;
-    idt_d.limit = 256 * sizeof(struct idt_entry);
+    idt_d.limit = 256 * sizeof(idt_entry);
     load_idt(&idt_d);
+    //Move the GDT
+    gdt_desc gdt_d;
+    __asm__ volatile("sgdt %0" : : "m"(gdt_d));
+    void* new_gdt = malloc(gdt_d.limit);
+    memcpy(new_gdt, gdt_d.base, gdt_d.limit);
+    memset(gdt_d.base, 0, gdt_d.limit);
+    gdt_d.base = new_gdt;
+    __asm__ volatile("lgdt %0" : : "m"(gdt_d));
 
     //Initialize the APIC
-    krnl_boot_status(">>> Initializing APIC <<<", 98);
+    krnl_boot_status(">>> Initializing APIC <<<", 80);
     apic_init();
 
-    //Shift the DRAM region
-    vmem_init();
-    dram_shift();
-
     //Initialize the multitasking system
-    krnl_boot_status(">>> Initializing multitasking <<<", 99);
+    krnl_boot_status(">>> Initializing multitasking <<<", 90);
     mtask_init();
 
     //The loading process is done!
     krnl_boot_status(">>> Done <<<", 100);
-    
-    //Create a virtual memory space
-    uint64_t cr3 = vmem_create_pml4(vmem_create_pcid());
-    //Map the kernel in the upper half
-    {
-        //But first, print the debug info about where we are
-        char temp[128] = "Kernel loaded at 0x";
-        char temp2[64];
-        char temp3[64];
-        gfx_verbose_println(strcat(strcat(strcat(temp, sprintub16(temp2, krnl_pos.offset, 1)), " / size 0x"), sprintub16(temp3, krnl_pos.size, 1)));
+
+    //Okay. This is jank level 100 here.
+    //THIS way of doing things is BAD. Nevermand in an operating system kernel!
+    //I really hope this is a temporary fix.
+
+    //Scan through the loaded kernel image and find integers values of which belong to this range.
+    //Replace them with their upper-half variants.
+    //    (basically, this is poor man's relocation)
+    //    (please, forgive me. I wasn't able to tell my compiler not to
+    //     generate code with these .refptr. references :< )
+    uint64_t orig_pos = krnl_pos.offset;
+    for(uint64_t o = orig_pos; o <= orig_pos + krnl_pos.size - 8; o++){
+        uint64_t* ptr = (uint64_t*)o;
+        uint64_t val = *ptr;
+        if(val >= orig_pos && val <= orig_pos + krnl_pos.size){
+            val = (val - orig_pos) | 0xFFFF800000000000ULL;
+            *ptr = val;
+        }
     }
-    //Map the kernel in the upper half
-    vmem_map(cr3, (void*)krnl_pos.offset, (void*)(krnl_pos.offset + krnl_pos.size), (void*)(0xFFFF800000000000ULL));
-    //Identity map the first 8GB of the memory
-    vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
-    mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, cr3, NULL, 1, (void(*)(void*))((uint64_t)(mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
+    krnl_pos.offset = orig_pos;
+
+    //Create an initial task
+    mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, vmem_get_cr3(), NULL,
+                      1, (void(*)(void*))(((uint64_t)&mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
     while(1);
 }

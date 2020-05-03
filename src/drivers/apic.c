@@ -14,7 +14,7 @@ void apic_init(void){
     //Disable interrupts
     __asm__ volatile("cli");
     //Set LAPIC base
-    lapic_base = 0xFEE00000;
+    lapic_base = 0xFFFFFFFFFFFFE000ULL;
     //Set task and processor priority to 0
     apic_reg_wr(LAPIC_REG_TPR, 0);
     apic_reg_wr(LAPIC_REG_PPR, 0);
@@ -41,14 +41,14 @@ void apic_init(void){
  * Reads LAPIC register
  */
 uint32_t apic_reg_rd(uint32_t reg){
-    return *(uint32_t*)(lapic_base + reg);
+    return *(uint32_t*)(lapic_base + (uint64_t)reg);
 }
 
 /*
  * Writes LAPIC register
  */
 void apic_reg_wr(uint32_t reg, uint32_t val){
-    *(uint32_t*)(lapic_base + reg) = val;
+    *(uint32_t*)(lapic_base + (uint64_t)reg) = val;
 }
 
 /*

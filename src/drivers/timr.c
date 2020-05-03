@@ -15,21 +15,20 @@ void timr_init(void){
     apic_reg_wr(LAPIC_REG_TPR, 0);
     //Set the 16x divider
     apic_reg_wr(LAPIC_REG_TIMR_DIVCONF, 0x3);
-    //In order to use the APIC timer, we need to get
-    //  an initial clock source
-    //And we will count 100M CPU cycles for that
+    //In order to use the APIC timer, we need to get an initial clock source
+    //And we will count 10M CPU cycles for that
     uint64_t tsc_start = rdtsc();
     apic_reg_wr(LAPIC_REG_TIMR_INITCNT, 0xFFFFFFFF); //Set an initial count of uint32_t_max-1
     //Wait for 10M cycles to pass
-    while(rdtsc() - tsc_start < 100000);
+    while(rdtsc() - tsc_start < 10000000);
     //Stop the APIC timer
     apic_reg_wr(LAPIC_REG_LVT_TIM, 0x10000);
     //Get the counter value
     uint32_t cnt_val = apic_reg_rd(LAPIC_REG_TIMR_CURCNT);
     uint32_t ticks_in_cycles = 0xFFFFFFFF - cnt_val;
-    apic_reg_wr(LAPIC_REG_LVT_TIM, 0x20000 | 32); //Enable the timer with interrupt vector #32
     apic_reg_wr(LAPIC_REG_TIMR_DIVCONF, 0); //Set the divider to 2
-    apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_cycles * 50); //Set the initial counter value
+    apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_cycles * 10); //Set the initial counter value
+    apic_reg_wr(LAPIC_REG_LVT_TIM, 0x20000 | 32); //Enable the timer with interrupt vector #32
 }
 
 /*

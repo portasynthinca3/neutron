@@ -7,12 +7,14 @@
 
 #include "./gfx.h"
 #include "../stdlib.h"
+#include "../vmem/vmem.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
 //The video buffer pointers
-color32_t* vbe_buffer;
+color32_t* gop_buffer;
 color32_t* sec_buffer;
+phys_addr_t gop_buffer_physbase;
 #ifdef GFX_TRIBUF
 color32_t* mid_buffer;
 #endif
@@ -63,11 +65,25 @@ uint32_t gfx_res_y(void){
  * Retrieve the currently used buffer pointer
  */
 color32_t* gfx_buffer(void){
-    return (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
+    return (buf_sel == GFX_BUF_VBE) ? gop_buffer : sec_buffer;
 }
 
 color32_t* gfx_buf_another(void){
-    return (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+    return (buf_sel == GFX_BUF_VBE) ? sec_buffer : gop_buffer;
+}
+
+/*
+ * Shifts the display buffer addres to the upper-half window
+ */
+void gfx_shift_buf(void){
+    gop_buffer = (color32_t*)0xFFFF880000000000ULL;
+}
+
+/*
+ * Returns the physical address of the framebuffer
+ */
+phys_addr_t gfx_physbase(void){
+    return gop_buffer_physbase;
 }
 
 /*
@@ -128,7 +144,6 @@ void gfx_find_uga(void){
     uint64_t handle_count = 0;
     EFI_HANDLE* handle_buf;
     */
-
 }
 
 /*
@@ -243,7 +258,8 @@ void gfx_choose_best(void){
     //Retrieve its parameters
     res_x = graphics_output->Mode->Info->HorizontalResolution;
     res_y = graphics_output->Mode->Info->VerticalResolution;
-    vbe_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
+    gop_buffer = (color32_t*)graphics_output->Mode->FrameBufferBase;
+    gop_buffer_physbase = (phys_addr_t)gop_buffer;
 }
 
 /*
@@ -251,8 +267,8 @@ void gfx_choose_best(void){
  */
 void gfx_flip(void){
     //Choose the source and destination buffers
-    color32_t* buf_src = (buf_sel == GFX_BUF_VBE) ? vbe_buffer : sec_buffer;
-    color32_t* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : vbe_buffer;
+    color32_t* buf_src = (buf_sel == GFX_BUF_VBE) ? gop_buffer : sec_buffer;
+    color32_t* buf_dst = (buf_sel == GFX_BUF_VBE) ? sec_buffer : gop_buffer;
     #ifdef GFX_TRIBUF
     //For each line in the source buffer
     for(uint32_t y = 0; y < res_y; y++){
@@ -623,7 +639,8 @@ p2d_t gfx_puts(p2d_t pos, color32_t color, color32_t bcolor, char* s){
                 default: { //Print the char and advance its position
                     p2d_t char_size = gfx_glyph(pos_actual, color, bcolor, codepoint);
                     pos_actual.x += char_size.x;
-                    sz.x += char_size.x;
+                    if(pos_actual.x - pos.x > sz.x)
+                        sz.x = pos_actual.x - pos.x;
                     break;
                 }
             }
@@ -650,18 +667,6 @@ void gfx_panic(uint64_t ip, uint64_t code){
     gfx_flip();
     gfx_set_buf(GFX_BUF_SEC);
     //Darken the screen
-    /*
-    color32_t* buf = gfx_buffer();
-    uint32_t res_x = gfx_res_x();
-    uint32_t res_y = gfx_res_y();
-    for(uint32_t y = 0; y < res_y; y++){
-        for(uint32_t x = 0; x < res_x; x++){
-            color32_t orig = buf[(y * res_x) + x];
-            //But while giving a red tint to it
-            buf[(y * res_x) + x] = gfx_blend_colors(orig, COLOR32(255, 128, 0, 0), 64);
-        }
-    }
-    */
     gfx_draw_filled_rect((p2d_t){0, 0}, (p2d_t){res_x, res_y}, COLOR32(32, 255, 128, 0));
     //Determine the error message that needs to be printed
     char* panic_msg = NULL;
@@ -676,7 +681,7 @@ void gfx_panic(uint64_t ip, uint64_t code){
     else
         panic_msg = KRNL_PANIC_UNKNOWN_MSG;
     //Construct the error message
-    char text[300];
+    char text[500];
     char temp[20];
     text[0] = 0;
     strcat(text, "Kernel panic occured at address 0x");
@@ -686,11 +691,49 @@ void gfx_panic(uint64_t ip, uint64_t code){
     strcat(text, ": ");
     strcat(text, panic_msg);
     //Add a line for CPU exceptions
+    /*
     if((code & 0xFF) == KRNL_PANIC_CPUEXC_CODE){
-        strcat(text, "\nCPU exc. ");
-        strcat(text, sprintu(temp, (code >> 8) & 0xFF, 2));
-        strcat(text, " ex. data ");
-        strcat(text, sprintu(temp, (code >> 16) & 0xFFFFFFFF, 2));
+        strcat(text, "\nCPU exc. 0x");
+        strcat(text, sprintub16(temp, (code >> 8) & 0xFF, 2));
+        strcat(text, " ex. data 0x");
+        strcat(text, sprintub16(temp, (code >> 16) & 0xFFFFFFFF, 2));
+        //Add an additional line for page fault exceptions
+        if(((code >> 8) & 0xFF) == 0x0E) {
+            strcat(text, "\nPage fault addr. 0x");
+            uint64_t pf_addr = 0;
+            __asm__ volatile("mov %%cr2, %0" : "=r"(pf_addr));
+            strcat(text, sprintub16(temp, pf_addr, 16));
+            uint32_t ex_data = code >> 16;
+            strcat(text, "\nPage ");
+            if((ex_data & 1) == 0)
+                strcat(text, "not ");
+            strcat(text, "present");
+
+            strcat(text, "\n");
+            if(ex_data & 2)
+                strcat(text, "Write ");
+            else
+                strcat(text, "Read ");
+
+            strcat(text, "in ");
+            if(ex_data & 4)
+                strcat(text, "userspace");
+            else
+                strcat(text, "kernel-space");
+                
+            if(ex_data & 8)
+                strcat(text, " of reserved bits");
+            if(ex_data & 16)
+                strcat(text, ", instruction fetch ");
+        }
+    }
+    */
+    //Add a line for out-of-memory exceptions
+    if(code == KRNL_PANIC_NOMEM_CODE){
+        strcat(text, "\nMemory: used/total (KB): ");
+        strcat(text, sprintu(temp, stdlib_used_ram() / 1024, 2));
+        strcat(text, " / ");
+        strcat(text, sprintu(temp, stdlib_usable_ram() / 1024, 2));
     }
     //Get its bounds
     p2d_t msg_bounds = gfx_text_bounds(text);

@@ -6,6 +6,7 @@
 #include "../drivers/timr.h"
 #include "../drivers/gfx.h"
 #include "../vmem/vmem.h"
+#include "../krnl.h"
 
 task_t* mtask_task_list;
 uint32_t mtask_next_task;
@@ -68,7 +69,6 @@ task_t* mtask_get_task_list(void){
  */
 void mtask_stop(void){
     mtask_enabled = 0;
-    timr_stop();
 }
 
 /*
@@ -100,10 +100,8 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     void* task_stack = suggested_stack;
     if(task_stack == NULL)
         task_stack = calloc(stack_size, 1);
-    //Set the framebuffer memory type as write-combining
-    vmem_pat_set_range(cr3, gfx_buf_another(), gfx_buf_another() + (gfx_res_x() * gfx_res_y()), 1);
     //Assign the task RSP
-    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size - 1);
+    task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size);
     //Assign the task RIP
     task->state.rip = (uint64_t)func;
     //Assign the task RFLAGS
@@ -120,9 +118,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
         //Assign the current task
         mtask_cur_task = task;
         mtask_cur_task_no = 0;
-        //Call the switcher
-        //It should switch to the newly created task
-        __asm__ volatile("cli");
+        //Switch to the newly created task
         mtask_enabled = 1;
         __asm__ volatile("jmp mtask_restore_state");
     }

@@ -50,8 +50,7 @@ uint8_t elf_load(char* path, uint8_t debug){
     }
     //Create a virtual memory space
     uint64_t cr3 = vmem_create_pml4(vmem_create_pcid());
-    //Map the kernel in the upper half
-    vmem_map(cr3, (void*)krnl_get_pos().offset, (void*)(krnl_get_pos().offset + krnl_get_pos().size), (void*)(0xFFFF800000000000ULL));
+    vmem_map_defaults(cr3);
     //Go through the sections
     for(uint32_t i = 0; i < elf_hdr.hdr.sect_hdr_entry_cnt; i++){
         uint32_t offs = elf_hdr.hdr.sec_hdr_table_pos + (i * elf_hdr.hdr.sect_hdr_entry_sz);
@@ -81,32 +80,47 @@ uint8_t elf_load(char* path, uint8_t debug){
             gfx_verbose_println(strcat(buf, sprintub16(buf2, sect_hdr.hdr.offs, 1)));
             memcpy(buf, "ELF section size: 0x", strlen("ELF section size: 0x") + 1);
             gfx_verbose_println(strcat(buf, sprintub16(buf2, sect_hdr.hdr.size, 1)));
-            memcpy(buf, "ELF section type: 0x", strlen("ELF section type: 0x") + 1);
-            gfx_verbose_println(strcat(buf, sprintub16(buf2, sect_hdr.hdr.type, 1)));
-            memcpy(buf, "ELF section flags: 0x", strlen("ELF section flags: 0x") + 1);
-            gfx_verbose_println(strcat(buf, sprintub16(buf2, sect_hdr.hdr.flags, 1)));
+            memcpy(buf, "ELF section addr: 0x", strlen("ELF section addr: 0x") + 1);
+            gfx_verbose_println(strcat(buf, sprintub16(buf2, sect_hdr.hdr.addr, 1)));
         }
         //Load the section in memory if it's executable
         if(sect_hdr.hdr.flags & 0x4){
             //Allocate the memory
-            uint8_t* app_text = (uint8_t*)malloc(sect_hdr.hdr.size);
+            uint8_t* app_text = (uint8_t*)amalloc(sect_hdr.hdr.size, 4096);
             //Copy the data
             file.position = sect_hdr.hdr.offs;
             diskio_read(&file, app_text, sect_hdr.hdr.size);
             //Map the data as required by the ELF file
-            vmem_map(cr3, app_text, app_text + sect_hdr.hdr.size, (void*)sect_hdr.hdr.addr);
+            vmem_map(cr3, (phys_addr_t)vmem_virt_to_phys(vmem_get_cr3(), app_text),
+                          (phys_addr_t)((uint64_t)vmem_virt_to_phys(vmem_get_cr3(), app_text) + sect_hdr.hdr.size),
+                          (virt_addr_t)sect_hdr.hdr.addr);
             //Display debug info
             if(debug){
-                char buf[128] = "ELF: this section is loaded at physaddr 0x";
+                char buf[128] = "ELF: this section is loaded at 0x";
                 char buf2[32] = "";
                 gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)app_text, 1)));
+            }
+            if(debug){
+                char buf[128] = "ELF:      or phys 0x";
+                char buf2[32] = "";
+                gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)vmem_virt_to_phys(vmem_get_cr3(), app_text), 1)));
             }
         }
     }
     if(debug) gfx_verbose_println("\nELF: executing the process");
     //Allocate some memory for the stack and map it
-    void* stack = calloc(8192, 1);
+    void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(8192, 1));
     vmem_map(cr3, stack, (void*)((uint8_t*)stack + 8192), (void*)(1ULL << 23));
     //Create a new task
+    if(debug){
+        char buf[128] = "ELF: entry point 0x";
+        char buf2[32] = "";
+        gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)elf_hdr.hdr.entry_pos, 1)));
+    }
+    if(debug){
+        char buf[128] = "ELF: stack 0x";
+        char buf2[32] = "";
+        gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)stack, 1)));
+    }
     uint64_t task_uid = mtask_create_task(8192, path, 1, 0, cr3, (void*)(1ULL << 23), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL);
 }

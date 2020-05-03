@@ -5,7 +5,7 @@
 
 //Definitions
 
-//The kernel version
+//Kernel version
 #define KRNL_VERSION_STR "v0.6.0"
 
 //Structures
@@ -20,3 +20,5 @@ typedef struct {
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 krnl_pos_t krnl_get_pos(void);
+
+EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);

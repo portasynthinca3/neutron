@@ -2,6 +2,7 @@
 #define GFX_H
 
 #include "../stdlib.h"
+#include "../vmem/vmem.h"
 
 //Structure defining a 2D point
 typedef struct {
@@ -38,6 +39,8 @@ color32_t* gfx_buffer(void);
 color32_t* gfx_buf_another(void);
 
 void gfx_init(void);
+void gfx_shift_buf(void);
+phys_addr_t gfx_physbase(void);
 void gfx_find_gop(void);
 void gfx_find_uga(void);
 void gfx_choose_best(void);

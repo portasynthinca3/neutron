@@ -38,7 +38,7 @@ mtask_save_state:
     xchg rax, rbx
     mov edx, 0xFFFFFFFF
     mov eax, 0xFFFFFFFF
-    xsave [rbx+176]
+    ;//xsave [rbx+176]
     xchg rax, rbx
     ;//Increment the switch counter
     inc qword ptr [rax+152]
@@ -60,7 +60,7 @@ mtask_restore_state:
     xchg rax, rbx
     mov edx, 0xFFFFFFFF
     mov eax, 0xFFFFFFFF
-    xrstor [rbx+176]
+    ;//xrstor [rbx+176]
     xchg rax, rbx
     ;//Load GPRs
     mov rbx, [rax+  8]
@@ -77,7 +77,7 @@ mtask_restore_state:
     mov r13, [rax+104]
     mov r14, [rax+112]
     ;//Send EOI
-    mov r15, 0xFEE000B0
+    mov r15, 0xFFFFFFFFFFFFE0B0
     mov dword ptr [r15], 0
     ;//Load R15
     mov r15, [rax+120]

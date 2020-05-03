@@ -15,9 +15,17 @@ free_block_t* first_free_block;
 void* gen_free_base_initial;
 void* gen_free_base;
 void* gen_free_top;
+void* gen_free_phys_base;
 uint64_t bad_ram_size = 0;
 uint64_t total_ram_size = 0;
 uint64_t used_ram_size = 0;
+
+/*
+ * Returns the physical base address of the dynamic RAM range
+ */
+void* stdlib_physbase(void){
+    return gen_free_phys_base;
+}
 
 /*
  * Returns the amount of RAM usable by Neutron
@@ -102,6 +110,7 @@ uint64_t dram_init(void){
 
     //Set up general free heap
     gen_free_base = best_block_start;
+    gen_free_phys_base = gen_free_base;
     gen_free_base_initial = gen_free_base;
     gen_free_top = (uint8_t*)best_block_start + best_block_size;
     total_ram_size += best_block_size;
@@ -123,9 +132,11 @@ void dram_shift(void){
     //Map the range
     vmem_map(vmem_get_cr3(), gen_free_base_initial, gen_free_top, (void*)0xFFFFC00000000000ULL);
     //Shift the ranges
-    //gen_free_top = (void*)((uint64_t)gen_free_top - (uint64_t)gen_free_base + 0xFFFFC00000000000ULL);
-    //gen_free_base = (void*)((uint64_t)gen_free_base - (uint64_t)gen_free_base_initial + 0xFFFFC00000000000ULL);
-    //gen_free_base_initial = (void*)0xFFFFC00000000000ULL;
+    gen_free_top = (void*)((uint64_t)gen_free_top - (uint64_t)gen_free_base + 0xFFFFC00000000000ULL);
+    gen_free_base = (void*)((uint64_t)gen_free_base - (uint64_t)gen_free_base_initial + 0xFFFFC00000000000ULL);
+    gen_free_base_initial = (void*)0xFFFFC00000000000ULL;
+    //Enable address translation
+    vmem_enable_trans();
 }
 
 /*
@@ -165,6 +176,26 @@ void* malloc(size_t size){
     //If we still didn't find free space, we defenitely don't have enough RAM
     #ifdef STDLIB_CARSH_ON_ALLOC_ERR
         crash_label_3: gfx_panic((uint64_t)&&crash_label_3, KRNL_PANIC_NOMEM_CODE);
+    #else
+        return NULL;
+    #endif
+}
+
+/*
+ * Aligned malloc()
+ */
+void* amalloc(size_t size, size_t gran){
+    if(gen_free_top - gen_free_base >= size){
+        void* saved_base = gen_free_base;
+        uint64_t remainder = gran - ((uint64_t)saved_base % gran);
+        if(remainder == gran)
+            remainder = 0;
+        gen_free_base = (uint8_t*)gen_free_base + remainder + size;
+        used_ram_size += remainder + size;
+        return saved_base + remainder;
+    }
+    #ifdef STDLIB_CARSH_ON_ALLOC_ERR
+        crash_label_2: gfx_panic((uint64_t)&&crash_label_2, KRNL_PANIC_NOMEM_CODE);
     #else
         return NULL;
     #endif
@@ -228,7 +259,7 @@ void* memcpy(void* destination, const void* source, size_t num){
     //W = 2 bytes at a time
     //B = 1 byte  at a time
     if(num % 8 == 0)
-        __asm__ volatile("rep movsq" : : "D" (destination), "S" (source), "c" (num / 4));
+        __asm__ volatile("rep movsq" : : "D" (destination), "S" (source), "c" (num / 8));
     else if(num % 4 == 0)
         __asm__ volatile("rep movsd" : : "D" (destination), "S" (source), "c" (num / 4));
     else if(num % 2 == 0)
@@ -256,8 +287,15 @@ void* memmove(void* dest, const void* src, size_t count){
 /*
  * Load Interrupt Descriptor Table
  */
-void load_idt(struct idt_desc* idt){
+void load_idt(idt_desc* idt){
     __asm__("lidt %0" : : "m" (*idt));
+}
+
+/*
+ * Load Global Descriptor Table
+ */
+void load_gdt(){
+
 }
 
 /*
@@ -607,7 +645,7 @@ int strcmp(const char* str1, const char* str2){
  */
 void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access){
     //Calculate the entry base pointer
-    struct idt_desc desc;
+    idt_desc desc;
     __asm__ volatile("sgdt %0" : : "m" (desc)); //Store the GDT descriptor
     void* entry_ptr = (uint8_t*)desc.base + (sel * 8);
 

@@ -6,14 +6,13 @@
 
 #include "./initrd.h"
 
-diskio_map_t mappings[DISKIO_MAX_MAPPINGS];
+diskio_map_t* mappings;
 
 /*
  * Initializes DISKIO stuff
  */
 void diskio_init(void){
-    //Clear mappings
-    memset(mappings, 0, sizeof(diskio_map_t) * DISKIO_MAX_MAPPINGS);
+    mappings = calloc(DISKIO_MAX_MAPPINGS, sizeof(diskio_map_t));
 }
 
 /*

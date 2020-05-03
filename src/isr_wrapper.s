@@ -70,15 +70,10 @@ exc_30:
 exc_wrapper:
     ;//Disable interrupts
     cli
-    ;//Save the state of the currently running task
-    ;//For ease of debugging
+    ;//Save task state
     add rsp, 8
-    ;//call mtask_save_state
+    call mtask_save_state
     sub rsp, 8
-    ;//Get exception number
-    pop rcx
-    ;//Get exception address
-    pop rdx
     ;//Clear direction flag
     cld
     ;//Call the exception handler
@@ -87,17 +82,10 @@ exc_wrapper:
 exc_wrapper_code:
     ;//Disable interrupts
     cli
-    ;//Save the state of the currently running task
-    ;//For ease of debugging
+    ;//Save task state
     add rsp, 16
-    ;//call mtask_save_state
+    call mtask_save_state
     sub rsp, 16
-    ;//Get exception number
-    pop rcx
-    ;//Get extra exception data
-    pop rbx
-    ;//Get exception address
-    pop rdx
     ;//Clear direction flag
     cld
     ;//Call the exception handler
@@ -118,7 +106,7 @@ apic_timer_isr_wrap:
     je apic_timer_isr_wrap_cont
     ;//Re-enable interrupts; send EOI; return
     push r15
-    mov r15, 0xFEE000B0
+    mov r15, 0xFFFFFFFFFFFFE0B0
     mov dword ptr [r15], 0
     pop r15
     sti
