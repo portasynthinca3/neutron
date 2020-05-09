@@ -28,6 +28,7 @@
 #include "./vmem/vmem.h"
 
 #include "./app_drv/elf/elf.h"
+#include "./app_drv/syscall/syscall.h"
 
 extern void enable_a20(void);
 extern void apic_timer_isr_wrap(void);
@@ -195,24 +196,11 @@ void krnl_exc(void){
     //Get the exception address from RDX
     uint64_t ip;
     __asm__ volatile("mov %%rdx, %0" : "=m" (ip));
-    //Get the exception code from RCX
-    uint64_t code;
-    __asm__ volatile("mov %%rcx, %0" : "=m" (code));
-    //Get the extra exception data from RBX
-    uint64_t data;
-    __asm__ volatile("mov %%rbx, %0" : "=m" (data));
     //Stop the schaeduler
     mtask_stop();
     //Print some info
     krnl_dump();
-    gfx_panic(ip, KRNL_PANIC_CPUEXC_CODE | (code << 8) | (data << 16));
-
-    //Load 0xDEADBEEF into EAX for ease of debugging
-    __asm__ volatile("mov $0xDEADBEEF, %eax");
-    //Load exception address into RBX for ease of debugging too
-    __asm__ volatile("mov %0, %%rbx" : : "m" (ip));
-    //Abort
-    while(1);
+    gfx_panic(mtask_get_by_uid(mtask_get_uid())->state.rip, KRNL_PANIC_CPUEXC_CODE);
 }
 
 /*
@@ -237,21 +225,12 @@ void krnl_boot_status(char* str, uint32_t progress){
     }
 }
 
-uint64_t dummy_var = 0;
-void dummy(void* args){
-    while(1){
-        dummy_var++;
-        mtask_dly_cycles(100000000);
-    }
-}
-
 /*
  * Multitasking entry point
  */
 void mtask_entry(void* args){
-    gfx_verbose_println("Hello from mtask_entry\nLoading test ELF file");
+    gfx_verbose_println("Hello from mtask_entry");
     //Load a simple program
-    elf_load("/initrd/elftest.elf", 1);
     
     //Exit the entry point
     mtask_stop_task(mtask_get_uid());
@@ -472,6 +451,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt[30] = IDT_ENTRY_ISR((uint64_t)(&exc_30 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
     //Set up gates for interrupts
     idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    //Set up a gate for system calls
+    idt[128] = IDT_ENTRY_ISR((uint64_t)(&syscall_wrapper - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
     //Load IDT
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(idt_entry);
@@ -517,7 +498,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_pos.offset = orig_pos;
 
     //Create an initial task
-    mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, vmem_get_cr3(), NULL,
-                      1, (void(*)(void*))(((uint64_t)&mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
+    //mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, vmem_get_cr3(), NULL,
+    //                  1, (void(*)(void*))(((uint64_t)&mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
+    elf_load("/initrd/test.elf", 0);
     while(1);
 }

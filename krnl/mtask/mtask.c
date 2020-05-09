@@ -89,10 +89,10 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     task->prio_cnt = task->priority;
     //Copy the name
     memcpy(task->name, name, strlen(name) + 1);
-    //Create a new address space or assign the given CR3
+    //Use the current address space or assign the suggested CR3
     uint64_t cr3 = _cr3;
     if(cr3 == 0)
-        cr3 = vmem_create_pml4(task->uid);
+        cr3 = vmem_get_cr3();
     task->state.cr3 = cr3;
     if(identity_map)
         vmem_map(cr3, 0, (phys_addr_t)(8ULL * 1024 * 1024 * 1024), 0);
@@ -115,6 +115,8 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
 
     //Check if it's the first task ever created
     if((mtask_next_task++ == 0) && start){
+        //Enable physwin
+        vmem_enable_physwin();
         //Assign the current task
         mtask_cur_task = task;
         mtask_cur_task_no = 0;

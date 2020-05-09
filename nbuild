@@ -2,28 +2,30 @@
 
 # The base of everything
 
-src/krnl.c
-src/isr_wrapper.s
-src/stdlib.c
-src/cpuid.c
-src/mtask/mtask.c
-src/mtask/mtask_sw.s
-src/vmem/vmem.c
+krnl/krnl.c
+krnl/isr_wrapper.s
+krnl/stdlib.c
+krnl/cpuid.c
+krnl/mtask/mtask.c
+krnl/mtask/mtask_sw.s
+krnl/vmem/vmem.c
 
 # Drivers
 
-src/drivers/diskio.c
-src/drivers/gfx.c
-src/drivers/apic.c
-src/drivers/timr.c
-src/drivers/acpi.c
-src/drivers/initrd.c
-src/drivers/human_io/kbd.c
-src/drivers/human_io/mouse.c
+krnl/drivers/diskio.c
+krnl/drivers/gfx.c
+krnl/drivers/apic.c
+krnl/drivers/timr.c
+krnl/drivers/acpi.c
+krnl/drivers/initrd.c
+krnl/drivers/human_io/kbd.c
+krnl/drivers/human_io/mouse.c
 
 # Application support stuff
 
-src/app_drv/elf/elf.c
+krnl/app_drv/elf/elf.c
+krnl/app_drv/syscall/syscall.c
+krnl/app_drv/syscall/syscall_wrap.s
 
 .after-build
 

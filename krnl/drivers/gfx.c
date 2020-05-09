@@ -678,6 +678,8 @@ void gfx_panic(uint64_t ip, uint64_t code){
         panic_msg = KRNL_PANIC_CPUEXC_MSG;
     else if(code == KRNL_PANIC_STACK_SMASH_CODE)
         panic_msg = KRNL_PANIC_STACK_SMASH_MSG;
+    else if(code == KRNL_PANIC_INVL_SYSCALL_CODE)
+        panic_msg = KRNL_PANIC_INVL_SYSCALL_MSG;
     else
         panic_msg = KRNL_PANIC_UNKNOWN_MSG;
     //Construct the error message

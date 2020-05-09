@@ -81,6 +81,8 @@ typedef struct {
 #define KRNL_PANIC_CPUEXC_MSG              "CPU-generated exception"
 #define KRNL_PANIC_STACK_SMASH_CODE        4
 #define KRNL_PANIC_STACK_SMASH_MSG         "Stack Smashing detected"
+#define KRNL_PANIC_INVL_SYSCALL_CODE       5
+#define KRNL_PANIC_INVL_SYSCALL_MSG        "Invalid syscall number"
 #define KRNL_PANIC_UNKNOWN_MSG             "<unknown code>"
 
 //Debug functions

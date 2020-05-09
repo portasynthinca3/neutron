@@ -1,3 +1,6 @@
+#ifndef KRNL_H
+#define KRNL_H
+
 #include "./stdlib.h"
 
 #include <efi.h>
@@ -22,3 +25,5 @@ EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 krnl_pos_t krnl_get_pos(void);
 
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
+
+#endif

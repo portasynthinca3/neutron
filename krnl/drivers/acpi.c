@@ -93,22 +93,6 @@ uint32_t acpi_init(void){
             acpi_sci_en = 1;
         }
     }
-
-    gfx_verbose_println("Sending enable commands (this might take a while)");
-    //Enable ACPI
-    outb(acpi_smi_cmd, acpi_en);
-    /*
-    uint32_t start = pit_ticks();
-    while((pit_ticks() - start <= 1500) &&
-          ((inw(acpi_pm1a_ctl) & acpi_sci_en) == 0));
-    if(fadt->pm1b_ctl_blk != 0){
-        start = pit_ticks();
-        while((pit_ticks() - start <= 1500) &&
-              ((inw(acpi_pm1b_ctl) & acpi_sci_en) == 0));
-    }
-    */
-
-    gfx_verbose_println("ACPI successfully initialized");
     
     return 1;
 }
@@ -117,6 +101,8 @@ uint32_t acpi_init(void){
  * Send ACPI shutdown signal
  */
 void acpi_shutdown(void){
+    //Enable ACPI
+    outb(acpi_smi_cmd, acpi_en);
     //Issue the shutdown command
     outw(acpi_pm1a_ctl, acpi_slp_typ_a | acpi_slp_en);
     if(acpi_pm1b_ctl != 0)

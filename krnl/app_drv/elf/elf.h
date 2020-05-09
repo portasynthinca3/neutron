@@ -30,6 +30,12 @@ typedef struct {
     uint16_t sect_names_idx;
 } __attribute__((packed)) elf_hdr_t;
 
+typedef struct {
+    uint64_t offset;
+    uint32_t info;
+    uint32_t addend;
+} __attribute__((packed)) elf_rela_t;
+
 //Function prototypes
 
 uint8_t elf_load(char* path, uint8_t debug);
