@@ -55,7 +55,7 @@ print_status('Compiling')
 src_files = [f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f))]
 for file in src_files:
     print('  Building: ' + src_dir + '/' + file)
-    code = os.system('gcc -nostdlib -ffreestanding -m64 -mno-sse2 -O0 -c -o ' + build_dir + '/' + file + '.o ' + src_dir + '/' + file)
+    code = os.system('gcc -g3 -nostdlib -ffreestanding -m64 -mno-sse2 -O0 -c -o ' + build_dir + '/' + file + '.o ' + src_dir + '/' + file)
     # terminate on compilation error
     if code != 0:
         exit()
@@ -64,3 +64,9 @@ for file in src_files:
 print_status('Linking')
 code = os.system('ld -melf_x86_64 -nostdlib -e main -o ' + build_dir + '/app.elf '
                + ' '.join([build_dir + '/' + f + '.o' for f in src_files]))
+if code != 0:
+    exit()
+
+# copy the executable
+print_status('Copying')
+os.system('cp ' + build_dir + '/app.elf ../initrd/' + app_dir + '.elf')

@@ -287,7 +287,7 @@ void* memmove(void* dest, const void* src, size_t count){
 /*
  * Load Interrupt Descriptor Table
  */
-void load_idt(idt_desc* idt){
+void load_idt(idt_desc_t* idt){
     __asm__("lidt %0" : : "m" (*idt));
 }
 
@@ -366,10 +366,16 @@ uint8_t inb(uint16_t port){
 uint64_t rdmsr(uint32_t msr){
     uint64_t val_h;
     uint64_t val_l;
+    /*
     __asm__ volatile("mov %0, %%ecx" : : "m" (msr));
     __asm__ volatile("rdmsr" : : : "eax", "edx");
     __asm__ volatile("mov %%edx, %0" : "=m" (val_h));
     __asm__ volatile("mov %%eax, %0" : "=m" (val_l));
+    */
+    __asm__ volatile("mov %2, %%ecx;"
+                     "rdmsr;"
+                     "mov %%edx, %0;"
+                     "mov %%eax, %1" : "=m"(val_h), "=m"(val_l) : "m"(msr) : "eax", "edx", "ecx");
     return (val_h << 32) | val_l;
 }
 
@@ -645,7 +651,7 @@ int strcmp(const char* str1, const char* str2){
  */
 void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access){
     //Calculate the entry base pointer
-    idt_desc desc;
+    idt_desc_t desc;
     __asm__ volatile("sgdt %0" : : "m" (desc)); //Store the GDT descriptor
     void* entry_ptr = (uint8_t*)desc.base + (sel * 8);
 

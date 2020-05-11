@@ -8,6 +8,11 @@
 
 //Definitions
 
+#define MSR_IA32_EFER                       0xC0000080
+#define MSR_IA32_STAR                       0xC0000081
+#define MSR_IA32_LSTAR                      0xC0000082
+#define MSR_IA32_SFMASK                     0xC0000084
+
 //Kernel version
 #define KRNL_VERSION_STR "v0.6.0"
 

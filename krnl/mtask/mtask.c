@@ -36,11 +36,9 @@ uint64_t mtask_is_enabled(void){
  */
 void mtask_init(void){
     //Allocate a buffer for the task list
-    mtask_task_list = (task_t*)malloc((MTASK_TASK_COUNT * sizeof(task_t)) + 16);
+    mtask_task_list = (task_t*)amalloc((MTASK_TASK_COUNT * sizeof(task_t)),  16);
     //Clear it
-    memset(mtask_task_list, 0, (MTASK_TASK_COUNT * sizeof(task_t)) + 16);
-    //It needs to be 16-byte aligned
-    mtask_task_list = (task_t*)((uint64_t)mtask_task_list + (uint64_t)(16 - ((uint64_t)mtask_task_list % 16)));
+    memset(mtask_task_list, 0, (MTASK_TASK_COUNT * sizeof(task_t)));
     
     mtask_cur_task_no = 0;
     mtask_next_task = 0;
@@ -81,7 +79,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
 
     task_t* task = &mtask_task_list[mtask_next_task];
     //Clear the task registers (except for RCX, set it to the argument pointer)
-    task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //Asign an UID
     task->uid = mtask_next_uid++;
     //Assign the priority
@@ -107,11 +105,14 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     //Assign the task RFLAGS
     uint64_t rflags;
     __asm__ volatile("pushfq; pop %0" : "=m" (rflags));
+    rflags |= 1 << 9; //enable interrupts
     task->state.rflags = rflags;
     //Reset some vars
     task->valid = 1;
     task->state_code = start ? TASK_STATE_RUNNING : TASK_STATE_WAITING_TO_RUN;
     task->blocked_till = 0;
+    //Set CS
+    task->state.cs = 0x93;
 
     //Check if it's the first task ever created
     if((mtask_next_task++ == 0) && start){
@@ -146,8 +147,10 @@ void mtask_stop_task(uint64_t uid){
         if(mtask_task_list[i].uid == uid)
             mtask_task_list[i].valid = 0;
     //Hang if we're terminating the current task
-    if(uid == mtask_get_uid())
+    if(uid == mtask_get_uid()){
+        __asm__ volatile("sti");
         while(1);
+    }
 }
 
 /*

@@ -3,7 +3,11 @@
 
 syscall_wrapper:
     ;//Save all necessary registers
+    mov rbx, rsp
+    call syscall_get_krnl_rsp
+    mov rsp, rax
     push rbx
+    push rcx
     push r10
     push r11
     push r12
@@ -21,6 +25,9 @@ syscall_wrapper:
     pop r12
     pop r11
     pop r10
-    pop rbx
-    ;//Interrupt return
-    iretq
+    pop rcx
+    pop rsp
+    ;//Enable interrupts
+    or r11, 1 << 9
+    ;//System call return
+    sysretq

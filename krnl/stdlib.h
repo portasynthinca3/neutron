@@ -49,9 +49,9 @@ typedef struct _free_block_s {
 typedef struct {
     uint16_t limit;
     void* base;
-} __attribute__((packed)) idt_desc;
+} __attribute__((packed)) idt_desc_t;
 
-typedef idt_desc gdt_desc;
+typedef idt_desc_t gdt_desc_t;
 
 /*
  * Structure describing an IDT entry
@@ -59,15 +59,48 @@ typedef idt_desc gdt_desc;
 typedef struct {
     uint16_t offset_1;
     uint16_t selector;
-    uint8_t intr_stack_table;
-    uint8_t type_attr;
+    uint8_t  intr_stack_table;
+    uint8_t  type_attr;
     uint16_t offset_2;
     uint32_t offset_3;
     uint32_t reserved;
-} __attribute__((packed)) idt_entry;
+} __attribute__((packed)) idt_entry_t;
+
+/*
+ * Structure describing a GDT entry
+ */
+typedef struct {
+    uint16_t limit_low;
+    uint16_t base_low;
+    uint8_t  base_mid;
+    uint8_t  access;
+    uint8_t  limit_hi_flags;
+    uint8_t  base_hi;
+} __attribute__((packed)) gdt_entry_t;
+
+/*
+ * Structure describing a task state segment
+ */
+typedef struct {
+    uint32_t rsvd0;
+    uint64_t rsp0;
+    uint64_t rsp1;
+    uint64_t rsp2;
+    uint64_t rsvd1;
+    uint64_t ist1;
+    uint64_t ist2;
+    uint64_t ist3;
+    uint64_t ist4;
+    uint64_t ist5;
+    uint64_t ist6;
+    uint64_t ist7;
+    uint64_t rsvd2;
+    uint16_t rsvd3;
+    uint16_t io_base;
+} __attribute__((packed)) tss_t;
 
 //A macro that creates generic IDT entries
-#define IDT_ENTRY(OFFS, CSEL, TYPE) ((idt_entry){.offset_1 = (OFFS) & 0xFFFF, .selector = (CSEL), .intr_stack_table = 0, .type_attr = (TYPE), .offset_2 = (OFFS) >> 16, .offset_3 = (OFFS) >> 32, .reserved = 0})
+#define IDT_ENTRY(OFFS, CSEL, TYPE) ((idt_entry_t){.offset_1 = (OFFS) & 0xFFFF, .selector = (CSEL), .intr_stack_table = 0, .type_attr = (TYPE), .offset_2 = (OFFS) >> 16, .offset_3 = (OFFS) >> 32, .reserved = 0})
 //A macro that creates Kernel ISR IDT entries
 #define IDT_ENTRY_ISR(OFFS, CS) (IDT_ENTRY((OFFS), (CS), 0b10001110))
 
@@ -80,7 +113,7 @@ typedef struct {
 #define KRNL_PANIC_CPUEXC_CODE             3
 #define KRNL_PANIC_CPUEXC_MSG              "CPU-generated exception"
 #define KRNL_PANIC_STACK_SMASH_CODE        4
-#define KRNL_PANIC_STACK_SMASH_MSG         "Stack Smashing detected"
+#define KRNL_PANIC_STACK_SMASH_MSG         "Stack smashing detected"
 #define KRNL_PANIC_INVL_SYSCALL_CODE       5
 #define KRNL_PANIC_INVL_SYSCALL_MSG        "Invalid syscall number"
 #define KRNL_PANIC_UNKNOWN_MSG             "<unknown code>"
@@ -93,7 +126,7 @@ void puts_e9(char* str);
 
 //Low-level functions
 
-void load_idt(idt_desc* idt);
+void load_idt(idt_desc_t* idt);
 void bswap_dw(int* value);
 uint64_t rdtsc(void);
 uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16_t* mo, uint16_t* y);

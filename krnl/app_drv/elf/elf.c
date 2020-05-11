@@ -94,9 +94,9 @@ uint8_t elf_load(char* path, uint8_t debug){
             //If this page is already mapped, don't do anything
             //Otherwise, map
             if(!vmem_present_page(cr3, (virt_addr_t)target_addr)){
-                vmem_map(cr3, (phys_addr_t)vmem_virt_to_phys(vmem_get_cr3(), addr),
-                            (phys_addr_t)((uint64_t)vmem_virt_to_phys(vmem_get_cr3(), addr) + sect_hdr.hdr.size),
-                            (virt_addr_t)target_addr);
+                vmem_map_user(cr3, (phys_addr_t)vmem_virt_to_phys(vmem_get_cr3(), addr),
+                                   (phys_addr_t)((uint64_t)vmem_virt_to_phys(vmem_get_cr3(), addr) + sect_hdr.hdr.size),
+                                   (virt_addr_t)target_addr);
             }
             //Advance next address
             if(sect_hdr.hdr.addr == 0) {
@@ -117,10 +117,10 @@ uint8_t elf_load(char* path, uint8_t debug){
             }
         }
     }
-    if(debug) gfx_verbose_println("\nELF: executing the process");
+    if(debug) gfx_verbose_println("\nELF: starting the process");
     //Allocate some memory for the stack and map it
     void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(8192, 1));
-    vmem_map(cr3, stack, (void*)((uint8_t*)stack + 8192), (void*)(1ULL << 23));
+    vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 8192), (void*)(1ULL << 46));
     //Create a new task
     if(debug){
         char buf[128] = "ELF: entry point 0x";
@@ -132,5 +132,5 @@ uint8_t elf_load(char* path, uint8_t debug){
         char buf2[32] = "";
         gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)stack, 1)));
     }
-    uint64_t task_uid = mtask_create_task(8192, path, 1, 0, cr3, (void*)(1ULL << 23), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL);
+    uint64_t task_uid = mtask_create_task(8192 - 8, path, 1, 0, cr3, (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL);
 }

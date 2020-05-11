@@ -18,6 +18,8 @@ uint8_t trans_disbl = 1;
 //Let physwindow requests directly through?
 uint8_t physwin_disbl = 1;
 
+uint64_t vmem_ident_cr3;
+
 //Let's talk about "physwindows" a little bit.
 //So, suppose you want to write to a physical memory location for some reason
 //  (for example, to set up page tables and what not)
@@ -60,7 +62,7 @@ uint8_t vmem_pcid_supported(void){
 /*
  * Flushes TLB for the page at address `addr`
  */
-void vmem_invlpg(phys_addr_t* addr){
+void vmem_invlpg(phys_addr_t addr){
     __asm__ volatile("invlpg (%0)" : : "b"(addr));
 }
 
@@ -189,6 +191,8 @@ void vmem_init(void){
     __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
     cr0 &= ~(1 << 16);
     __asm__ volatile("mov %0, %%cr0" : : "r" (cr0));
+
+    vmem_ident_cr3 = vmem_get_cr3();
 }
 
 /*
@@ -224,7 +228,7 @@ void vmem_create_pdpt(uint64_t cr3, virt_addr_t at){
     uint64_t pml4e = 0;
     pml4e |= (1 << 0); //it's present
     pml4e |= (1 << 1); //writes are allowed
-    //pml4e |= (1 << 2); //user access is allowed
+    pml4e |= (1 << 2); //user access is allowed
     pml4e &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PDPT
     pml4e &= ~(1 << 5); //clear the "accessed" bit
     pml4e |= (uint64_t)pdpt & 0xFFFFFFFFFFFFF000; //set the address
@@ -281,7 +285,7 @@ void vmem_create_pd(uint64_t cr3, virt_addr_t at){
     uint64_t pdpte = 0;
     pdpte |= (1 << 0); //it's present
     pdpte |= (1 << 1); //writes are allowed
-    //pdpte |= (1 << 2); //user access is allowed
+    pdpte |= (1 << 2); //user access is allowed
     pdpte &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PD
     pdpte &= ~(1 << 5); //clear the "accessed" bit
     pdpte |= (uint64_t)pd & 0xFFFFFFFFFFFFF000; //set the address
@@ -337,7 +341,7 @@ void vmem_create_pt(uint64_t cr3, virt_addr_t at){
     uint64_t pde = 0;
     pde |= (1 << 0); //it's present
     pde |= (1 << 1); //writes are allowed
-    //pde |= (1 << 2); //user access is allowed
+    pde |= (1 << 2); //user access is allowed
     pde &= ~((1 << 3) | (1 << 4)); //enable caching on access to this PT
     pde &= ~(1 << 5); //clear the "accessed" bit
     pde |= (uint64_t)pt & 0xFFFFFFFFFFFFF000; //set the address
@@ -390,7 +394,34 @@ void vmem_create_page(uint64_t cr3, virt_addr_t at, phys_addr_t from){
     uint64_t pte = 0;
     pte |= (1 << 0); //it's present
     pte |= (1 << 1); //writes are allowed
-    //pte |= (1 << 2); //user access is allowed
+    pte |= (1 << 2); //user access is allowed
+    pte &= ~((1 << 3) | (1 << 4)); //enable caching on access to this page
+    pte &= ~(1 << 5); //clear the "accessed" bit
+    pte |= (uint64_t)from & 0xFFFFFFFFFFFFF000; //set the address
+    pte &= ~(1ULL << 63); //allow instruction fetching
+
+    //Set the entry
+    vmem_physwin_write64(pte_addr, pte);
+}
+
+/*
+ * Creates a page mapped to a specific physical address that
+ *   can be accessed from userland using the specific "at" mask and CR3 value
+ */
+void vmem_create_page_user(uint64_t cr3, virt_addr_t at, phys_addr_t from){
+    //Check if that entry is present
+    if(!vmem_present_pt(cr3, at))
+        vmem_create_pt(cr3, at); //Create it if not
+    
+    //Extract entry index from "at"
+    uint64_t pte_idx = ((uint64_t)at >> 12) & 0x1FF;
+    //Calculate the address of the entry
+    phys_addr_t pte_addr = (uint8_t*)vmem_addr_pt(cr3, at) + (pte_idx * 8);
+    //Generate the entry
+    uint64_t pte = 0;
+    pte |= (1 << 0); //it's present
+    pte |= (1 << 1); //writes are allowed
+    pte |= (1 << 2); //user access is allowed
     pte &= ~((1 << 3) | (1 << 4)); //enable caching on access to this page
     pte &= ~(1 << 5); //clear the "accessed" bit
     pte |= (uint64_t)from & 0xFFFFFFFFFFFFF000; //set the address
@@ -438,6 +469,16 @@ void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_s
     for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
         //Map one page
         vmem_create_page(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
+    }
+}
+/*
+ * Maps a virtual address range to a physical address range, while setting access mode to userland
+ */
+void vmem_map_user(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_st){
+    //Loop through the range
+    for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
+        //Map one page
+        vmem_create_page_user(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
     }
 }
 
@@ -548,6 +589,13 @@ uint64_t vmem_get_cr3(void){
     uint64_t cr3 = 0;
     __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
     return cr3;
+}
+
+/*
+ * Sets the current CR3 value
+ */
+void vmem_set_cr3(uint64_t cr3){
+    __asm__ volatile("mov %0, %%cr3" : : "r" (cr3));
 }
 
 /*

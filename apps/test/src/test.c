@@ -1,7 +1,7 @@
 typedef long unsigned int uint64_t;
 
 void do_syscall(uint64_t num, uint64_t p0){
-    asm("int $0x80" : :
+    asm("syscall" : :
         "rdi"(num), "rsi"(p0) : "rdi", "rsi");
 }
 
@@ -18,7 +18,7 @@ void syscall_run(char* path){
 }
 
 void main(void* args){
-    syscall_print("Hello, World!");
+    syscall_print("Hello, World! (from test.elf)");
     syscall_run("/initrd/test2.elf");
     syscall_stop();
 }

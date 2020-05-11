@@ -139,6 +139,8 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, sprintub16(temp2, task->state.rip, 16));
     strcat(temp, " RFLAGS=");
     strcat(temp, sprintub16(temp2, task->state.rflags, 16));
+    strcat(temp, " CS=");
+    strcat(temp, sprintub16(temp2, task->state.cs, 16));
     gfx_verbose_println(temp);
 
     //Print cycles
@@ -421,50 +423,83 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_get_efi_systable()->BootServices->ExitBootServices(krnl_efi_img_handle, krnl_efi_map_key);
 	//Disable interrupts
 	__asm__ volatile("cli");
-    //Get the current code selector
-    uint16_t cur_cs = 0;
-    __asm__ volatile("movw %%cs, %0" : "=r" (cur_cs));
+    //Get the current code and data selectors
+    uint16_t krnl_cs = 0;
+    uint16_t krnl_ds = 0;
+    __asm__ volatile("movw %%cs, %0" : "=r" (krnl_cs));
+    __asm__ volatile("movw %%ds, %0" : "=r" (krnl_ds));
     //Set up IDT
-    idt_entry* idt = (idt_entry*)calloc(256, sizeof(idt_entry));
-    idt_desc idt_d;
+    idt_entry_t* idt = (idt_entry_t*)calloc(256, sizeof(idt_entry_t));
+    idt_desc_t idt_d;
     //Set up gates for exceptions
-    idt[0] = IDT_ENTRY_ISR((uint64_t)(&exc_0 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[1] = IDT_ENTRY_ISR((uint64_t)(&exc_1 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[2] = IDT_ENTRY_ISR((uint64_t)(&exc_2 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[3] = IDT_ENTRY_ISR((uint64_t)(&exc_3 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[4] = IDT_ENTRY_ISR((uint64_t)(&exc_4 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[5] = IDT_ENTRY_ISR((uint64_t)(&exc_5 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[6] = IDT_ENTRY_ISR((uint64_t)(&exc_6 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[7] = IDT_ENTRY_ISR((uint64_t)(&exc_7 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[8] = IDT_ENTRY_ISR((uint64_t)(&exc_8 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[9] = IDT_ENTRY_ISR((uint64_t)(&exc_9 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[10] = IDT_ENTRY_ISR((uint64_t)(&exc_10 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[11] = IDT_ENTRY_ISR((uint64_t)(&exc_11 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[12] = IDT_ENTRY_ISR((uint64_t)(&exc_12 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[13] = IDT_ENTRY_ISR((uint64_t)(&exc_13 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[14] = IDT_ENTRY_ISR((uint64_t)(&exc_14 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[16] = IDT_ENTRY_ISR((uint64_t)(&exc_16 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[17] = IDT_ENTRY_ISR((uint64_t)(&exc_17 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[18] = IDT_ENTRY_ISR((uint64_t)(&exc_18 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[19] = IDT_ENTRY_ISR((uint64_t)(&exc_19 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[20] = IDT_ENTRY_ISR((uint64_t)(&exc_20 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    idt[30] = IDT_ENTRY_ISR((uint64_t)(&exc_30 - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[0] = IDT_ENTRY_ISR((uint64_t)(&exc_0 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[1] = IDT_ENTRY_ISR((uint64_t)(&exc_1 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[2] = IDT_ENTRY_ISR((uint64_t)(&exc_2 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[3] = IDT_ENTRY_ISR((uint64_t)(&exc_3 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[4] = IDT_ENTRY_ISR((uint64_t)(&exc_4 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[5] = IDT_ENTRY_ISR((uint64_t)(&exc_5 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[6] = IDT_ENTRY_ISR((uint64_t)(&exc_6 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[7] = IDT_ENTRY_ISR((uint64_t)(&exc_7 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[8] = IDT_ENTRY_ISR((uint64_t)(&exc_8 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[9] = IDT_ENTRY_ISR((uint64_t)(&exc_9 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[10] = IDT_ENTRY_ISR((uint64_t)(&exc_10 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[11] = IDT_ENTRY_ISR((uint64_t)(&exc_11 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[12] = IDT_ENTRY_ISR((uint64_t)(&exc_12 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[13] = IDT_ENTRY_ISR((uint64_t)(&exc_13 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[14] = IDT_ENTRY_ISR((uint64_t)(&exc_14 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[16] = IDT_ENTRY_ISR((uint64_t)(&exc_16 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[17] = IDT_ENTRY_ISR((uint64_t)(&exc_17 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[18] = IDT_ENTRY_ISR((uint64_t)(&exc_18 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[19] = IDT_ENTRY_ISR((uint64_t)(&exc_19 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[20] = IDT_ENTRY_ISR((uint64_t)(&exc_20 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[30] = IDT_ENTRY_ISR((uint64_t)(&exc_30 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Set up gates for interrupts
-    idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
-    //Set up a gate for system calls
-    idt[128] = IDT_ENTRY_ISR((uint64_t)(&syscall_wrapper - krnl_pos.offset) | 0xFFFF800000000000ULL, cur_cs);
+    idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Load IDT
     idt_d.base = (void*)idt;
-    idt_d.limit = 256 * sizeof(idt_entry);
+    idt_d.limit = 256 * sizeof(idt_entry_t);
     load_idt(&idt_d);
-    //Move the GDT
-    gdt_desc gdt_d;
+
+    //Move the GDT, adding userspace descriptors
+    gdt_desc_t gdt_d;
     __asm__ volatile("sgdt %0" : : "m"(gdt_d));
-    void* new_gdt = malloc(gdt_d.limit);
+    uint64_t* new_gdt = malloc(65536);
     memcpy(new_gdt, gdt_d.base, gdt_d.limit);
-    memset(gdt_d.base, 0, gdt_d.limit);
+    uint16_t user_cs = 0x90;
+    uint16_t user_ds = 0x88;
+    new_gdt[krnl_cs / 8 + 1] = new_gdt[krnl_ds / 8];
+    new_gdt[user_cs / 8] = new_gdt[krnl_cs / 8];
+    new_gdt[user_ds / 8] = new_gdt[krnl_ds / 8];
+    new_gdt[user_cs / 8] |= 3ULL << 45; //set privilege level to 3
+    new_gdt[user_ds / 8] |= 3ULL << 45;
+    //Set up the task state segment and its descriptor
+    uint16_t tsss = 0x100;
+    tss_t* tss = calloc(1, sizeof(tss_t));
+    tss->rsp0 = (uint64_t)malloc(8192) + 8192;
+    uint64_t tss_addr = (uint64_t)tss;
+    uint64_t tss_size = sizeof(tss_t);
+    uint64_t tss_desc_hi =   tss_addr               >> 32;   //Limit and base
+    uint64_t tss_desc_lo =  (tss_size & 0xFFFF)            |
+                           ((tss_addr & 0xFFFF)     << 16) |
+                           ((tss_addr >> 16 & 0xFF) << 32) |
+                           ((tss_size >> 16 & 0xF ) << 48) |
+                           ((tss_addr >> 24 & 0xF ) << 56) |
+                           (0b0000000011101001ULL   << 40);  //Access and flags
+                            //G--A----PDD-TYPE
+    new_gdt[tsss / 8]     = tss_desc_lo;
+    new_gdt[tsss / 8 + 1] = tss_desc_hi;
+    //Load the new GDT
     gdt_d.base = new_gdt;
+    gdt_d.limit = 65535;
     __asm__ volatile("lgdt %0" : : "m"(gdt_d));
+    //Load TR
+    __asm__ volatile("ltr %0" : : "r"(tsss));
+
+    //Set the system call stuff
+    wrmsr(MSR_IA32_EFER, (rdmsr(MSR_IA32_EFER) & ~(0xFFFFFULL << 45)) | 1);
+    wrmsr(MSR_IA32_LSTAR, (uint64_t)(&syscall_wrapper - krnl_pos.offset) | 0xFFFF800000000000ULL);
+    wrmsr(MSR_IA32_SFMASK, 1 << 9); //Disable interrupts on syscalls
+    wrmsr(MSR_IA32_STAR, ((uint64_t)krnl_cs << 32) | ((uint64_t)(user_cs - 16) << 48));
 
     //Initialize the APIC
     krnl_boot_status(">>> Initializing APIC <<<", 80);
@@ -500,6 +535,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Create an initial task
     //mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, vmem_get_cr3(), NULL,
     //                  1, (void(*)(void*))(((uint64_t)&mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
+    syscall_init();
     elf_load("/initrd/test.elf", 0);
     while(1);
 }

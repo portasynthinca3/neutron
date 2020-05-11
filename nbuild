@@ -42,14 +42,13 @@ krnl/app_drv/syscall/syscall_wrap.s
 -rtc base=utc,driftfix=slew \
 -global kvm-pit.lost_tick_policy=delay \
 -no-hpet \
--no-reboot \
 -cdrom /home/portasynthinca3/proj/neutron/build/neutron.iso \
 -device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,max_outputs=1,bus=pci.0,addr=0x2 \
 -device intel-hda,id=sound0,bus=pci.0,addr=0x3 \
 -sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
 -msg timestamp=on \
 -bios /usr/share/ovmf/x64/OVMF_CODE.fd \
--d int,guest_errors \
+-d int,cpu_reset \
 -monitor stdio \
 -s \
 -S

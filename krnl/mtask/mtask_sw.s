@@ -27,11 +27,13 @@ mtask_save_state:
     ;//Load non-GPRs into GPRs
     mov r8,  cr3
     mov r9,  [rsp+ 8] ;//RIP
+    mov r12, [rsp+16] ;//CS
     mov r10, [rsp+24] ;//RFLAGS
     mov r11, [rsp+32] ;//RSP
     ;//Store them
     mov [rax+128], r8
     mov [rax+136], r9
+    mov [rax+160], r12
     mov [rax+144], r10
     mov [rax+ 56], r11
     ;//Save MM, XMM-ZMM and ST registers
@@ -50,12 +52,18 @@ mtask_restore_state:
     ;//Load RSP
     mov rsp, [rax+ 56]
     ;//Load non-GPRs
-    mov rbx, [rax+128]
-    mov rcx, [rax+136]
-    mov rdx, [rax+144]
+    mov rbx, [rax+128] ;//CR3
     mov cr3, rbx
-    push     rcx
-    push     rdx
+    ;//pushq    [rax+160] ;//SS
+    pushq    0x93
+    subq     [rsp], 8
+    pushq    [rax+ 56] ;//RSP
+    mov rbx, [rax+144] ;//RFLAGS
+    or  rbx, 1<<9      ;//Enable interrupts
+    pushq rbx 
+    ;//pushq    [rax+160] ;//CS
+    pushq    0x93
+    pushq    [rax+136] ;//RIP
     ;//Load MM, XMM-ZMM and ST registers
     xchg rax, rbx
     mov edx, 0xFFFFFFFF
@@ -83,9 +91,5 @@ mtask_restore_state:
     mov r15, [rax+120]
     ;//Load RAX
     mov rax, [rax+  0]
-    ;//Load RFALGS
-    popfq
-    ;//Enable interrupts
-    sti
-    ;//Load RIP
-    ret
+    ;//Return
+    iretq

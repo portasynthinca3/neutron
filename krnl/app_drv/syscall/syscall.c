@@ -9,6 +9,18 @@
 #include "../../drivers/gfx.h"
 #include "../elf/elf.h"
 
+//Kernel mode RSP
+uint64_t krnl_rsp = 0;
+
+void syscall_init(void){
+    //Create a kernel mode stack
+    krnl_rsp = (uint64_t)malloc(65536) + 65536;
+}
+
+uint64_t syscall_get_krnl_rsp(void){
+    return krnl_rsp;
+}
+
 /*
  * Handles a system call
  */
