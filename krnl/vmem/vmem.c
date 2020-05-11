@@ -394,7 +394,7 @@ void vmem_create_page(uint64_t cr3, virt_addr_t at, phys_addr_t from){
     uint64_t pte = 0;
     pte |= (1 << 0); //it's present
     pte |= (1 << 1); //writes are allowed
-    pte |= (1 << 2); //user access is allowed
+    pte &= ~(1 << 2); //user access is notallowed
     pte &= ~((1 << 3) | (1 << 4)); //enable caching on access to this page
     pte &= ~(1 << 5); //clear the "accessed" bit
     pte |= (uint64_t)from & 0xFFFFFFFFFFFFF000; //set the address
@@ -465,21 +465,37 @@ phys_addr_t vmem_virt_to_phys(uint64_t cr3, virt_addr_t at){
  * Maps a virtual address range to a physical address range
  */
 void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_st){
+    uint64_t p_cr3 = vmem_get_cr3();
+    vmem_set_cr3(vmem_ident_cr3);
+    uint8_t p_disbl = physwin_disbl;
+    physwin_disbl = 1;
+
     //Loop through the range
     for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
         //Map one page
         vmem_create_page(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
     }
+
+    physwin_disbl = p_disbl;
+    vmem_set_cr3(p_cr3);
 }
 /*
  * Maps a virtual address range to a physical address range, while setting access mode to userland
  */
 void vmem_map_user(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_st){
+    uint64_t p_cr3 = vmem_get_cr3();
+    vmem_set_cr3(vmem_ident_cr3);
+    uint8_t p_disbl = physwin_disbl;
+    physwin_disbl = 1;
+
     //Loop through the range
     for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
         //Map one page
         vmem_create_page_user(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
     }
+
+    physwin_disbl = p_disbl;
+    vmem_set_cr3(p_cr3);
 }
 
 

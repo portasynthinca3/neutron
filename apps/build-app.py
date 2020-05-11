@@ -55,7 +55,7 @@ print_status('Compiling')
 src_files = [f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f))]
 for file in src_files:
     print('  Building: ' + src_dir + '/' + file)
-    code = os.system('gcc -g3 -nostdlib -ffreestanding -m64 -mno-sse2 -O0 -c -o ' + build_dir + '/' + file + '.o ' + src_dir + '/' + file)
+    code = os.system('gcc -g3 -nostdlib -ffreestanding -m64 -mno-sse2 -Og -c -o ' + build_dir + '/' + file + '.o ' + src_dir + '/' + file)
     # terminate on compilation error
     if code != 0:
         exit()

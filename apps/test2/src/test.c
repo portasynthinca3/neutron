@@ -20,8 +20,8 @@ void syscall_run(char* path){
 void main(void* args){
     syscall_print("Hello, World (from test2.elf)!");
     
-    //syscall_print("Let's try to acces a kernel memory location (0xFFFF800000000000)");
-    //uint64_t malicious_af = *(uint64_t*)0xFFFF800000000000ULL;
+    syscall_print("Let's try to acces a kernel memory location (0xFFFF800000000000)");
+    volatile uint64_t malicious_af = *(uint64_t*)0xFFFF800000000000ULL;
     
     syscall_print("Let's try to divide by 0");
     volatile int a = 123 / 0;
