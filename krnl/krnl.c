@@ -532,10 +532,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     }
     krnl_pos.offset = orig_pos;
 
-    //Create an initial task
-    //mtask_create_task(16384, "Multitasking bootstrapper", 10, 0, vmem_get_cr3(), NULL,
-    //                  1, (void(*)(void*))(((uint64_t)&mtask_entry - krnl_pos.offset) | 0xFFFF800000000000ULL), NULL);
+    //Run the initialization task
     syscall_init();
-    elf_load("/initrd/test.elf", 0);
+    elf_load("/initrd/init.elf", 0);
     while(1);
 }

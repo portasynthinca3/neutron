@@ -16,7 +16,7 @@ syscall_wrapper:
     push r15
     push rbp
     ;//Handle syscall (obvious huh)
-    call handle_syscall
+    call syscall_handle
     ;//Restore saved registers
     pop rbp
     pop r15

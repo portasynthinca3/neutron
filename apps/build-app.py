@@ -33,6 +33,7 @@ if not path.exists(app_dir):
 build_dir = app_dir + '/build'
 src_dir = app_dir + '/src'
 res_dir = app_dir + '/res'
+tmp_dir = app_dir + '/.tmp'
 desc_path = app_dir + '/app.json'
 
 desc = {}
@@ -49,13 +50,27 @@ except Exception:
 if not path.exists(build_dir):
     os.mkdir(build_dir)
 
+# create temp directory
+if not path.exists(tmp_dir):
+    os.mkdir(tmp_dir)
+
+# create application description header
+with open(tmp_dir + '/app_desc.h', 'w') as f:
+    f.writelines([
+        '#define __APP_NAME "' + desc['name'] + '"\n',
+        '#define __APP_SHORT_NAME "' + desc['short-name'] + '"\n',
+        '#define __APP_VERSION "' + desc['version'] + '"\n',
+        '#define __APP_DSC "' + desc['desc'] + '"\n'
+    ])
+
 print_status('Compiling')
 
 # build source files
-src_files = [f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f))]
+src_files = [src_dir + '/' + f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f))] + ['nlib/nlib.c']
 for file in src_files:
-    print('  Building: ' + src_dir + '/' + file)
-    code = os.system('gcc -g3 -nostdlib -ffreestanding -m64 -mno-sse2 -Og -c -o ' + build_dir + '/' + file + '.o ' + src_dir + '/' + file)
+    print('  Building: ' + file)
+    code = os.system('gcc -g2 -nostdlib -ffreestanding -m64 -mno-sse2 -Inlib -I' + tmp_dir + ' -Og -c -o '
+                     + build_dir + '/' + path.splitext(os.path.basename(file))[0] + '.o ' + file)
     # terminate on compilation error
     if code != 0:
         exit()
@@ -63,7 +78,7 @@ for file in src_files:
 # link
 print_status('Linking')
 code = os.system('ld -melf_x86_64 -nostdlib -e main -o ' + build_dir + '/app.elf '
-               + ' '.join([build_dir + '/' + f + '.o' for f in src_files]))
+               + ' '.join([build_dir + '/' + path.splitext(os.path.basename(f))[0] + '.o' for f in src_files]))
 if code != 0:
     exit()
 

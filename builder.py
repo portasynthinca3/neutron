@@ -74,11 +74,11 @@ for path in c_files:
 	path_obj = 'build/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path)
-	execute('x86_64-w64-mingw32-gcc -g3 -fno-pie -ffreestanding -mcmodel=large -mno-red-zone -m64 -mno-sse2 ' + ('-Og' if '-d' in sys.argv else '-Os') +
+	execute('x86_64-w64-mingw32-gcc -g2 -fno-pie -ffreestanding -mcmodel=large -mno-red-zone -m64 -mno-sse2 ' + ('-Og' if '-d' in sys.argv else '-Os') +
 			' -fstack-protector -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
 
 print_status('Linking')
-execute('x86_64-w64-mingw32-gcc -g3 -mcmodel=large -mno-red-zone -m64 -nostdlib -shared -Wl,-dll,--subsystem,10,--image-base,0xFFFF800000000000,-e,efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
+execute('x86_64-w64-mingw32-gcc -g2 -mcmodel=large -mno-red-zone -m64 -nostdlib -shared -Wl,-dll,--subsystem,10,--image-base,0xFFFF800000000000,-e,efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
 
 image_size_sectors_default = 4 * 1024 * 2
 image_size_sectors = 2880
