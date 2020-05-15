@@ -60,7 +60,7 @@ with open(tmp_dir + '/app_desc.h', 'w') as f:
         '#define __APP_NAME "' + desc['name'] + '"\n',
         '#define __APP_SHORT_NAME "' + desc['short-name'] + '"\n',
         '#define __APP_VERSION "' + desc['version'] + '"\n',
-        '#define __APP_DSC "' + desc['desc'] + '"\n'
+        '#define __APP_DESC "' + desc['desc'] + '"\n'
     ])
 
 print_status('Compiling')

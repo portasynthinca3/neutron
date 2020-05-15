@@ -42,7 +42,7 @@ void mtask_init(void){
     
     mtask_cur_task_no = 0;
     mtask_next_task = 0;
-    mtask_next_uid = 0;
+    mtask_next_uid = 1;
     mtask_enabled = 0;
     //Initialize the scheduling timer
     timr_init();

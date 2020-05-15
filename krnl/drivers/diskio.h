@@ -12,6 +12,9 @@
 #define DISKIO_STATUS_OK                            0
 #define DISKIO_STATUS_FILE_NOT_FOUND                1
 #define DISKIO_STATUS_WRITE_PROTECTED               2
+#define DISKIO_STATUS_NOT_ALLOWED                   3
+#define DISKIO_STATUS_INVL_SIGNATURE                4
+#define DISKIO_STATUS_EOF                           5
 
 #define DISKIO_BUS_INITRD                           0
 
@@ -40,6 +43,8 @@ typedef struct {
 } file_info_t;
 
 typedef struct {
+    uint64_t signature;
+    uint64_t pid;
     file_info_t info;
     uint8_t mode;
     uint64_t position;
@@ -50,7 +55,7 @@ typedef struct {
 void diskio_init(void);
 void diskio_mount(diskio_dev_t device, char* path);
 uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode);
-uint8_t diskio_read(file_handle_t* handle, void* buf, uint64_t len);
+uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len);
 void diskio_close(file_handle_t* handle);
 
 #endif

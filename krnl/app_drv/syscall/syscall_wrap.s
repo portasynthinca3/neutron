@@ -4,8 +4,9 @@
 syscall_wrapper:
     ;//Save all necessary registers
     mov rbx, rsp
-    call syscall_get_krnl_rsp
-    mov rsp, rax
+    ;//This instruction will be self-modified: movq rsp, <something>
+    .byte 0x48, 0xbc
+    .byte 0, 0, 0, 0, 0, 0, 0, 0
     push rbx
     push rcx
     push r10

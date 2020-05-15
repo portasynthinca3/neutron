@@ -3,6 +3,7 @@
 
 #include "./diskio.h"
 #include "../stdlib.h"
+#include "../mtask/mtask.h"
 
 #include "./initrd.h"
 
@@ -56,6 +57,8 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
                     if(mode != DISKIO_FILE_ACCESS_READ)
                         return DISKIO_STATUS_WRITE_PROTECTED;
                     //Setup the handle
+                    handle->signature = 0xFFFF0000AAAA5555;
+                    handle->pid = mtask_get_uid();
                     handle->mode = mode;
                     handle->position = 0;
                     handle->info.medium_start = (uint64_t)initrd_contents(name);
@@ -67,19 +70,36 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             }
         }
     }
+    //If no mappings were found, return an error
+    return DISKIO_STATUS_FILE_NOT_FOUND;
 }
 
 /*
  * Reads file contents into buffer
  */
-uint8_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
+uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
+    //Check the signature
+    if(handle->signature != 0xFFFF0000AAAA5555)
+        return DISKIO_STATUS_INVL_SIGNATURE;
+    //Check the PID of the owner
+    if(handle->pid != mtask_get_uid())
+        return DISKIO_STATUS_NOT_ALLOWED;
+    //Limit the length to the remaining file length
+    uint64_t act_len = len;
+    if(len > handle->info.size - handle->position)
+        act_len = handle->info.size - handle->position;
     //Different device types require different access schemes
     switch(handle->info.device.bus_type){
-        case DISKIO_BUS_INITRD:{
+        case DISKIO_BUS_INITRD: {
             //Copy data into the buffer
-            memcpy(buf, (const void*)(handle->info.medium_start + handle->position), len);
+            memcpy(buf, (const void*)(handle->info.medium_start + handle->position), act_len);
             //Shift the position
-            handle->position += len;
+            handle->position += act_len;
+            //Return status: OK if read everything, EOF if the remaining length is smaller than the requested one
+            if(act_len != len)
+                return DISKIO_STATUS_EOF | (act_len << 32);
+            else
+                return DISKIO_STATUS_OK;
         } break;
     }
 }

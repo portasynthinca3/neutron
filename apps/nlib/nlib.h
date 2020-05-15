@@ -1,8 +1,11 @@
 //Neutron project
 //Standard library for userland projects
 
+#pragma once
+
 //Definitions
 #define NLIB_VERSION "1.0.0"
+#define NULL ((void*)0)
 
 //Macros
 //Macro for converting R, G and B values to color32_t
@@ -24,6 +27,7 @@ typedef long long unsigned int uint64_t;
 typedef long long signed int int64_t;
 typedef uint64_t size_t;
 typedef uint64_t sc_state_t;
+typedef void FILE;
 
 //Structure definitions
 typedef struct {
@@ -54,3 +58,34 @@ sc_state_t _gfx_draw_rect       (color32_t c, p2d_t pos, p2d_t sz);
 sc_state_t _gfx_draw_raw        (uint8_t* img, p2d_t pos, p2d_t sz);
 p2d_t      _gfx_text_bounds     (char* str);
 sc_state_t _gfx_draw_str        (p2d_t pos, color32_t fg, color32_t bg, char* str);
+//Syscalls: Task management
+uint64_t   _task_get_uid        (void);
+sc_state_t _task_terminate      (uint64_t uid);
+uint64_t   _task_load           (char* path);
+#define    ELF_STATUS_OK                    0
+#define    ELF_STATUS_FILE_INACCESSIBLE     1
+#define    ELF_STATUS_INCOMPATIBLE          2
+//Syscalls: Filesystem
+sc_state_t _fs_open       (char* path, uint64_t mode);
+sc_state_t _fs_read_bytes (FILE* file, void* buf, size_t len);
+#define    FS_MODE_READ                     0
+#define    FS_MODE_WRITE                    1
+#define    FS_MODE_APPEND                   2
+#define    FS_STATUS_OK                     0
+#define    FS_STATUS_FILE_DOESNT_EXIST      1
+#define    FS_STATUS_MODE_NOT_APPLICABLE    2
+#define    FS_STATUS_FILE_BUSY              3
+#define    FS_RD_STATUS_INVL_PTR            4
+#define    FS_RD_STATUS_ERROR               5
+#define    FS_RD_STATUS_EOF                 6
+//File I/O
+FILE*  fopen  (const char* filename, const char* mode);
+int    fgetc  (FILE* fp);
+char*  fgets  (char* buf, int n, FILE* fp);
+size_t fread  (void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file);
+//Ordinary functions
+char*  strcat (char* dest, char* src);
+int    memcmp (const void* lhs, const void* rhs, size_t cnt);
+int    strcmp (const char* str1, const char* str2);
+void*  memcpy (void* destination, const void* source, size_t num);
+size_t strlen (const char* str);

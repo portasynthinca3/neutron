@@ -242,6 +242,7 @@ void mtask_entry(void* args){
  * Stack smashing detected
  */
 __attribute__((noreturn)) void __stack_chk_fail(void) {
+    krnl_dump();
     gfx_panic(0, KRNL_PANIC_STACK_SMASH_CODE);
     while(1);
 }
@@ -402,7 +403,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     diskio_init();
     diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_INITRD, .device_no = 0}, "/initrd/");
     //Try to load the font
-    gfx_verbose_println("Loading the Noto Sans Semibold font from INITRD");
+    gfx_verbose_println("Loading the Noto Sans Semibold font");
     file_handle_t font_file;
     if(diskio_open("/initrd/noto-sans-semi-10.vlw", &font_file, DISKIO_FILE_ACCESS_READ) == DISKIO_STATUS_OK){
         uint8_t* font_buf = (uint8_t*)malloc(font_file.info.size);

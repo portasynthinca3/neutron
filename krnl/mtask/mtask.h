@@ -27,7 +27,7 @@ typedef struct {
     uint8_t padding[60];
 } __attribute__((packed)) task_t;
 
-#define MTASK_TASK_COUNT                    32
+#define MTASK_TASK_COUNT                    128
 
 #define TASK_STATE_RUNNING                  0
 #define TASK_STATE_BlOCKED_CYCLES           1

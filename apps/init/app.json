@@ -1,6 +1,6 @@
 {
     "short-name":"init",
-    "name":"init",
+    "name":"Initialization application",
     "version":"1.0.0",
-    "desc":"default Neutron initialization application"
+    "desc":"Default Neutron initialization application"
 }
