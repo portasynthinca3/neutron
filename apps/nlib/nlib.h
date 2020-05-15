@@ -5,7 +5,34 @@
 
 //Definitions
 #define NLIB_VERSION "1.0.0"
-#define NULL ((void*)0)
+
+#define NULL            ((void*)0)
+#define true            1
+#define false           0
+
+#define CHAR_BIT        8
+#define SCHAR_MIN       -128
+#define SCHAR_MAX       127
+#define UCHAR_MAX       255
+#define CHAR_MIN        SCHAR_MIN
+#define CHAR_MAX        SCHAR_MAX
+#define MB_LEN_MAX      16
+#define SHRT_MIN        -32768
+#define SHRT_MAX        32767
+#define USHRT_MAX       65536
+#define INT_MIN         -2147483648
+#define INT_MAX         2147483648
+#define UINT_MAX        4294967295
+#define LONG_MIN        -9223372036854775808
+#define LONG_MAX        9223372036854775807
+#define ULONG_MAX       18446744073709551615
+
+#define EOF             -1
+#define FOPEN_MAX       256
+#define FILENAME_MAX    256
+#define stderr          (FILE*)3
+#define stdin           (FILE*)2
+#define stdout          (FILE*)1
 
 //Macros
 //Macro for converting R, G and B values to color32_t
@@ -14,6 +41,8 @@
 #define COLOR32A(A, C) ((color32_t){.a = (A), .r = (C).r, .g = (C).g, .b = (C).b})
 //Macro for converting X and values to p2d_t
 #define P2D(X, Y) ((p2d_t){.x = (X), .y = (Y)})
+//Assertion macro
+#define assert(expr) (if(!(expr)){_gfx_println_verbose("*** ASSERTION FAILED"); abort();})
 
 //Standrard type definitions
 
@@ -84,8 +113,22 @@ int    fgetc  (FILE* fp);
 char*  fgets  (char* buf, int n, FILE* fp);
 size_t fread  (void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file);
 //Ordinary functions
-char*  strcat (char* dest, char* src);
-int    memcmp (const void* lhs, const void* rhs, size_t cnt);
-int    strcmp (const char* str1, const char* str2);
-void*  memcpy (void* destination, const void* source, size_t num);
-size_t strlen (const char* str);
+char*  strcat  (char* dest, char* src);
+int    memcmp  (const void* lhs, const void* rhs, size_t cnt);
+int    strcmp  (const char* str1, const char* str2);
+void*  memset  (void* dst, int ch, size_t size);
+void*  memcpy  (void* destination, const void* source, size_t num);
+char*  strcpy  (char* dest, char* src);
+void*  memchr  (const void* str, int c, size_t n);
+char*  strchr  (const char* str, int c);
+char*  strpbrk (const char *str1, const char *str2);
+char*  strstr  (const char* haystack, const char* needle);
+size_t strlen  (const char* str);
+int    atoi    (const char* str);
+long   atol    (const char* str);
+void   abort   (void);
+void   exit    (void);
+int    atexit  (void (*func)(void));
+int    abs     (int x);
+int    rand    (void);
+void   srand   (unsigned int seed);

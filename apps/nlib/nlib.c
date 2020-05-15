@@ -329,24 +329,101 @@ int strcmp(const char* str1, const char* str2){
 }
 
 /*
+ * Fill a chunk of memory with given values
+ */
+void* memset(void* dst, int ch, size_t size){
+    //Convert ch to 8 bits
+    uint8_t c = (uint8_t)ch;
+    //Fill the chunk with them
+    while(size--)
+        *(uint8_t*)((uint8_t*)dst + size) = c;
+    //Return dst
+    return dst;
+}
+
+/*
  * Copy a block of memory
  */
 void* memcpy(void* destination, const void* source, size_t num){
     if(num == 0)
         return destination;
-    //Q = 8 bytes at a time
-    //D = 4 bytes at a time
-    //W = 2 bytes at a time
-    //B = 1 byte  at a time
-    if(num % 8 == 0)
-        __asm__ volatile("rep movsq" : : "D" (destination), "S" (source), "c" (num / 8));
-    else if(num % 4 == 0)
-        __asm__ volatile("rep movsd" : : "D" (destination), "S" (source), "c" (num / 4));
-    else if(num % 2 == 0)
-        __asm__ volatile("rep movsw" : : "D" (destination), "S" (source), "c" (num / 2));
-    else
-        __asm__ volatile("rep movsb" : : "D" (destination), "S" (source), "c" (num));
+    for(uint64_t i = 0; i < num; i++)
+        *(uint8_t*)((uint64_t)destination + i) = *(uint8_t*)((uint64_t)source + i);
     return destination;
+}
+
+/*
+ * Copy a string to other string
+ */
+char* strcpy(char* dest, char* src){
+    memcpy(dest, src, strlen(src));
+}
+
+/*
+ * Find the first occurence of a character in a block of memory
+ */
+void* memchr(const void* str, int c, size_t n){
+    char chr;
+    uint64_t cnt = 0;
+    //Walk through the string
+    while(cnt++ < n){
+        //Return the occurence if it was found
+        if(chr == c)
+            return (void*)((uint64_t)str + cnt);
+    }
+    //Return NULL if not
+    return NULL;
+}
+
+/*
+ * Find the first occurence of a character in a string
+ */
+char* strchr(const char* str, int c){
+    char chr;
+    uint64_t cnt = 0;
+    //Walk through the string
+    while(chr = *(str + cnt)){
+        //Return the occurence if it was found
+        if(chr == c)
+            return (void*)((uint64_t)str + cnt);
+        //Increment the counter
+        cnt++;
+    }
+    //Return NULL if not
+    return NULL;
+}
+
+/*
+ * Find the first occurence of any character from str2 in str1
+ */
+char* strpbrk(const char *str1, const char *str2){
+    char chr, chr2;
+    uint64_t cnt = 0, cnt2 = 0;
+    //Walk through the string
+    while(chr = *(char*)(str1++)){
+        //Go through each characther in str2 and compare it against the current character
+        while(chr2 = *(char*)(str1 + cnt2++))
+            if(chr2 == chr) //Return the occurence
+                return (void*)((uint64_t)str1 + cnt);
+        //Increment the counter
+        cnt++;
+    }
+    //Return NULL if not
+    return NULL;
+}
+
+/*
+ * Find the first occurence of string needle in string haystack
+ */
+char* strstr(const char* haystack, const char* needle){
+    //For each character in the haystack
+    for(uint64_t i = 0; i < strlen(haystack) - strlen(needle); i++){
+        //Compare
+        if(memcmp(haystack + i, needle, strlen(needle)) == 0)
+            return (char*)((uint64_t)haystack + i);
+    }
+    //Return NULL if not found
+    return NULL;
 }
 
 /*
@@ -356,4 +433,103 @@ size_t strlen(const char* str){
     size_t i = 0;
     while(str[i++] != 0);
     return i - 1;
+}
+
+/*
+ * Parse number from string representation
+ */
+int atoi(const char* str){
+    int n = 0;
+    char c;
+    //Fetch next character
+    while((c = *(str++)) != 0){
+        //If it's a digit, append it
+        if(c >= '0' && c <= '9'){
+            n *= 10;
+            n += c - '0';
+        } else {
+            //Error
+            return 0;
+        }
+    }
+    return n;
+}
+
+/*
+ * Parse long number from string representation
+ */
+long atol(const char* str){
+    long n = 0;
+    char c;
+    //Fetch next character
+    while((c = *(str++)) != 0){
+        //If it's a digit, append it
+        if(c >= '0' && c <= '9'){
+            n *= 10;
+            n += c - '0';
+        } else {
+            //Error
+            return 0;
+        }
+    }
+    return n;
+}
+
+/*
+ * Abnormal program termination
+ */
+void abort(void){
+    _gfx_println_verbose("*** PROGRAM ABORTED");
+    //terminate the current process
+    _task_terminate(_task_get_uid());
+}
+
+//Function to call upon call of exit()
+void (*__atexit_func)(void) = NULL;
+/*
+ * Normal program termination
+ */
+void exit(void){
+    //Call the atexit function
+    if(__atexit_func != NULL)
+        __atexit_func();
+    //Terminate the current process
+    _task_terminate(_task_get_uid());
+}
+
+/*
+ * Assign the function yo be called by exit()
+ */
+int atexit(void (*func)(void)){
+    __atexit_func = func;
+    return 0;
+}
+
+/*
+ * Returns the absolute value of a number
+ */
+int abs(int x){
+    if(x >= 0)
+        return x;
+    else
+        return -x;
+}
+
+//Random number generator state
+uint64_t __r_x = 0, __r_w = 0, __r_s = 0x65c5f23086039ca8;
+/*
+ * Returns a presudo-random number (Middle Square Weyl Sequence algorithm)
+ */
+int rand(void){
+    __r_x *= __r_x;
+    __r_x += (__r_w += __r_s);
+    return __r_x = (__r_x >> 32) | (__r_x << 32);
+}
+
+/*
+ * Sets random number generation seed
+ */
+void srand(unsigned int seed){
+    __r_s = seed;
+    __r_s |= (uint64_t)rand() << 32;
 }

@@ -16,15 +16,57 @@ void main(void* args){
         while(1);
     }
     //Read data by lines
-    char buf[512];
-    buf[0] = 1;
-    while(buf[0] != 0){
-        fgets(buf, 512, fp);
-        //Truncate the trailing \n,
-        //  becuase _gfx_println_verbose inserts \n by itself
-        if(buf[strlen(buf) - 1] == '\n')
-            buf[strlen(buf) - 1] = 0;
-        _gfx_println_verbose(buf);
+    char line[512];
+    uint64_t line_no = 0;
+    while(true){
+        //Read one line
+        fgets(line, 512, fp);
+        //If it's empty, EOF has been reached
+        if(strlen(line) == 0)
+            break;
+        //Skip the line if it's empty or starts with a hash
+        if(line[0] == '\n' || line[0] == '#'){
+            line_no++;
+            continue;
+        }
+        //Truncate the trailing \n
+        if(line[strlen(line) - 1] == '\n')
+            line[strlen(line) - 1] = 0;
+        //Get key and value
+        char key[256];
+        char val[256];
+        memset(key, 0, sizeof(key));
+        memset(val, 0, sizeof(val));
+        //Find occurence of the equal signkey
+        char* eq_occur = strchr(line, '=');
+        memcpy(key, line, eq_occur - line);
+        strcpy(val, eq_occur + 1);
+
+        //A temporary buffer for constructing messages
+        char buf[256];
+        memset(buf, 0, 256);
+
+        //Parse the commands
+        if(strcmp(key, "start") == 0){ //Start an application
+            //Load the specified application
+            uint64_t status = _task_load(val);
+            //Print an error or a success message
+            if(status == ELF_STATUS_OK){
+                strcpy(buf, "[OK] Started application ");
+                strcat(buf, val);
+                _gfx_println_verbose(buf);
+            } else {
+                strcpy(buf, "[ERROR] Error starting application ");
+                strcat(buf, val);
+                _gfx_println_verbose(buf);
+            }
+        } else { //Unknown command
+            strcpy(buf, "[ERROR] Unknown command ");
+            strcat(buf, key);
+            _gfx_println_verbose(buf);
+        }
+
+        //Increment the line number
     }
 
     while(1);
