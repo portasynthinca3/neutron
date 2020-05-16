@@ -13,8 +13,11 @@
 #define MSR_IA32_LSTAR                      0xC0000082
 #define MSR_IA32_SFMASK                     0xC0000084
 
+#define MAX_KRNL_MSG_SZ                     256
+
 //Kernel version
 #define KRNL_VERSION_STR "v0.6.0"
+#define KRNL_VERSION_NUM 1
 
 //Structures
 
@@ -24,7 +27,17 @@ typedef struct {
     uint64_t size;
 } krnl_pos_t;
 
+//Kernel message struct
+typedef struct _krnl_msg_s {
+    uint64_t tsc;
+    char file[64];
+    char msg[MAX_KRNL_MSG_SZ];
+    struct _krnl_msg_s* next;
+} krnl_msg_t;
+
 //Function prototypes
+
+void krnl_write_msgf(char* file, char* msg, ...);
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 krnl_pos_t krnl_get_pos(void);

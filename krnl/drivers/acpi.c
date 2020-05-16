@@ -8,6 +8,7 @@
 #include "./timr.h"
 #include "../stdlib.h"
 #include "./gfx.h"
+#include "../krnl.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
@@ -30,7 +31,7 @@ uint32_t acpi_init(void){
     acpi_rsdp_t* rsdp = acpi_find_rsdp();
     //If no RSDP was found, return
     if(rsdp == NULL){
-        gfx_verbose_println("Error: RSDP not found");
+        krnl_write_msgf(__FILE__, "error: RSDP not found");
         return 0;
     }
 
@@ -38,20 +39,20 @@ uint32_t acpi_init(void){
     acpi_rsdt_t* rsdt = (acpi_rsdt_t*)(uint64_t)rsdp->rsdt_ptr;
     //Check if it's valid
     if(!acpi_sdt_checksum(&rsdt->hdr)){
-        gfx_verbose_println("Error: RSDP is not valid");
+        krnl_write_msgf(__FILE__, "error: RSDP in invalid");
         return 0;
     }
 
     //Find FADT
     acpi_fadt_t* fadt = rsdt_find(rsdt, "FACP");
     if(fadt == NULL){
-        gfx_verbose_println("Error: FADT not found");
+        krnl_write_msgf(__FILE__, "error: FADT not found");
         return 0;
     }
 
     //Check the DSDT
     if(!acpi_sdt_checksum((acpi_sdt_hdr_t*)(uint64_t)fadt->dsdt)){
-        gfx_verbose_println("Error: DSDT is not valid");
+        krnl_write_msgf(__FILE__, "error: DSDT is invalid");
         return 0;
     }
     //Search for the \_S5 package in DSDT
@@ -93,6 +94,8 @@ uint32_t acpi_init(void){
             acpi_sci_en = 1;
         }
     }
+
+    krnl_write_msgf(__FILE__, "initialization was successful");
     
     return 1;
 }

@@ -3,6 +3,7 @@
 
 #include "./apic.h"
 #include "../stdlib.h"
+#include "../krnl.h"
 
 //Local APIC base address
 uint64_t lapic_base;
@@ -15,6 +16,7 @@ void apic_init(void){
     __asm__ volatile("cli");
     //Set LAPIC base
     lapic_base = 0xFFFFFFFFFFFFE000ULL;
+    krnl_write_msgf(__FILE__, "LAPIC base: 0x%x", lapic_base);
     //Set task and processor priority to 0
     apic_reg_wr(LAPIC_REG_TPR, 0);
     apic_reg_wr(LAPIC_REG_PPR, 0);
@@ -35,6 +37,8 @@ void apic_init(void){
     apic_eoi();
     //Clear error
     apic_reg_wr(LAPIC_REG_ERR_ST, 0);
+
+    krnl_write_msgf(__FILE__, "initialized LAPIC");
 }
 
 /*

@@ -4,6 +4,7 @@
 #include "./diskio.h"
 #include "../stdlib.h"
 #include "../mtask/mtask.h"
+#include "../krnl.h"
 
 #include "./initrd.h"
 
@@ -29,6 +30,7 @@ void diskio_mount(diskio_dev_t device, char* path){
             mappings[i].device = device;
             //Mark the entry as used
             mappings[i].used = 0;
+            krnl_write_msgf(__FILE__, "mounted dev 0x%i.0x%i to %s", device.bus_type, device.device_no, path);
             //Return
             return;
         }

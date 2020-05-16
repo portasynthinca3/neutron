@@ -50,5 +50,4 @@ krnl/app_drv/syscall/syscall_wrap.s
 -bios /usr/share/ovmf/x64/OVMF_CODE.fd \
 -d int \
 -monitor stdio \
--s \
--S
+-s

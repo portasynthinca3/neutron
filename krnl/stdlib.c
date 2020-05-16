@@ -270,6 +270,13 @@ void* memcpy(void* destination, const void* source, size_t num){
 }
 
 /*
+ * Copy a string to other string
+ */
+char* strcpy(char* dest, char* src){
+    memcpy(dest, src, strlen(src) + 1);
+}
+
+/*
  * Copy a block of memory to an overlapping block of memory
  */
 void* memmove(void* dest, const void* src, size_t count){
@@ -607,6 +614,85 @@ char* strcat(char* dest, char* src){
     dest[dest_len + src_len] = 0;
     //Return the destination
     return dest;
+}
+
+/*
+ * Returns the number of arguments sprintf will require on a string fmt
+ */
+int _sprintf_argcnt(char* fmt){
+    uint64_t argcnt = 0;
+    for(uint64_t i = 0; i < strlen(fmt); i++)
+        if(fmt[i] == '%' && (i > 0 && fmt[i - 1] != '%'))
+            argcnt++;
+    return argcnt;
+}
+
+/*
+ * Print formatted string
+ */
+int _sprintf(char* str, const char* format, va_list valist){
+    //Get the number of arguments
+    uint64_t argcnt = _sprintf_argcnt((char*)format);
+    //Parse the format
+    uint64_t str_idx = 0;
+    for(uint64_t i = 0; i < strlen(format); i++){
+        //If it's a percentage sign, print something special
+        if(format[i] == '%'){
+            char fmt = format[++i];
+            switch(fmt){
+                case 's': { //string
+                    char* str2 = va_arg(valist, char*);
+                    for(uint64_t j = 0; j < strlen(str2); j++)
+                        str[str_idx++] = str2[j];
+                    break;
+                }
+                case 'c': //character
+                    str[str_idx++] = va_arg(valist, int);
+                    break;
+                case '%': //percentage sign
+                    str[str_idx++] = '%';
+                    break;
+                case 'n': //nothing
+                    break;
+                case 'd': //integer
+                case 'u':
+                case 'i': {
+                    char buf[64];
+                    sprintu(buf, va_arg(valist, uint64_t), 1);
+                    for(uint64_t j = 0; j < strlen(buf); j++)
+                        str[str_idx++] = buf[j];
+                    break;
+                }
+                case 'p': //hex integer
+                case 'x':
+                case 'X': {
+                    char buf[64];
+                    sprintub16(buf, va_arg(valist, uint64_t), 1);
+                    for(uint64_t j = 0; j < strlen(buf); j++)
+                        str[str_idx++] = buf[j];
+                    break;
+                }
+                default: //nothing else
+                    return -1;
+            }
+        } else { //A normal character
+            str[str_idx++] = format[i];
+        }
+    }
+    //Add zero termination
+    str[str_idx] = 0;
+    //Return the amount of characters printed
+    return str_idx;
+}
+
+/*
+ * Print formatted string (wrapper)
+ */
+int sprintf(char* str, const char* format, ...){
+    va_list valist;
+    va_start(valist, _sprintf_argcnt((char*)format));
+    _sprintf(str, format, valist);
+    va_end(valist);
 }
 
 /*

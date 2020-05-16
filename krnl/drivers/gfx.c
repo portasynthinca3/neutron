@@ -8,6 +8,7 @@
 #include "./gfx.h"
 #include "../stdlib.h"
 #include "../vmem/vmem.h"
+#include "../krnl.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
@@ -94,56 +95,20 @@ void gfx_init(void){
     gfx_find_gop();
     //If it hadn't been found, print an error
     if(graphics_output == NULL){
+        krnl_write_msgf(__FILE__, "GOP not found", gfx_res_x(), gfx_res_y());
         krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
-            (CHAR16*)L"Unable to find the graphics output protocol. Trying UGA instead\r\n");
-        //gfx_find_uga();
-        //If no, print an error
-        /*
-        if(graphics_uga == NULL){
-            krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
-                (CHAR16*)L"Error: no way to display graphics was detected. If you are sure that your computer supports graphics, report this error\r\n");
-            while(1);
-        } else {
-            krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
-                (CHAR16*)L"UGA found\r\n");
-        }
-        */
+            (CHAR16*)L"Unable to find the graphics output protocol\r\n");
+        while(1);
     } else {
+        krnl_write_msgf(__FILE__, "GOP found", gfx_res_x(), gfx_res_y());
         krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"GOP found\r\n");
     }
     //Choose the best video mode
     gfx_choose_best();
+    krnl_write_msgf(__FILE__, "found best display mode: %ix%i", gfx_res_x(), gfx_res_y());
     //Allocate the second buffer based on the screen size
-    //  (actually, a little bit bigger than that)
-    sec_buffer = (color32_t*)malloc(res_x * (res_y + 16) * sizeof(color32_t));
-    #ifdef GFX_TRIBUF
-    //Allocate the third buffer
-    mid_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
-    #endif
-}
-
-/*
- * Finds the EFI UGA protocol
- */
-void gfx_find_uga(void){
-    //Locate the protocol
-    //Firstly, through the ConsoleOut handle
-    /*
-    EFI_STATUS status;
-    status = krnl_get_efi_systable()->BootServices->HandleProtocol( krnl_get_efi_systable()->ConsoleOutHandle,
-        &((EFI_GUID)EFI_UGA_DRAW_PROTOCOL_GUID), (void**)graphics_uga);
-    if(!EFI_ERROR(status))
-        return;
-    //Then, directly
-    status = krnl_get_efi_systable()->BootServices->LocateProtocol(&((EFI_GUID)EFI_UGA_DRAW_PROTOCOL_GUID), NULL,
-        (void**)&graphics_uga);
-    if(!EFI_ERROR(status))
-        return;
-    //Lastly, locate by handle
-    uint64_t handle_count = 0;
-    EFI_HANDLE* handle_buf;
-    */
+    sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
 }
 
 /*
@@ -172,7 +137,7 @@ void gfx_find_gop(void){
     for(int i = 0; i < handle_count; i++){
         status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle[i],
             &((EFI_GUID)EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID), (void*)&graphics_output);
-        if(EFI_ERROR(status))
+        if(!EFI_ERROR(status))
             return;
     }
 }
@@ -195,25 +160,28 @@ void gfx_choose_best(void){
     status = krnl_get_efi_systable()->BootServices->LocateHandleBuffer(ByProtocol,
         &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), NULL, &handle_count, &handle);
     if(!EFI_ERROR(status)){
-        status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle,
-            &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
-        //Parse it
-        //To be specific, its detailed timing descriptors
-        //Go through them
-        if(!EFI_ERROR(status)){
-            for(uint32_t base = 54; base <= 108; base += 18){
-                uint32_t mon_res_x = (uint32_t)*(uint8_t*)(edid->Edid + base + 2) << 4;
-                uint32_t mon_res_y = (uint32_t)*(uint8_t*)(edid->Edid + base + 5) << 4;
-                if((mon_res_x * mon_res_y) > (mon_best_res_x * mon_best_res_y)){
-                    mon_best_res_x = mon_res_x;
-                    mon_best_res_y = mon_res_y;
+        for(int i = 0; i < handle_count; i++){
+            status = krnl_get_efi_systable()->BootServices->HandleProtocol(handle[i],
+                &((EFI_GUID)EFI_EDID_DISCOVERED_PROTOCOL_GUID), (void*)&edid);
+            if(!EFI_ERROR(status)){
+                //Go through detailed timing descriptors
+                for(uint32_t base = 54; base <= 108; base += 18){
+                    uint32_t mon_res_x = (uint32_t)*(uint8_t*)(edid->Edid + base + 2) << 4;
+                    uint32_t mon_res_y = (uint32_t)*(uint8_t*)(edid->Edid + base + 5) << 4;
+                    if((mon_res_x * mon_res_y) > (mon_best_res_x * mon_best_res_y)){
+                        mon_best_res_x = mon_res_x;
+                        mon_best_res_y = mon_res_y;
+                    }
                 }
             }
         }
-    } else {
+    }
+    if(mon_best_res_x == 0 || mon_best_res_y == 0){
+        krnl_write_msgf(__FILE__, "error retrieving display resolution, forcing to 1280x720");
         mon_best_res_x = 1280;
         mon_best_res_y = 720;
     }
+    krnl_write_msgf(__FILE__, "display resolution: %ix%i", mon_best_res_x, mon_best_res_x);
 
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info;
     uint64_t mode_info_size;
@@ -536,7 +504,7 @@ p2d_t gfx_glyph(p2d_t pos, color32_t color, color32_t bcolor, uint32_t c){
         gfx_draw_rect((p2d_t){pos.x + 1, pos.y - font.ascent}, (p2d_t){font.size / 2, font.ascent + font.descent - 3}, color);
         return (p2d_t){font.size / 2 + 2, font.size};
     } else if(c == ' ') //Treat the missing space character specially
-        return (p2d_t){font.size / 3, font.size};
+        return (p2d_t){font.size / 2, font.size};
     //Get the glyph properties
     int32_t height = *(int32_t*)(glyph_ptr + 4); bswap_dw(&height);
     int32_t width = *(int32_t*)(glyph_ptr + 8); bswap_dw(&width);

@@ -16,7 +16,9 @@ uint64_t krnl_rsp = 0;
 void syscall_init(void){
     //Create a kernel mode stack
     krnl_rsp = (uint64_t)malloc(8192) + 8192;
+    krnl_write_msgf(__FILE__, "system call RSP: 0x%x", krnl_rsp);
     //Self-modify the syscall wrapper offset
+    krnl_write_msgf(__FILE__, "mov rsp modify address: 0x%x", &syscall_wrapper + 5);
     *(uint64_t volatile*)(&syscall_wrapper + 5) = krnl_rsp;
 }
 

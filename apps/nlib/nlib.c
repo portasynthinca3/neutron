@@ -356,7 +356,7 @@ void* memcpy(void* destination, const void* source, size_t num){
  * Copy a string to other string
  */
 char* strcpy(char* dest, char* src){
-    memcpy(dest, src, strlen(src));
+    memcpy(dest, src, strlen(src) + 1);
 }
 
 /*

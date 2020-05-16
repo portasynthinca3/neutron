@@ -4,9 +4,44 @@
 #include "./timr.h"
 #include "./apic.h"
 #include "../stdlib.h"
+#include "../krnl.h"
 
-//The variable for keeping track of milliseconds since timer initialization
-uint64_t timr_millis = 0;
+//CPU clock frequency in Hz
+uint64_t cpu_fq_hz;
+
+/*
+ * Returns CPU frequency in Hz
+ */
+uint64_t timr_get_cpu_fq(void){
+    return cpu_fq_hz;
+}
+
+/*
+ * Measures the CPU frequency and stores it in cpu_fq_hz
+ */
+void timr_measure_cpu_fq(void){
+    uint64_t sum = 0;
+    for(int i = 0; i < 50; i++){
+        //Disable ch2 counting and PC speaker (clear bits 0 and 1)
+        outb(0x61, inb(0x61) & ~3);
+        //Accept a new value in chan 2 latch reg
+        outb(0x43, 0b10110000);
+        //Write the initial counter value
+        uint16_t cnt_val = 1193182 / 20;
+        outb(0x42, cnt_val >> 8);
+        outb(0x42, cnt_val & 0xFF);
+        //Enable ch2 counting and read TSC
+        outb(0x61, inb(0x61) | 1);
+        uint64_t tsc_start = rdtsc();
+        //Wait until bit 5 goes high (this means that the time needed passed)
+        while((inb(0x61) & (1 << 5)) == 0);
+        uint64_t tsc_diff = rdtsc() - tsc_start;
+        //Calculate CPU speed
+        sum += tsc_diff * 394;
+    }
+    cpu_fq_hz = sum / 50;
+    krnl_write_msgf(__FILE__, "CPU frequency detected: %i MHz", cpu_fq_hz / 1000 / 1000);
+}
 
 /*
  * Initializes the timer
@@ -26,9 +61,11 @@ void timr_init(void){
     //Get the counter value
     uint32_t cnt_val = apic_reg_rd(LAPIC_REG_TIMR_CURCNT);
     uint32_t ticks_in_cycles = 0xFFFFFFFF - cnt_val;
+    krnl_write_msgf(__FILE__, "LAPIC timer ticks in 10M CPU cycles: %i", ticks_in_cycles);
     apic_reg_wr(LAPIC_REG_TIMR_DIVCONF, 0); //Set the divider to 2
     apic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_cycles * 10); //Set the initial counter value
     apic_reg_wr(LAPIC_REG_LVT_TIM, 0x20000 | 32); //Enable the timer with interrupt vector #32
+    krnl_write_msgf(__FILE__, "LAPIC timer initialized");
 }
 
 /*
@@ -38,16 +75,4 @@ void timr_stop(void){
     apic_reg_wr(LAPIC_REG_LVT_TIM, apic_reg_rd(LAPIC_REG_LVT_TIM) & ~0x20000);
 }
 
-/*
- * Increment the millisecond counter
- */
-void timr_tick(void){
-    timr_millis++;
-}
 
-/*
- * Returns the amount of milliseconds that have passed since timer initialization
- */
-uint64_t timr_ms(void){
-    return timr_millis / 2;
-}

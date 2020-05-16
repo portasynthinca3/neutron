@@ -1,6 +1,8 @@
 #ifndef STDLIB_H
 #define STDLIB_H
 
+#include <stdarg.h>
+
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
@@ -152,6 +154,7 @@ void* calloc(uint64_t num, size_t size);
 
 void* memset(void* dst, int ch, size_t size);
 void* memcpy(void* destination, const void* source, size_t num);
+char* strcpy(char* dest, char* src);
 
 //I/O port operation functions
 
@@ -179,6 +182,9 @@ void* list_get_at_idx(list_node_t* first, uint32_t idx);
 size_t strlen(const char* str);
 char* sprintu(char* str, uint64_t i, uint8_t min);
 char* sprintub16(char* str, uint64_t i, uint8_t min);
+int _sprintf_argcnt(char* fmt);
+int _sprintf(char* str, const char* format, va_list valist);
+int sprintf(char* str, const char* format, ...);
 char* strcat(char* dest, char* src);
 int strcmp(const char* str1, const char* str2);
 
