@@ -476,6 +476,130 @@ long atol(const char* str){
 }
 
 /*
+ * Print an uint64_t to the string
+ */
+char* _sprintu(char* str, uint64_t i, uint8_t min){
+    //Create some variables
+    uint8_t pos = 0;
+    uint64_t div = 1000000000000000000; //Start with the leftmost digit
+    uint8_t started = 0;
+    for(int j = 1; j <= 19; j++){
+        //Fetch the next digit
+        uint8_t digit = (i / div) % 10;
+        //If the conversion hasn't started already and the current digit
+        //  is greater than zero OR we exceeded the maximum amount of dropped
+        //  digits, assume that the conversion has started
+        if((!started && digit > 0) || (19 - j < min))
+            started = 1;
+        //If the conversion has started, write a digit to the string
+        if(started)
+            str[pos++] = digit + '0';
+        //Move to the next digit
+        div /= 10;
+    }
+    //Mark the end of the string
+    str[pos] = 0;
+    //Return the string
+    return str;
+}
+
+char hex_const[16] = "0123456789ABCDEF";
+
+/*
+ * Print an uint64_t with base 16 to the string
+ */
+char* _sprintub16(char* str, uint64_t i, uint8_t min){
+    //Create some variables
+    uint8_t pos = 0;
+    uint64_t div = 1ULL << 60; //Start with the leftmost digit
+    uint8_t started = 0;
+    for(uint8_t j = 1; j <= 16; j++){
+        //Fetch the next digit
+        uint8_t digit = (i / div) % 16;
+        //If the conversion hasn't started already and the current digit
+        //  is greater than zero OR we exceeded the maximum amount of dropped
+        //  digits, assume that the conversion has started
+        if((!started && digit > 0) || (16 - j < min))
+            started = 1;
+        //If the conversion has started, write a digit to the string
+        if(started)
+            str[pos++] = hex_const[digit];
+        //Move to the next digit
+        div >>= 4;
+    }
+    //Mark the end of the string
+    str[pos] = 0;
+    //Return the string
+    return str;
+}
+
+/*
+ * Print formatted string
+ */
+int sprintf(char* str, const char* format, ...){
+    //Get the number of arguments
+    uint64_t argcnt = 0;
+    for(uint64_t i = 0; i < strlen(format); i++)
+        if(format[i] == '%' && (i > 0 && format[i - 1] != '%'))
+            argcnt++;
+    //Get variable arguments
+    va_list valist;
+    va_start(valist, argcnt);
+    //Parse the format
+    uint64_t str_idx = 0;
+    for(uint64_t i = 0; i < strlen(format); i++){
+        //If it's a percentage sign, print something special
+        if(format[i] == '%'){
+            char fmt = format[++i];
+            switch(fmt){
+                case 's': { //string
+                    char* str2 = va_arg(valist, char*);
+                    for(uint64_t j = 0; j < strlen(str2); j++)
+                        str[str_idx++] = str2[j];
+                    break;
+                }
+                case 'c': //character
+                    str[str_idx++] = va_arg(valist, int);
+                    break;
+                case '%': //percentage sign
+                    str[str_idx++] = '%';
+                    break;
+                case 'n': //nothing
+                    break;
+                case 'd': //integer
+                case 'u':
+                case 'i': {
+                    char buf[64];
+                    _sprintu(buf, va_arg(valist, uint64_t), 1);
+                    for(uint64_t j = 0; j < strlen(buf); j++)
+                        str[str_idx++] = buf[j];
+                    break;
+                }
+                case 'p': //hex integer
+                case 'x':
+                case 'X': {
+                    char buf[64];
+                    _sprintub16(buf, va_arg(valist, uint64_t), 1);
+                    for(uint64_t j = 0; j < strlen(buf); j++)
+                        str[str_idx++] = buf[j];
+                    break;
+                }
+                default: //nothing else
+                    va_end(valist);
+                    return -1;
+            }
+        } else { //A normal character
+            str[str_idx++] = format[i];
+        }
+    }
+    //Add zero termination
+    str[str_idx] = 0;
+    //Return the amount of characters printed
+    va_end(valist);
+    return str_idx;
+}
+
+/*
  * Abnormal program termination
  */
 void abort(void){

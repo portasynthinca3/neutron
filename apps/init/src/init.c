@@ -42,7 +42,7 @@ void main(void* args){
         memcpy(key, line, eq_occur - line);
         strcpy(val, eq_occur + 1);
 
-        //A temporary buffer for constructing messages
+        //A temporary buffer for messages
         char buf[256];
         memset(buf, 0, 256);
 
@@ -52,21 +52,19 @@ void main(void* args){
             uint64_t status = _task_load(val);
             //Print an error or a success message
             if(status == ELF_STATUS_OK){
-                strcpy(buf, "[OK] Started application ");
-                strcat(buf, val);
+                sprintf(buf, "[OK] Started application %s", val);
                 _gfx_println_verbose(buf);
             } else {
-                strcpy(buf, "[ERROR] Error starting application ");
-                strcat(buf, val);
+                sprintf(buf, "[ERROR [LINE %i]] Error starting application %s", line_no, val);
                 _gfx_println_verbose(buf);
             }
         } else { //Unknown command
-            strcpy(buf, "[ERROR] Unknown command ");
-            strcat(buf, key);
+            sprintf(buf, "[ERROR] Unknown command %s", key);
             _gfx_println_verbose(buf);
         }
 
         //Increment the line number
+        line_no++;
     }
 
     while(1);

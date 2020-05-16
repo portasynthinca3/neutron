@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <stdarg.h>
+
 //Definitions
 #define NLIB_VERSION "1.0.0"
 
@@ -112,23 +114,28 @@ FILE*  fopen  (const char* filename, const char* mode);
 int    fgetc  (FILE* fp);
 char*  fgets  (char* buf, int n, FILE* fp);
 size_t fread  (void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file);
-//Ordinary functions
-char*  strcat  (char* dest, char* src);
-int    memcmp  (const void* lhs, const void* rhs, size_t cnt);
-int    strcmp  (const char* str1, const char* str2);
-void*  memset  (void* dst, int ch, size_t size);
-void*  memcpy  (void* destination, const void* source, size_t num);
-char*  strcpy  (char* dest, char* src);
-void*  memchr  (const void* str, int c, size_t n);
-char*  strchr  (const char* str, int c);
-char*  strpbrk (const char *str1, const char *str2);
-char*  strstr  (const char* haystack, const char* needle);
-size_t strlen  (const char* str);
-int    atoi    (const char* str);
-long   atol    (const char* str);
-void   abort   (void);
-void   exit    (void);
-int    atexit  (void (*func)(void));
-int    abs     (int x);
-int    rand    (void);
-void   srand   (unsigned int seed);
+//Strimg/memory operations
+char*  strcat      (char* dest, char* src);
+int    memcmp      (const void* lhs, const void* rhs, size_t cnt);
+int    strcmp      (const char* str1, const char* str2);
+void*  memset      (void* dst, int ch, size_t size);
+void*  memcpy      (void* destination, const void* source, size_t num);
+char*  strcpy      (char* dest, char* src);
+void*  memchr      (const void* str, int c, size_t n);
+char*  strchr      (const char* str, int c);
+char*  strpbrk     (const char *str1, const char *str2);
+char*  strstr      (const char* haystack, const char* needle);
+size_t strlen      (const char* str);
+int    atoi        (const char* str);
+long   atol        (const char* str);
+char*  _sprintu    (char* str, uint64_t i, uint8_t min);
+char*  _sprintub16 (char* str, uint64_t i, uint8_t min);
+int    sprintf     (char* str, const char* format, ...);
+//Flow control
+void   abort  (void);
+void   exit   (void);
+int    atexit (void (*func)(void));
+//Maths
+int    abs   (int x);
+int    rand  (void);
+void   srand (unsigned int seed);
