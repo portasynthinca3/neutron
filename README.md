@@ -1,5 +1,4 @@
 ![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
-![Codacy grade](https://img.shields.io/codacy/grade/3db2b0cbdd72413a944b0a5004dc3dd8)
 ![GitHub search hit counter](https://img.shields.io/github/search/portasynthinca3/neutron/goto)
 ![GitHub All Releases](https://img.shields.io/github/downloads/portasynthinca3/neutron/total)
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/portasynthinca3/neutron?include_prereleases)
@@ -16,12 +15,5 @@ In theory, it should work on any modern system. Here they are:
 *   CPU: x86-64 architecture
 *   System: UEFI class 2 or 3
 *   RAM: 128 MB
-## Building
-1.  You need to install the `x86_64-w64-mingw32-gcc` compiler. You can get it from the Arch User Repository or
-some other place. Example: `$ pamac build mingw-w64-gcc-base`
-
-2.  You need to have python version 3 installed.
-
-3.  You need to have MTools installed.
-
-4.  Run the `python3 builder.py` command inside the directory that contains the project. The ISO file will be inside the `build` directory.
+## Building and documentation
+[Wiki-wiki-wiki!](https://github.com/portasynthinca3/neutron/wiki)
