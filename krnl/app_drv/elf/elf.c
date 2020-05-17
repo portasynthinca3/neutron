@@ -12,8 +12,11 @@
 /*
  * Loads and executes an ELF file
  */
-uint8_t elf_load(char* path, uint8_t debug){
-    if(debug) gfx_verbose_println("ELF: opening file");
+uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
+    //Check requested privileges
+    if(mtask_get_uid() > 0)
+        if(popcnt(privl ^ mtask_get_by_uid(mtask_get_uid())->privl) > 0)
+            return ELF_STATUS_ESCALATION_ERROR;
     //Open the file
     file_handle_t file;
     if(diskio_open(path, &file, DISKIO_FILE_ACCESS_READ) != DISKIO_STATUS_OK)
@@ -24,15 +27,6 @@ uint8_t elf_load(char* path, uint8_t debug){
         elf_hdr_t hdr;
     } elf_hdr;
     diskio_read(&file, elf_hdr.raw, sizeof(elf_hdr_t));
-    if(debug){
-        if(elf_hdr.hdr.bits == 2)
-            gfx_verbose_println("ELF bits: 64");
-        if(elf_hdr.hdr.bits == 1)
-            gfx_verbose_println("ELF bits: 32");
-        char temp[50] = "ELF arch: 0x";
-        char temp2[20];
-        gfx_verbose_println(strcat(temp, sprintub16(temp2, elf_hdr.hdr.instruction_set, 2)));
-    }
     //Check the format (ELF32/ELF64)
     if(elf_hdr.hdr.bits != 2)
         return ELF_STATUS_INCOMPATIBLE;
@@ -72,11 +66,6 @@ uint8_t elf_load(char* path, uint8_t debug){
         char s_name[32];
         file.position = shrtrtab_offs + sect_hdr.hdr.name_offs;
         diskio_read(&file, s_name, 32);
-        //Display debug info
-        if(debug){
-            char buf[128] = "ELF: ";
-            gfx_verbose_println(strcat(buf, s_name));
-        }
         //Load the section if needed
         if(sect_hdr.hdr.type == 1 //SHT_PROGBITS
            && sect_hdr.hdr.size > 0){
@@ -103,34 +92,11 @@ uint8_t elf_load(char* path, uint8_t debug){
                 next_addr += sect_hdr.hdr.size;
                 next_addr += 4096 - (next_addr % 4096);
             }
-            //Display debug info
-            if(debug){
-                char buf[128] = "ELF: section is loaded at 0x";
-                char buf2[32] = "";
-                gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)addr, 1)));
-                memcpy(buf, "ELF: section target 0x", strlen("ELF: section target 0x") + 1);
-                memset(buf2, 0, 32);
-                gfx_verbose_println(strcat(buf, sprintub16(buf2, target_addr, 1)));
-                memcpy(buf, "ELF: size 0x", strlen("ELF: size 0x") + 1);
-                memset(buf2, 0, 32);
-                gfx_verbose_println(strcat(buf, sprintub16(buf2, sect_hdr.hdr.size, 1)));
-            }
         }
     }
-    if(debug) gfx_verbose_println("\nELF: starting the process");
     //Allocate some memory for the stack and map it
     void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(8192, 1));
     vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 8192), (void*)(1ULL << 46));
     //Create a new task
-    if(debug){
-        char buf[128] = "ELF: entry point 0x";
-        char buf2[32] = "";
-        gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)elf_hdr.hdr.entry_pos, 1)));
-    }
-    if(debug){
-        char buf[128] = "ELF: stack 0x";
-        char buf2[32] = "";
-        gfx_verbose_println(strcat(buf, sprintub16(buf2, (uint64_t)stack, 1)));
-    }
-    uint64_t task_uid = mtask_create_task(8192 - 8, path, 1, 0, cr3, (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL);
+    uint64_t task_uid = mtask_create_task(8192 - 8, path, prio, 0, cr3, (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl);
 }

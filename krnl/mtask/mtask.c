@@ -75,16 +75,17 @@ void mtask_stop(void){
  * Returns the UID
  */
 uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
-        void* suggested_stack, uint8_t start, void(*func)(void*), void* args){
+        void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl){
 
     task_t* task = &mtask_task_list[mtask_next_task];
     //Clear the task registers (except for RCX, set it to the argument pointer)
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     //Asign an UID
     task->uid = mtask_next_uid++;
-    //Assign the priority
+    //Assign the priority and privileges
     task->priority = priority;
     task->prio_cnt = task->priority;
+    task->privl = privl;
     //Copy the name
     memcpy(task->name, name, strlen(name) + 1);
     //Use the current address space or assign the suggested CR3
@@ -194,6 +195,21 @@ void mtask_dly_cycles(uint64_t cycles){
     //Set the block
     mtask_cur_task->blocked_till = rdtsc() + cycles;
     mtask_cur_task->state_code = TASK_STATE_BlOCKED_CYCLES;
-    //This variable will be set by the scheduler
-    while(mtask_cur_task->state_code != TASK_STATE_RUNNING);
+}
+
+/*
+ * Blocks the currently running task for a specific time in microseconds
+ */
+void mtask_dly_us(uint64_t us){
+    //Convert milliseconds to CPU cycles
+    uint64_t cycles = ((timr_get_cpu_fq() / 1000) * us) / 1000;
+    //Block for that amount of cycles
+    mtask_dly_cycles(cycles);
+}
+
+/*
+ * Adds privileges specified in mask to the currently running process
+ */
+void mtask_escalate(uint64_t mask){
+    mtask_cur_task->privl |= mask;
 }

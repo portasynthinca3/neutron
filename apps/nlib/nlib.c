@@ -172,8 +172,8 @@ inline sc_state_t _task_terminate(uint64_t uid){
 /*
  * System call: Task management: Load executable
  */
-inline uint64_t _task_load(char* path){
-    return _syscall(1, 2, (uint64_t)path, 0, 0, 0, 0);
+inline uint64_t _task_load(char* path, uint64_t privl){
+    return _syscall(1, 2, (uint64_t)path, privl, 0, 0, 0);
 }
 
 
@@ -186,11 +186,22 @@ inline uint64_t _task_load(char* path){
 inline sc_state_t _fs_open(char* path, uint64_t mode){
     return _syscall(2, 0, (uint64_t)path, mode, 0, 0, 0);
 }
+
 /*
  * System call: Filesystem: Open file
  */
 inline sc_state_t _fs_read_bytes(FILE* file, void* buf, size_t len){
     return _syscall(2, 1, (uint64_t)file, (uint64_t)buf, len, 0, 0);
+}
+
+
+// -----===== SYSTEM CALLS: KERNEL MESSAGES =====-----
+
+/*
+ * System call: Kernel messages: Write message
+ */
+inline sc_state_t _km_write(char* file, char* msg){
+    return _syscall(3, 0, (uint64_t)file, (uint64_t)msg, 0, 0, 0);
 }
 
 

@@ -37,6 +37,7 @@ typedef struct _krnl_msg_s {
 
 //Function prototypes
 
+void krnl_write_msg(char* file, char* msg);
 void krnl_write_msgf(char* file, char* msg, ...);
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);

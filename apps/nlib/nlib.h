@@ -36,6 +36,10 @@
 #define stdin           (FILE*)2
 #define stdout          (FILE*)1
 
+#define TASK_PRIVL_EVERYTHING               0x7FFFFFFFFFFFFFFFULL
+#define TASK_PRIVL_INHERIT                  (1ULL << 63)
+#define TASK_PRIVL_KMESG                    (1ULL << 0)
+
 //Macros
 //Macro for converting R, G and B values to color32_t
 #define COLOR32(A, R, G, B) ((color32_t){.a = (A), .r = (R), .g = (G), .b = (B)})
@@ -92,7 +96,7 @@ sc_state_t _gfx_draw_str        (p2d_t pos, color32_t fg, color32_t bg, char* st
 //Syscalls: Task management
 uint64_t   _task_get_uid        (void);
 sc_state_t _task_terminate      (uint64_t uid);
-uint64_t   _task_load           (char* path);
+uint64_t   _task_load           (char* path, uint64_t privl);
 #define    ELF_STATUS_OK                    0
 #define    ELF_STATUS_FILE_INACCESSIBLE     1
 #define    ELF_STATUS_INCOMPATIBLE          2
@@ -109,6 +113,8 @@ sc_state_t _fs_read_bytes (FILE* file, void* buf, size_t len);
 #define    FS_RD_STATUS_INVL_PTR            4
 #define    FS_RD_STATUS_ERROR               5
 #define    FS_RD_STATUS_EOF                 6
+//Syscalls: Kernel messages
+sc_state_t _km_write (char* file, char* msg);
 //File I/O
 FILE*  fopen  (const char* filename, const char* mode);
 int    fgetc  (FILE* fp);

@@ -8,6 +8,7 @@
 #include "../../mtask/mtask.h"
 #include "../../drivers/gfx.h"
 #include "../../drivers/diskio.h"
+#include "../../krnl.h"
 #include "../elf/elf.h"
 
 //Kernel mode RSP
@@ -174,7 +175,10 @@ uint64_t syscall_handle(void){
                     //check pointer (should be in userspace)
                     if(p0 + strlen((char*)p0) >= 0x800000000000ULL)
                         return 0xFFFFFFFFFFFFFFFF;
-                    return elf_load((char*)p0, 0);
+                    //Inherit the privileges if requested
+                    if(p1 & TASK_PRIVL_INHERIT)
+                        p1 = mtask_get_by_uid(mtask_get_uid())->privl;
+                    return elf_load((char*)p0, p1, mtask_get_by_uid(mtask_get_uid())->priority);
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;
             }
@@ -217,6 +221,22 @@ uint64_t syscall_handle(void){
                             return 0;
                     }
                 }
+                default: //invalid subfunction number
+                    return 0xFFFFFFFFFFFFFFFF;
+            }
+        case 3: //kernel messages
+            switch(subfunc){
+                case 0: //write message
+                    //check task privileges
+                    if(mtask_get_by_uid(mtask_get_uid())->privl & TASK_PRIVL_KMESG == 0)
+                        return 1;
+                    //check filename and message pointers (should be in userspace)
+                    if(p0 + strlen((char*)p0) >= 0x800000000000ULL)
+                        return 0xFFFFFFFFFFFFFFFF;
+                    if(p1 + strlen((char*)p1) >= 0x800000000000ULL)
+                        return 0xFFFFFFFFFFFFFFFF;
+                    //write the message
+                    krnl_write_msg((char*)p0, (char*)p1);
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;
             }

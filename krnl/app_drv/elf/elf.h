@@ -5,6 +5,7 @@
 #define ELF_STATUS_OK                       0
 #define ELF_STATUS_FILE_INACCESSIBLE        1
 #define ELF_STATUS_INCOMPATIBLE             2
+#define ELF_STATUS_ESCALATION_ERROR         3
 
 //Structures
 
@@ -38,4 +39,4 @@ typedef struct {
 
 //Function prototypes
 
-uint8_t elf_load(char* path, uint8_t debug);
+uint8_t elf_load(char* path, uint64_t privl, uint8_t prio);

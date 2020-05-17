@@ -770,3 +770,12 @@ uint32_t rand(void){
     __asm__ volatile("rdrand %%eax; mov %%eax, %0" : "=m"(num) : : "eax");
     return num;
 }
+
+/*
+ * Returns the count of set bits
+ */
+uint64_t popcnt(uint64_t n){
+    uint64_t c = 0;
+    __asm__ volatile("popcnt %1, %0" : "=r"(c) : "r"(n));
+    return c;
+}

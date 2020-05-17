@@ -730,14 +730,11 @@ uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz){
  */
 void gfx_shift_up(uint32_t lines){
     color32_t* buf = gfx_buffer();
-    for(uint32_t i = 0; i < lines; i++){
-        //From top to bottom
-        for(uint32_t l = 1; l < res_x; l++){
-            uint32_t offs = l * res_x;
-            //Shift one line
-            memcpy(&buf[offs - res_x], &buf[offs], res_x * sizeof(color32_t));
-        }
-    }
+    //Shift the screen
+    for(int i = 0; i < res_y - lines; i++)
+        memcpy(&(buf[res_x * i]), &(buf[res_x * (i + lines)]), res_x * sizeof(color32_t));
+    //Clear the remaining part
+    gfx_draw_filled_rect((p2d_t){.x = 0, .y = res_y - lines}, (p2d_t){.x = res_x, .y = lines}, COLOR32(255, 0, 0, 0));
 }
 
 //Position on screen in verbose logging mode

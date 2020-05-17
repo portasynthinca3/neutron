@@ -137,6 +137,7 @@ int memcmp(const void* lhs, const void* rhs, size_t cnt);
 uint64_t rdmsr(uint32_t msr);
 void wrmsr(uint32_t msr, uint64_t val);
 uint32_t rand(void);
+uint64_t popcnt(uint64_t n);
 
 //Dynamic memory functions
 

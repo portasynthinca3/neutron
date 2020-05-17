@@ -64,7 +64,7 @@ krnl_msg_t* last_msg;
 //Stack Smashing Protection guard
 uint64_t __stack_chk_guard;
 //Is the kernel in verbose mode or not?
-uint8_t krnl_verbose;
+uint8_t krnl_verbose = 0;
 //EFI stuff
 EFI_SYSTEM_TABLE* krnl_efi_systable;
 EFI_HANDLE krnl_efi_img_handle;
@@ -101,7 +101,7 @@ void krnl_write_msg(char* file, char* msg){
         last_msg = m;
     }
 
-    if(gfx_buffer() != 0)
+    if(krnl_verbose)
         krnl_print_msg(m);
 }
 
@@ -316,24 +316,24 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_efi_map_key = dram_init();
     vmem_init();
     dram_shift();
-    timr_measure_cpu_fq();
 
     krnl_write_msgf(__FILE__, "Neutron kernel version %s (%i), compiled on %s %s",
                               KRNL_VERSION_STR, KRNL_VERSION_NUM, __DATE__, __TIME__);
     krnl_write_msgf(__FILE__, "load address/size: 0x%x/0x%x", krnl_pos.offset, krnl_pos.size);
     krnl_write_msgf(__FILE__, "dynamic memory physical base: 0x%x", stdlib_physbase());
 
-    //Set verbose mode
-    krnl_verbose = 1;
-    gfx_set_verbose(krnl_verbose);
-
-    krnl_write_msgf(__FILE__, "verbose mode is turned %s", krnl_verbose ? "on" : "off");
+    //Measure CPU frequency
+    timr_measure_cpu_fq();
 
     //Do some graphics-related initialization stuff
     gfx_init();
     gfx_set_buf(GFX_BUF_SEC); //Enable doublebuffering
     gfx_fill(COLOR32(255, 0, 0, 0));
-    gfx_set_font(jb_mono_10);
+    gfx_set_font(jb_mono_11);
+
+    //Set verbose mode
+    krnl_verbose = 1;
+    gfx_set_verbose(krnl_verbose);
     
     //Draw the logo
     gfx_draw_raw((p2d_t){.x = (gfx_res_x() - neutron_logo_width) / 2, .y = 50}, neutron_logo,
@@ -422,17 +422,14 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     initrd_init();
     diskio_init();
     diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_INITRD, .device_no = 0}, "/initrd/");
-    //Try to load the font
     /*
-    gfx_verbose_println("Loading the Noto Sans Semibold font");
+    //Try to load the font
     file_handle_t font_file;
-    if(diskio_open("/initrd/noto-sans-semi-10.vlw", &font_file, DISKIO_FILE_ACCESS_READ) == DISKIO_STATUS_OK){
+    if(diskio_open("/initrd/bitstream-mono-10.vlw", &font_file, DISKIO_FILE_ACCESS_READ) == DISKIO_STATUS_OK){
         uint8_t* font_buf = (uint8_t*)malloc(font_file.info.size);
         diskio_read(&font_file, font_buf, font_file.info.size);
         diskio_close(&font_file);
         gfx_set_font(font_buf);
-    } else {
-        gfx_verbose_println("Failed to load the font");
     }
     */
 
@@ -565,6 +562,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 
     //Run the initialization task
     syscall_init();
-    elf_load("/initrd/init.elf", 0);
+    krnl_write_msgf(__FILE__, "running init");
+    uint64_t status = elf_load("/initrd/init.elf", TASK_PRIVL_EVERYTHING, 2);
+    if(status != ELF_STATUS_OK)
+        krnl_write_msgf(__FILE__, "running init failed: error code %i", status);
     while(1);
 }
