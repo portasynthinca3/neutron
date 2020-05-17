@@ -1,35 +1,53 @@
 .c
 
-#The base of everything
+# The base of everything
 
-src/krnl.c
-src/isr_wrapper.s
-src/stdlib.c
-src/cpuid.c
-src/mtask/mtask.c
-src/mtask/mtask_sw.s
-src/vmem/vmem.c
+krnl/krnl.c
+krnl/isr_wrapper.s
+krnl/stdlib.c
+krnl/cpuid.c
+krnl/mtask/mtask.c
+krnl/mtask/mtask_sw.s
+krnl/vmem/vmem.c
 
-#GUI stuff
+# Drivers
 
-src/gui/gui.c
-src/gui/windows.c
-src/gui/controls.c
-src/gui/stdgui.c
+krnl/drivers/diskio.c
+krnl/drivers/gfx.c
+krnl/drivers/apic.c
+krnl/drivers/timr.c
+krnl/drivers/acpi.c
+krnl/drivers/initrd.c
+krnl/drivers/human_io/kbd.c
+krnl/drivers/human_io/mouse.c
 
-#Drivers
+# Application support stuff
 
-src/drivers/diskio.c
-src/drivers/gfx.c
-src/drivers/usb.c
-src/drivers/pci.c
-src/drivers/ata.c
-src/drivers/apic.c
-src/drivers/timr.c
-src/drivers/acpi.c
-src/drivers/initrd.c
-src/drivers/human_io/kbd.c
-src/drivers/human_io/mouse.c
-src/drivers/human_io/ps2.c
-src/drivers/human_io/ps2_kbd.c
-src/drivers/human_io/ps2_mouse.c
+krnl/app_drv/elf/elf.c
+krnl/app_drv/syscall/syscall.c
+krnl/app_drv/syscall/syscall_wrap.s
+
+.after-build
+
+/usr/bin/qemu-system-x86_64 \
+-name guest=Neutron,debug-threads=on \
+-machine pc-i440fx-4.2,accel=kvm,usb=off,vmport=off,dump-guest-core=off \
+-cpu IvyBridge-IBRS,ss=on,vmx=on,pcid=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,md-clear=on,stibp=on,arch-capabilities=on,ssbd=on,xsaveopt=on,ibpb=on,amd-ssbd=on,skip-l1dfl-vmentry=on \
+-m 1024 \
+-overcommit mem-lock=off \
+-smp 1,sockets=1,cores=1,threads=1 \
+-uuid 9681faaf-3395-4000-ae75-bd7005a26ada \
+-no-user-config \
+-nodefaults \
+-rtc base=utc,driftfix=slew \
+-global kvm-pit.lost_tick_policy=delay \
+-no-hpet \
+-cdrom /home/portasynthinca3/proj/neutron/build/neutron.iso \
+-device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,max_outputs=1,bus=pci.0,addr=0x2 \
+-device intel-hda,id=sound0,bus=pci.0,addr=0x3 \
+-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
+-msg timestamp=on \
+-bios /usr/share/ovmf/x64/OVMF_CODE.fd \
+-d int \
+-monitor stdio \
+-s

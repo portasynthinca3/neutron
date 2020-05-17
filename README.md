@@ -5,19 +5,17 @@
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/portasynthinca3/neutron?include_prereleases)
 ![batteries](https://img.shields.io/badge/batteries-included-brightgreen)
 [![Discord](https://img.shields.io/discord/683727891976290321?label=Our%20Discord%20server%21)](https://discord.gg/djFDPYS)
+## Credits
+Thanks to the [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI) Arduino library for containing the VLW font file format documentation!
+Also thanks to Sasha Kulichkov for testing this software.
 ## The purpose of the project
 Neutron is the result of me trying to get into the low-level stuff.
 This project is **not** intended to do some crazy stuff like replacing the giants like Windows, Linux and macOS. That's just not possible. However, it doesn't mean i don't have an end goal. **The end goal is to write a simple 64-bit UEFI-powered OS that can run 3rd party applications and its GUI system, while requiring as little disk space, RAM and processor resources as possible.** Oh, and also, I just want to have fun :)
-## The list of people involved in this project
-*   Me, Andrey Antonenko, the creator, maintainer and programmer
-*   Sasha Kulichkov, graphical designer and tester
 ## Requirements
 In theory, it should work on any modern system. Here they are:
 *   CPU: x86-64 architecture
 *   System: UEFI class 2 or 3
-*   RAM: 256 MB (this is temporary for version 5.0.1, will be reduced back to 64MB in a next release)
-## Screenshots
-They are in the `screens` directory
+*   RAM: 128 MB
 ## Building
 1.  You need to install the `x86_64-w64-mingw32-gcc` compiler. You can get it from the Arch User Repository or
 some other place. Example: `$ pamac build mingw-w64-gcc-base`
@@ -26,4 +24,4 @@ some other place. Example: `$ pamac build mingw-w64-gcc-base`
 
 3.  You need to have MTools installed.
 
-4.  Run the `$ python3 builder.py` command inside the directory that contains the project. The ISO file will be inside the `build` directory.
+4.  Run the `python3 builder.py` command inside the directory that contains the project. The ISO file will be inside the `build` directory.

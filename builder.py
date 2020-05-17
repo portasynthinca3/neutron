@@ -1,3 +1,5 @@
+#!/bin/python
+
 import sys, os, time
 from os import listdir
 from os.path import isfile, join
@@ -18,12 +20,14 @@ def print_status(text):
 def execute(cmd):
 	if '-v' in sys.argv:
 		print(bcolors.OKBLUE + cmd + bcolors.ENDC)
-	os.system(cmd)
+	code = os.system(cmd)
+	if code != 0:
+		exit()
 
 build_start = time.time()
 
 if '-h' in sys.argv:
-	print('Additional arguments:\n  -h    display this message\n  -v    print every command being executed')
+	print('Additional arguments:\n  -h    display this message\n  -v    print every command executed\n  -d    replace -Os GCC option with -Og')
 	exit()
 
 config_file = 'nbuild'
@@ -36,6 +40,7 @@ config_file_obj.close()
 
 c_files = list()
 fs_files = list()
+after_build = ''
 
 if not os.path.exists('build'):
 	os.mkdir('build')
@@ -48,15 +53,20 @@ for line_no in range(len(config_lines)):
 		if not line.startswith('#'):
 			if line.startswith('.'):
 				config_section = line[1:]
-				if not config_section in ['c']:
+				if not config_section in ['c', 'after-build']:
 					print('Error: ' + config_file + ':' + str(line_no + 1) + ': invalid section "' + config_section + '"')
 					sys.exit()
 			else:
 				if config_section == 'c':
 					c_files.append(line)
+				elif config_section == 'after-build':
+					after_build = after_build + line + '\n'
 				else:
 					print('Error: ' + config_file + ':' + str(line_no + 1) + ': data in invalid section "' + config_section + '"')
 					sys.exit()
+
+print_status('Cleaning the build directory')
+execute('rm -rf build/*')
 
 c_obj = list()
 print_status('Compiling C sources')
@@ -64,10 +74,11 @@ for path in c_files:
 	path_obj = 'build/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path)
-	execute('x86_64-w64-mingw32-gcc -ffreestanding -mcmodel=large -mno-red-zone -m64 -msse2 -mstackrealign -Os -fstack-protector -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -c -o ' + path_obj + ' ' + path)
+	execute('x86_64-w64-mingw32-gcc -g2 -fno-pie -ffreestanding -mcmodel=large -mno-red-zone -m64 -mno-sse2 ' + ('-Og' if '-d' in sys.argv else '-Os') +
+			' -fstack-protector -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -Wno-varargs -c -o ' + path_obj + ' ' + path)
 
 print_status('Linking')
-execute('x86_64-w64-mingw32-gcc -mcmodel=large -mno-red-zone -m64 -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
+execute('x86_64-w64-mingw32-gcc -g2 -mcmodel=large -mno-red-zone -m64 -nostdlib -shared -Wl,-dll,--subsystem,10,--image-base,0xFFFF800000000000,-e,efi_main -o build/BOOTX64.EFI ' + ' '.join(c_obj))
 
 image_size_sectors_default = 4 * 1024 * 2
 image_size_sectors = 2880
@@ -128,3 +139,7 @@ execute(f'dd if={image_file} of={iso_file} > /dev/null 2>&1')
 build_end = time.time()
 build_took = build_end - build_start
 print_status(f'Build done, took {int(build_took * 1000)} ms')
+
+if after_build != '':
+	print_status('Exectuting after-build commands')
+	execute(after_build)
