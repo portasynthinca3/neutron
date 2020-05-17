@@ -14,6 +14,6 @@ This project is **not** intended to do some crazy stuff like replacing the giant
 In theory, it should work on any modern system. Here they are:
 *   CPU: x86-64 architecture
 *   System: UEFI class 2 or 3
-*   RAM: 128 MB
+*   RAM: 64 MB
 ## Building and documentation
 [Wiki-wiki-wiki!](https://github.com/portasynthinca3/neutron/wiki)

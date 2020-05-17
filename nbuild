@@ -33,7 +33,7 @@ krnl/app_drv/syscall/syscall_wrap.s
 -name guest=Neutron,debug-threads=on \
 -machine pc-i440fx-4.2,accel=kvm,usb=off,vmport=off,dump-guest-core=off \
 -cpu IvyBridge-IBRS,ss=on,vmx=on,pcid=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,md-clear=on,stibp=on,arch-capabilities=on,ssbd=on,xsaveopt=on,ibpb=on,amd-ssbd=on,skip-l1dfl-vmentry=on \
--m 1024 \
+-m 512 \
 -overcommit mem-lock=off \
 -smp 1,sockets=1,cores=1,threads=1 \
 -uuid 9681faaf-3395-4000-ae75-bd7005a26ada \
