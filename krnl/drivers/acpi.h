@@ -19,7 +19,7 @@ typedef struct {
 //ACPI RSDT table
 typedef struct {
     acpi_sdt_hdr_t hdr;
-    uint32_t ptrs;
+    uint32_t ptrs[256];
 } __attribute__((packed)) acpi_rsdt_t;
 
 //ACPI RSDP structure
@@ -109,7 +109,7 @@ typedef struct {
 uint32_t acpi_init(void);
 uint8_t acpi_sdt_checksum(acpi_sdt_hdr_t* rsdt);
 acpi_rsdp_t* acpi_find_rsdp(void);
-void* rsdt_find(acpi_rsdt_t* rsdt, char* table);
+void* rsdt_find(char* table);
 
 //Power management
 

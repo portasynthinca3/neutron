@@ -16,6 +16,7 @@
 #include "./drivers/timr.h"
 #include "./drivers/acpi.h"
 #include "./drivers/initrd.h"
+#include "./drivers/ps2.h"
 
 #include "./fonts/jb-mono-10.h"
 
@@ -29,8 +30,10 @@
 #include "./app_drv/elf/elf.h"
 #include "./app_drv/syscall/syscall.h"
 
-extern void enable_a20(void);
+//ISR wrappers
 extern void apic_timer_isr_wrap(void);
+extern void ps21_isr_wrap(void);
+extern void ps22_isr_wrap(void);
 
 //Exception wrapper definitions
 extern void exc_0(void);
@@ -481,6 +484,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt[30] = IDT_ENTRY_ISR((uint64_t)(&exc_30 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Set up gates for interrupts
     idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[33] = IDT_ENTRY_ISR((uint64_t)(&ps21_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[34] = IDT_ENTRY_ISR((uint64_t)(&ps22_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Load IDT
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(idt_entry_t);
@@ -534,6 +539,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Initialize the APIC
     krnl_boot_status("Initializing APIC", 80);
     apic_init();
+
+    //Initialize PS/2
+    krnl_boot_status("Initializing PS/2", 85);
+    ps2_init();
 
     //Initialize the multitasking system
     krnl_boot_status("Initializing multitasking", 90);

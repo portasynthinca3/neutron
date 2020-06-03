@@ -8,7 +8,7 @@
 #include "gfx.h"
 
 //The current theme
-theme_t theme;;
+theme_t theme;
 
 /*
  * Parses the ARGB color

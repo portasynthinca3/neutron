@@ -7,6 +7,7 @@
 #include "../krnl.h"
 #include "./timr.h"
 #include "./gfx.h"
+#include "./ps2.h"
 
 #include "./initrd.h"
 
@@ -358,7 +359,28 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
                 return DISKIO_STATUS_OK;
         } break;
         case DISKIO_BUS_DEVICE: {
-
+            switch(handle->info.device.device_no){
+                case DEV_FILE_PS21: {
+                    int cnt = 0;
+                    int data = 0;
+                    while((data = ps21_read()) != -1)
+                        ((uint8_t*)buf)[cnt++] = (uint8_t)data;
+                    if(cnt != len)
+                        return DISKIO_STATUS_EOF | ((uint64_t)cnt << 32);
+                    else
+                        return DISKIO_STATUS_OK;
+                } break;
+                case DEV_FILE_PS22: {
+                    int cnt = 0;
+                    int data = 0;
+                    while((data = ps22_read()) != -1)
+                        ((uint8_t*)buf)[cnt++] = (uint8_t)data;
+                    if(cnt != len)
+                        return DISKIO_STATUS_EOF | ((uint64_t)cnt << 32);
+                    else
+                        return DISKIO_STATUS_OK;
+                } break;
+            }
         } break;
     }
 }
@@ -396,18 +418,32 @@ uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
                 return DISKIO_STATUS_OK;
         } break;
         case DISKIO_BUS_DEVICE: {
-            //limit the number of bytes
-            uint64_t max_len = (gfx_res_x() * gfx_res_y() * 4) - handle->position;
-            uint64_t act_len = len;
-            if(len > max_len)
-                act_len = max_len;
-            //copy the data
-            memcpy(gfx_buf_another(), buf, act_len);
-            //Return status: OK if wrote everything, EOF if the remaining buffer space is smaller than the requested data length
-            if(act_len != len)
-                return DISKIO_STATUS_EOF | (act_len << 32);
-            else
-                return DISKIO_STATUS_OK;
+            switch(handle->info.device.device_no){
+                case DEV_FILE_FB: {
+                    //limit the number of bytes
+                    uint64_t max_len = (gfx_res_x() * gfx_res_y() * 4) - handle->position;
+                    uint64_t act_len = len;
+                    if(len > max_len)
+                        act_len = max_len;
+                    //copy the data
+                    memcpy(gfx_buf_another(), buf, act_len);
+                    //Return status: OK if wrote everything, EOF if the remaining buffer space is smaller than the requested data length
+                    if(act_len != len)
+                        return DISKIO_STATUS_EOF | (act_len << 32);
+                    else
+                        return DISKIO_STATUS_OK;
+                } break;
+                case DEV_FILE_PS21: {
+                    for(int i = 0; i < len; i++)
+                        ps21_write(((uint8_t*)buf)[i]);
+                    return DISKIO_STATUS_OK;
+                } break;
+                case DEV_FILE_PS22: {
+                    for(int i = 0; i < len; i++)
+                        ps22_write(((uint8_t*)buf)[i]);
+                    return DISKIO_STATUS_OK;
+                } break;
+            }
         } break;
     }
 }

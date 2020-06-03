@@ -3,6 +3,24 @@
 
 #include "../stdlib.h"
 
+//How many I/O APICs can Neutron handle
+#define IO_APIC_MAX_CNT                 16
+
+//ACPI MADT table structures
+typedef struct {
+    uint8_t type;
+    uint8_t len;
+    uint8_t data[256];
+} __attribute__((packed)) madt_record_t;
+
+//I/O APIC structure
+typedef struct {
+    uint8_t  valid;
+    uint8_t  id;
+    uint32_t mmio_base;
+    uint32_t gsi_base;
+} ioapic_t;
+
 //APIC base Model-Specific Register
 #define IA32_APIC_BASE_MSR              0x1B
 
@@ -61,9 +79,13 @@
 #define LAPIC_REG_TIMR_DIVCONF          0x3E0
 
 void apic_init(void);
-uint32_t apic_reg_rd(uint32_t reg);
-void apic_reg_wr(uint32_t reg, uint32_t val);
-uint32_t apic_get_id(void);
-void apic_eoi(void);
+uint32_t lapic_reg_rd(uint32_t reg);
+void lapic_reg_wr(uint32_t reg, uint32_t val);
+uint32_t lapic_get_id(void);
+void lapic_eoi(void);
+
+uint32_t ioapic_reg_rd(uint32_t id, uint32_t reg);
+void ioapic_reg_wr(uint32_t id, uint32_t reg, uint32_t val);
+void ioapic_map_irq(uint32_t id, uint8_t irq, uint8_t vect);
 
 #endif
