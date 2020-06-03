@@ -32,23 +32,13 @@
 #define EOF             -1
 #define FOPEN_MAX       256
 #define FILENAME_MAX    256
-#define stderr          (FILE*)3
-#define stdin           (FILE*)2
-#define stdout          (FILE*)1
-
-#define TASK_PRIVL_EVERYTHING               0x7FFFFFFFFFFFFFFFULL
-#define TASK_PRIVL_INHERIT                  (1ULL << 63)
-#define TASK_PRIVL_KMESG                    (1ULL << 0)
+//#define stderr          (FILE*)3
+//#define stdin           (FILE*)2
+//#define stdout          (FILE*)1
 
 //Macros
-//Macro for converting R, G and B values to color32_t
-#define COLOR32(A, R, G, B) ((color32_t){.a = (A), .r = (R), .g = (G), .b = (B)})
-//Macro for changing the alpha value of a color
-#define COLOR32A(A, C) ((color32_t){.a = (A), .r = (C).r, .g = (C).g, .b = (C).b})
-//Macro for converting X and values to p2d_t
-#define P2D(X, Y) ((p2d_t){.x = (X), .y = (Y)})
 //Assertion macro
-#define assert(expr) (if(!(expr)){_gfx_println_verbose("*** ASSERTION FAILED"); abort();})
+#define assert(expr) (if(!(expr)) abort();)
 
 //Standrard type definitions
 
@@ -64,48 +54,33 @@ typedef uint64_t size_t;
 typedef uint64_t sc_state_t;
 typedef void FILE;
 
-//Structure definitions
-typedef struct {
-  int32_t x; //X coordinate of the point
-  int32_t y; //Y coordinate of the point
-} __attribute__((packed)) p2d_t;
-
-typedef struct {
-  uint8_t r; //Red value of the color
-  uint8_t g; //Green value of the color
-  uint8_t b; //Blue value of the color
-  uint8_t a; //Alpha (transparency) value of the color
-} __attribute__((packed)) color32_t;
-
 //Function prototypes
 
 //System calls
 //General syscall function
 uint64_t _syscall(uint32_t func, uint32_t subfunc,
                   uint64_t p0, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4);
-//Syscalls: Graphics
-uint64_t   _gfx_println_verbose (char* str);
-p2d_t      _gfx_get_res         (void);
-sc_state_t _gfx_flip            (void);
-sc_state_t _gfx_fill            (color32_t c);
-sc_state_t _gfx_fill_rect       (color32_t c, p2d_t pos, p2d_t sz);
-sc_state_t _gfx_draw_rect       (color32_t c, p2d_t pos, p2d_t sz);
-sc_state_t _gfx_draw_raw        (uint8_t* img, p2d_t pos, p2d_t sz);
-p2d_t      _gfx_text_bounds     (char* str);
-sc_state_t _gfx_draw_str        (p2d_t pos, color32_t fg, color32_t bg, char* str);
 //Syscalls: Task management
-uint64_t   _task_get_uid        (void);
-sc_state_t _task_terminate      (uint64_t uid);
-uint64_t   _task_load           (char* path, uint64_t privl);
+uint64_t   _task_get_pid   (void);
+sc_state_t _task_terminate (uint64_t pid);
+uint64_t   _task_load      (char* path, uint64_t privl);
+void*      _task_palloc    (uint64_t num);
+sc_state_t _task_pfree     (void* start);
 #define    ELF_STATUS_OK                    0
 #define    ELF_STATUS_FILE_INACCESSIBLE     1
 #define    ELF_STATUS_INCOMPATIBLE          2
+#define    TASK_PRIVL_EVERYTHING            (0xFFFFFFFFFFFFFFFFULL & ~TASK_PRIVL_INHERIT & ~TASK_PRIVL_SUDO_MODE)
+#define    TASK_PRIVL_INHERIT               (1ULL << 63)
+#define    TASK_PRIVL_KMESG                 (1ULL << 0)
+#define    TASK_PRIVL_SUDO_MODE             (1ULL << 1)
+#define    TASK_PRIVL_SYSFILES              (1ULL << 2)
+#define    TASK_PRIVL_DEVFILES              (1ULL << 3)
 //Syscalls: Filesystem
 sc_state_t _fs_open       (char* path, uint64_t mode);
 sc_state_t _fs_read_bytes (FILE* file, void* buf, size_t len);
-#define    FS_MODE_READ                     0
-#define    FS_MODE_WRITE                    1
-#define    FS_MODE_APPEND                   2
+#define    FS_MODE_READ                     1
+#define    FS_MODE_WRITE                    2
+#define    FS_MODE_APPEND                   4
 #define    FS_STATUS_OK                     0
 #define    FS_STATUS_FILE_DOESNT_EXIST      1
 #define    FS_STATUS_MODE_NOT_APPLICABLE    2
@@ -119,8 +94,13 @@ sc_state_t _km_write (char* file, char* msg);
 FILE*  fopen  (const char* filename, const char* mode);
 int    fgetc  (FILE* fp);
 char*  fgets  (char* buf, int n, FILE* fp);
+int    fputc  (int c, FILE* fp);
+int    fputs  (const char* s, FILE* fp);
+int    fseek  (FILE* fp, uint64_t offs);
+int    fclose (FILE* fp);
 size_t fread  (void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file);
-//Strimg/memory operations
+size_t fwrite (const void *ptr, size_t size_of_elements, size_t number_of_elements, FILE *a_file);
+//String/memory operations
 char*  strcat      (char* dest, char* src);
 int    memcmp      (const void* lhs, const void* rhs, size_t cnt);
 int    strcmp      (const char* str1, const char* str2);
@@ -145,3 +125,8 @@ int    atexit (void (*func)(void));
 int    abs   (int x);
 int    rand  (void);
 void   srand (unsigned int seed);
+//Memory control
+void* malloc (uint64_t num);
+void  free   (void* ptr);
+//Non-standard functions
+uint64_t rdtsc (void);

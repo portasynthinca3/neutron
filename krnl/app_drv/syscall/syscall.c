@@ -75,99 +75,10 @@ uint64_t syscall_handle(void){
     //Subfunction number is in lower 32 bits
     uint32_t subfunc = (uint32_t)num;
     switch(func){
-        case 0: //graphics
-            switch(subfunc){
-                case 0: //print in verbose mode
-                    //check range (should be in userland)
-                    if(p0 + strlen((char*)p0) >= 0x800000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //print the string
-                    gfx_verbose_println((char*)p0);
-                    return 0;
-                case 1: //get screen resolution
-                    return _ser_p2d_t((p2d_t){
-                        .x = gfx_res_x(),
-                        .y = gfx_res_y()
-                    });
-                case 2: //flip buffers
-                    gfx_flip();
-                    return 0;
-                case 3: //fill buffer
-                    gfx_fill(_deser_color32_t(p0));
-                    return 0;
-                case 4: { //fill rectangle
-                    //check range (should not exceed buffer limits)
-                    p2d_t pos = _deser_p2d_t(p1);
-                    p2d_t sz = _deser_p2d_t(p2);
-                    uint64_t last_pt =  (pos.x + sz.x) +
-                                    ((pos.y + sz.y) * gfx_res_x());
-                    if(pos.x < 0 || pos.y < 0 || sz.x < 0 || sz.y < 0)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    if(last_pt > gfx_res_x() * gfx_res_y())
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //draw if everything is OK
-                    gfx_draw_filled_rect(pos, sz, _deser_color32_t(p0));
-                    return 0;
-                }
-                case 5: { //draw rectangle
-                    //check range (should not exceed buffer limits)
-                    p2d_t pos = _deser_p2d_t(p1);
-                    p2d_t sz = _deser_p2d_t(p2);
-                    uint64_t last_pt =  (pos.x + sz.x) +
-                                    ((pos.y + sz.y) * gfx_res_x());
-                    if(pos.x < 0 || pos.y < 0 || sz.x < 0 || sz.y < 0)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    if(last_pt > gfx_res_x() * gfx_res_y())
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //draw if everything is OK
-                    gfx_draw_rect(pos, sz, _deser_color32_t(p0));
-                    return 0;
-                }
-                case 6: { //draw raw image
-                    //check range (should not exceed buffer limits)
-                    p2d_t pos = _deser_p2d_t(p1);
-                    p2d_t sz = _deser_p2d_t(p2);
-                    uint64_t last_pt =  (pos.x + sz.x) +
-                                    ((pos.y + sz.y) * gfx_res_x());
-                    if(pos.x < 0 || pos.y < 0 || sz.x < 0 || sz.y < 0)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    if(last_pt > gfx_res_x() * gfx_res_y())
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //draw if everything is OK
-                    gfx_draw_raw(pos, (uint8_t*)p0, sz);
-                    return 0;
-                }
-                case 7: { //calculate text bounds
-                    //check pointer (should be in userspace)
-                    if(p0 + strlen((char*)p0) >= 0x800000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //return the result if everything is OK
-                    return _ser_p2d_t(gfx_text_bounds((char*)p0));
-                }
-                case 8: { //print string
-                    //check pointer (should be in userspace)
-                    if(p0 + strlen((char*)p0) >= 0x800000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //check range (should not exceed the buffer limits)
-                    p2d_t pos = _deser_p2d_t(p1);
-                    p2d_t sz = gfx_text_bounds((char*)p3);
-                    uint64_t last_pt =  (pos.x + sz.x) +
-                                    ((pos.y + sz.y) * gfx_res_x());
-                    if(pos.x < 0 || pos.y < 0 || sz.x < 0 || sz.y < 0)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    if(last_pt > gfx_res_x() * gfx_res_y())
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //draw if everything is OK
-                    gfx_puts(pos, _deser_color32_t(p2 >> 32), _deser_color32_t(p2), (char*)p0);
-                    return 0;
-                }
-                default: //invalid subfunction number
-                    return 0xFFFFFFFFFFFFFFFF;
-            }
         case 1: //task management
             switch(subfunc){
                 case 0: //get task UID
-                    return mtask_get_uid();
+                    return mtask_get_pid();
                 case 1: //terminate task
                     mtask_stop_task(p0);
                     return 0;
@@ -177,8 +88,15 @@ uint64_t syscall_handle(void){
                         return 0xFFFFFFFFFFFFFFFF;
                     //Inherit the privileges if requested
                     if(p1 & TASK_PRIVL_INHERIT)
-                        p1 = mtask_get_by_uid(mtask_get_uid())->privl;
-                    return elf_load((char*)p0, p1, mtask_get_by_uid(mtask_get_uid())->priority);
+                        p1 = mtask_get_by_pid(mtask_get_pid())->privl & ~TASK_PRIVL_SUDO_MODE;
+                    return elf_load((char*)p0, p1, mtask_get_by_pid(mtask_get_pid())->priority);
+                case 3: //allocate pages
+                    return (uint64_t)mtask_palloc(mtask_get_pid(), p0);
+                    break;
+                case 4: //free pages
+                    mtask_pfree(mtask_get_pid(), (virt_addr_t)p0);
+                    return 0;
+                    break;
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;
             }
@@ -190,7 +108,7 @@ uint64_t syscall_handle(void){
                         return 0xFFFFFFFFFFFFFFFF;
                     //Try to open the file
                     file_handle_t* handle = (file_handle_t*)malloc(sizeof(file_handle_t));
-                    uint64_t status = diskio_open((char*)p0, handle, p1 + 1);
+                    uint64_t status = diskio_open((char*)p0, handle, p1);
                     //Parse status
                     switch(status){
                         case DISKIO_STATUS_OK:
@@ -221,6 +139,41 @@ uint64_t syscall_handle(void){
                             return 0;
                     }
                 }
+                case 2: { //write bytes
+                    //check buffer pointer (should be in userspace)
+                    if(p1 + p2 >= 0x800000000000ULL)
+                        return 0xFFFFFFFFFFFFFFFF;
+                    //check handle pointer (should be in kernel dynamic memory space)
+                    if(p0 < 0xFFFFC00000000000ULL)
+                        return 0xFFFFFFFFFFFFFFFF;
+                    //try to write the data
+                    uint64_t status = diskio_write((file_handle_t*)p0, (void*)p1, p2);
+                    //Parse status
+                    switch(status & 0xFF){
+                        case DISKIO_STATUS_NOT_ALLOWED:
+                        case DISKIO_STATUS_INVL_SIGNATURE:
+                            return 4ULL << 32;
+                        case DISKIO_STATUS_EOF:
+                            return (6ULL << 32) | (status >> 32);
+                        case DISKIO_STATUS_OK:
+                            return 0;
+                    }
+                }
+                case 3: { //seek
+                    //check handle pointer (should be in kernel dynamic memory space)
+                    if(p0 < 0xFFFFC00000000000ULL)
+                        return 0xFFFFFFFFFFFFFFFF;
+                    //seek
+                    return diskio_seek((file_handle_t*)p0, p1);
+                }
+                case 4: { //close file
+                    //check handle pointer (should be in kernel dynamic memory space)
+                    if(p0 < 0xFFFFC00000000000ULL)
+                        return 0xFFFFFFFFFFFFFFFF;
+                    //close the file
+                    diskio_close((file_handle_t*)p0);
+                    return DISKIO_STATUS_OK;
+                }
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;
             }
@@ -228,7 +181,7 @@ uint64_t syscall_handle(void){
             switch(subfunc){
                 case 0: //write message
                     //check task privileges
-                    if(mtask_get_by_uid(mtask_get_uid())->privl & TASK_PRIVL_KMESG == 0)
+                    if(mtask_get_by_pid(mtask_get_pid())->privl & TASK_PRIVL_KMESG == 0)
                         return 1;
                     //check filename and message pointers (should be in userspace)
                     if(p0 + strlen((char*)p0) >= 0x800000000000ULL)

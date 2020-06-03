@@ -42,7 +42,6 @@ void gfx_init(void);
 void gfx_shift_buf(void);
 phys_addr_t gfx_physbase(void);
 void gfx_find_gop(void);
-void gfx_find_uga(void);
 void gfx_choose_best(void);
 void gfx_flip(void);
 void gfx_set_font(const unsigned char* fnt);

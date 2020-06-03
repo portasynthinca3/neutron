@@ -38,135 +38,22 @@ uint64_t _syscall(uint32_t func, uint32_t subfunc,
     return ret;
 }
 
-/*
- * System call serialization/deserialization functions
- */
-inline uint64_t _ser_p2d_t(p2d_t p){
-    return ((uint64_t)p.x << 32) | (uint64_t)p.y;
-}
-
-inline p2d_t _deser_p2d_t(uint64_t p){
-    return (p2d_t){
-        .x = (int32_t)(p >> 32),
-        .y = (int32_t)p
-    };
-}
-
-inline uint64_t _ser_color32_t(color32_t c){
-    return ((uint64_t)c.a << 24) |
-           ((uint64_t)c.b << 16) |
-           ((uint64_t)c.g <<  8) |
-           ((uint64_t)c.r);
-}
-
-inline color32_t _deser_color32_t(uint64_t c){
-    return (color32_t){
-        .r = (uint8_t)c,
-        .g = (uint8_t)(c >> 8),
-        .b = (uint8_t)(c >> 16),
-        .a = (uint8_t)(c >> 24)
-    };
-}
-
-
-// -----===== SYSTEM CALLS: GRAPHICS =====-----
-
-
-/*
- * System call: Graphics: Print a string in verbose mode
- */
-inline uint64_t _gfx_println_verbose(char* str){
-    return _syscall(0, 0, (uint64_t)str, 0, 0, 0, 0);
-}
-
-/*
- * System call: Graphics: Get resolution
- */
-inline p2d_t _gfx_get_res(void){
-    return _deser_p2d_t(_syscall(0, 1, 0, 0, 0, 0, 0));
-}
-
-/*
- * System call: Graphics: Flip buffers
- */
-inline sc_state_t _gfx_flip(void){
-    return _syscall(0, 2, 0, 0, 0, 0, 0);
-}
-
-/*
- * System call: Graphics: Fill buffer
- */
-inline sc_state_t _gfx_fill(color32_t c){
-    return _syscall(0, 3, _ser_color32_t(c), 0, 0, 0, 0);
-}
-
-/*
- * System call: Graphics: Fill rectangle
- */
-inline sc_state_t _gfx_fill_rect(color32_t c, p2d_t pos, p2d_t sz){
-    return _syscall(0, 4,
-        _ser_color32_t(c),
-        _ser_p2d_t(pos),
-        _ser_p2d_t(sz),
-        0, 0);
-}
-
-/*
- * System call: Graphics: Draw rectangle
- */
-inline sc_state_t _gfx_draw_rect(color32_t c, p2d_t pos, p2d_t sz){
-    return _syscall(0, 5,
-        _ser_color32_t(c),
-        _ser_p2d_t(pos),
-        _ser_p2d_t(sz),
-        0, 0);
-}
-
-/*
- * System call: Graphics: Draw raw image
- */
-inline sc_state_t _gfx_draw_raw(uint8_t* img, p2d_t pos, p2d_t sz){
-    return _syscall(0, 6,
-        (uint64_t)img,
-        _ser_p2d_t(pos),
-        _ser_p2d_t(sz),
-        0, 0);
-}
-
-/*
- * System call: Graphics: Text bounds
- */
-inline p2d_t _gfx_text_bounds(char* str){
-    return _deser_p2d_t(_syscall(0, 7, (uint64_t)str, 0, 0, 0, 0));
-}
-
-/*
- * System call: Graphics: Print string
- */
-inline sc_state_t _gfx_draw_str(p2d_t pos, color32_t fg, color32_t bg, char* str){
-    return _syscall(0, 8,
-        (uint64_t)str,
-        _ser_p2d_t(pos),
-        (_ser_color32_t(fg) << 32) | _ser_color32_t(bg),
-        0, 0);
-}
-
 
 // -----===== SYSTEM CALLS: TASK MANAGEMENT =====-----
 
 
 /*
- * System call: Task management: Get task UID
+ * System call: Task management: Get task PID
  */
-inline uint64_t _task_get_uid(void){
+inline uint64_t _task_get_pid(void){
     return _syscall(1, 0, 0, 0, 0, 0, 0);
 }
 
 /*
  * System call: Task management: Terminate task
  */
-inline sc_state_t _task_terminate(uint64_t uid){
-    return _syscall(1, 1, uid, 0, 0, 0, 0);
+inline sc_state_t _task_terminate(uint64_t pid){
+    return _syscall(1, 1, pid, 0, 0, 0, 0);
 }
 
 /*
@@ -174,6 +61,20 @@ inline sc_state_t _task_terminate(uint64_t uid){
  */
 inline uint64_t _task_load(char* path, uint64_t privl){
     return _syscall(1, 2, (uint64_t)path, privl, 0, 0, 0);
+}
+
+/*
+ * System call: Task management: Allocate pages
+ */
+inline void* _task_palloc(uint64_t num){
+    return (void*)_syscall(1, 3, num, 0, 0, 0, 0);
+}
+
+/*
+ * System call: Task management: Free pages
+ */
+inline sc_state_t _task_pfree(void* start){
+    return _syscall(1, 4, (uint64_t)start, 0, 0, 0, 0);
 }
 
 
@@ -188,14 +89,36 @@ inline sc_state_t _fs_open(char* path, uint64_t mode){
 }
 
 /*
- * System call: Filesystem: Open file
+ * System call: Filesystem: Read bytes
  */
 inline sc_state_t _fs_read_bytes(FILE* file, void* buf, size_t len){
     return _syscall(2, 1, (uint64_t)file, (uint64_t)buf, len, 0, 0);
 }
 
+/*
+ * System call: Filesystem: Write bytes
+ */
+inline sc_state_t _fs_write_bytes(FILE* file, void* buf, size_t len){
+    return _syscall(2, 2, (uint64_t)file, (uint64_t)buf, len, 0, 0);
+}
+
+/*
+ * System call: Filesystem: Seek
+ */
+inline sc_state_t _fs_seek(FILE* file, uint64_t pos){
+    return _syscall(2, 3, (uint64_t)file, pos, 0, 0, 0);
+}
+
+/*
+ * System call: Filesystem: Close file
+ */
+inline sc_state_t _fs_close(FILE* file){
+    return _syscall(2, 4, (uint64_t)file, 0, 0, 0, 0);
+}
+
 
 // -----===== SYSTEM CALLS: KERNEL MESSAGES =====-----
+
 
 /*
  * System call: Kernel messages: Write message
@@ -207,13 +130,16 @@ inline sc_state_t _km_write(char* file, char* msg){
 
 // -----===== FILE I/O =====-----
 
+
 /*
  * Open a file
  */
 FILE* fopen(const char* filename, const char* mode){
     //Parse mode
     uint64_t m = 0;
-    if(strcmp(mode, "r") == 0 || strcmp(mode, "rb") == 0)
+    if(strcmp(mode, "r+") == 0)
+        m = FS_MODE_READ | FS_MODE_WRITE;
+    else if(strcmp(mode, "r") == 0 || strcmp(mode, "rb") == 0)
         m = FS_MODE_READ;
     else if(strcmp(mode, "w") == 0 || strcmp(mode, "wb") == 0)
         m = FS_MODE_WRITE;
@@ -236,6 +162,24 @@ FILE* fopen(const char* filename, const char* mode){
 size_t fread(void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file){
     //Make a system call
     sc_state_t state = _fs_read_bytes(a_file, ptr, size_of_elements * number_of_elements);
+    //Parse the state
+    uint64_t act_size = size_of_elements * number_of_elements;
+    switch(state >> 32){
+        case FS_RD_STATUS_EOF:
+            act_size = (uint32_t)state;
+        case FS_STATUS_OK:
+            return act_size;
+        default:
+            return 0;
+    }
+}
+
+/*
+ * Write buffer contents to file
+ */
+size_t fwrite(const void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file){
+    //Make a system call
+    sc_state_t state = _fs_write_bytes(a_file, (void*)ptr, size_of_elements * number_of_elements);
     //Parse the state
     uint64_t act_size = size_of_elements * number_of_elements;
     switch(state >> 32){
@@ -283,6 +227,51 @@ char* fgets(char* buf, int n, FILE* fp){
     }
 }
 
+/*
+ * Write character to file
+ */
+int fputc(int c, FILE* fp){
+    //Check character range
+    if(c < 0 || c > 255)
+        return -1;
+    //Write byte and check status
+    if(fwrite(&c, 1, 1, fp) != 0)
+        return c;
+    else
+        return -1;
+}
+
+/*
+ * Write zero-terminated string to file
+ */
+int fputs(const char* s, FILE* fp){
+    //Write bytes and check status
+    if(fwrite(s, 1, strlen(s), fp) != 0)
+        return 1;
+    else
+        return -1;
+}
+
+/*
+ * Seek to absolute file position
+ */
+int fseek(FILE* fp, uint64_t offs){
+    if(_fs_seek(fp, offs) == FS_STATUS_OK)
+        return 0;
+    else
+        return -1;
+}
+
+/*
+ * Close the file
+ */
+int fclose(FILE* fp){
+    if(_fs_close(fp) == FS_STATUS_OK)
+        return 0;
+    else
+        return -1;
+}
+
 
 // -----===== ORDINARY FUNCTIONS =====-----
 
@@ -325,10 +314,11 @@ int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
     int len1 = strlen(str1);
     int len2 = strlen(str2);
-    //Find the minimal one
-    int min_len = (len1 < len2) ? len1 : len2;
+    //Strings are not equal if they have different lengths (duh)
+    if(len1 != len2)
+        return (str1[0] > str2[0]) ? 1 : -1;
     //Go through each byte
-    for(int i = 0; i < min_len; i++){
+    for(int i = 0; i < len1; i++){
         //Return if the strings aren't equal
         if(str1[i] > str2[i])
             return 1;
@@ -614,9 +604,8 @@ int sprintf(char* str, const char* format, ...){
  * Abnormal program termination
  */
 void abort(void){
-    _gfx_println_verbose("*** PROGRAM ABORTED");
     //terminate the current process
-    _task_terminate(_task_get_uid());
+    _task_terminate(_task_get_pid());
 }
 
 //Function to call upon call of exit()
@@ -629,11 +618,11 @@ void exit(void){
     if(__atexit_func != NULL)
         __atexit_func();
     //Terminate the current process
-    _task_terminate(_task_get_uid());
+    _task_terminate(_task_get_pid());
 }
 
 /*
- * Assign the function yo be called by exit()
+ * Assign the function to be called by exit()
  */
 int atexit(void (*func)(void)){
     __atexit_func = func;
@@ -667,4 +656,32 @@ int rand(void){
 void srand(unsigned int seed){
     __r_s = seed;
     __r_s |= (uint64_t)rand() << 32;
+}
+
+/*
+ * Allocates a chunk of memory
+ */
+void* malloc(uint64_t num){
+    if(num == 0)
+        return NULL;
+    //Round to the page size
+    num += 4096 - (num % 4096);
+    //Allocate pages
+    return _task_palloc(num / 4096);
+}
+
+/*
+ * Frees a chunk of memory
+ */
+void free(void* ptr){
+    _task_pfree(ptr);
+}
+
+/*
+ * Read the amount of cycles executed by the CPU
+ */
+uint64_t rdtsc(void){
+    uint32_t h, l;
+    __asm__ volatile("rdtsc" : "=d" (h), "=a" (l));
+    return (uint64_t)((uint64_t)h << 32) | l;
 }

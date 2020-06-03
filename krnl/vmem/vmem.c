@@ -479,6 +479,7 @@ void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_s
     physwin_disbl = p_disbl;
     vmem_set_cr3(p_cr3);
 }
+
 /*
  * Maps a virtual address range to a physical address range, while setting access mode to userland
  */
@@ -492,6 +493,29 @@ void vmem_map_user(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_
     for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
         //Map one page
         vmem_create_page_user(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
+    }
+
+    physwin_disbl = p_disbl;
+    vmem_set_cr3(p_cr3);
+}
+
+/*
+ * Unmaps a virtual address range
+ */
+void vmem_unmap(uint64_t cr3, virt_addr_t v_st, virt_addr_t v_end){
+    uint64_t p_cr3 = vmem_get_cr3();
+    vmem_set_cr3(vmem_ident_cr3);
+    uint8_t p_disbl = physwin_disbl;
+    physwin_disbl = 1;
+
+    //Loop through the range
+    for(uint64_t offs = 0; offs < v_end - v_st; offs += 4096){
+        //Get the PT address for that page and calculate the PTE address
+        phys_addr_t pt_addr = vmem_addr_pt(cr3, (virt_addr_t)((uint8_t*)v_st + offs));
+        uint64_t pte_idx = (((uint64_t)v_st + offs) >> 12) & 0x1FF;
+        uint64_t* pte_addr = (uint64_t*)((uint8_t*)pt_addr + (pte_idx * 8));
+        //Invalidate that PTE entry
+        *pte_addr = 0;
     }
 
     physwin_disbl = p_disbl;

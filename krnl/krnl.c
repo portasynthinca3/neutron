@@ -14,7 +14,6 @@
 #include "./drivers/pci.h"
 #include "./drivers/apic.h"
 #include "./drivers/timr.h"
-#include "./drivers/human_io/mouse.h"
 #include "./drivers/acpi.h"
 #include "./drivers/initrd.h"
 
@@ -219,9 +218,9 @@ void krnl_dump(void){
             char temp2[20];
             strcat(temp, " ");
             strcat(temp, tasks[i].name);
-            strcat(temp, ", UID ");
-            strcat(temp, sprintu(temp2, tasks[i].uid, 1));
-            if(tasks[i].uid == mtask_get_uid())
+            strcat(temp, ", PID ");
+            strcat(temp, sprintu(temp2, tasks[i].pid, 1));
+            if(tasks[i].pid == mtask_get_pid())
                 strcat(temp, " [DUMP CAUSE]");
             if(tasks[i].state_code != TASK_STATE_RUNNING){
                 strcat(temp, " [BLOCKED TILL ");
@@ -243,14 +242,19 @@ void krnl_dump(void){
  * Exception ISR
  */
 void krnl_exc(void){
-    //Get the exception address from RDX
-    uint64_t ip;
-    __asm__ volatile("mov %%rdx, %0" : "=m" (ip));
-    //Stop the schaeduler
+    //Get the task that caused the exception
+    task_t* task = mtask_get_by_pid(mtask_get_pid());
+    //If that task was running in userspace, just terminate it
+    if(task->state.cs == 0x93){
+        krnl_write_msgf(__FILE__, "Task %s with PID %i caused an exception at RIP=0x%x",
+            task->name, task->pid, task->state.rip);
+        mtask_stop_task(task->pid);
+    }
+    //Otherwise, the exception happened in kernel-space
+    //Panic! In the Kernel
     mtask_stop();
-    //Print some info
     krnl_dump();
-    gfx_panic(mtask_get_by_uid(mtask_get_uid())->state.rip, KRNL_PANIC_CPUEXC_CODE);
+    gfx_panic(task->state.rip, KRNL_PANIC_CPUEXC_CODE);
 }
 
 /*

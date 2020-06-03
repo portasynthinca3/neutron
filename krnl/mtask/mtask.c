@@ -10,7 +10,7 @@
 
 task_t* mtask_task_list;
 uint32_t mtask_next_task;
-uint64_t mtask_next_uid;
+uint64_t mtask_next_pid;
 uint32_t mtask_cur_task_no;
 uint8_t mtask_enabled;
 task_t* mtask_cur_task;
@@ -42,17 +42,17 @@ void mtask_init(void){
     
     mtask_cur_task_no = 0;
     mtask_next_task = 0;
-    mtask_next_uid = 1;
+    mtask_next_pid = 1;
     mtask_enabled = 0;
     //Initialize the scheduling timer
     timr_init();
 }
 
 /*
- * Gets an UID of the currently running task
+ * Gets a PID of the currently running task
  */
-uint64_t mtask_get_uid(void){
-    return mtask_task_list[mtask_cur_task_no].uid;
+uint64_t mtask_get_pid(void){
+    return mtask_task_list[mtask_cur_task_no].pid;
 }
 
 /*
@@ -72,16 +72,18 @@ void mtask_stop(void){
 /*
  * Creates a task
  * If it's the first task ever created, starts multitasking
- * Returns the UID
+ * Returns the PID
  */
 uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
         void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl){
 
     task_t* task = &mtask_task_list[mtask_next_task];
+    //Clear the opened file list
+    memset(task->open_files, 0, sizeof(file_handle_t*) * MTASK_MAX_OPEN_FILES);
     //Clear the task registers (except for RCX, set it to the argument pointer)
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    //Asign an UID
-    task->uid = mtask_next_uid++;
+    //Asign a PID
+    task->pid = mtask_next_pid++;
     //Assign the priority and privileges
     task->priority = priority;
     task->prio_cnt = task->priority;
@@ -112,6 +114,7 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     task->valid = 1;
     task->state_code = start ? TASK_STATE_RUNNING : TASK_STATE_WAITING_TO_RUN;
     task->blocked_till = 0;
+    task->next_alloc = (virt_addr_t)((1ULL << 46) | (1ULL << 45));
     //Set CS
     task->state.cs = 0x93;
 
@@ -127,31 +130,45 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
         __asm__ volatile("jmp mtask_restore_state");
     }
 
-    return task->uid;
+    return task->pid;
 }
 
 /*
- * Gets the task by the UID
+ * Gets the task by the PID
  */
-task_t* mtask_get_by_uid(uint64_t uid){
+task_t* mtask_get_by_pid(uint64_t pid){
+    if(pid == 0)
+        return NULL;
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
-        if(mtask_task_list[i].uid == uid)
+        if(mtask_task_list[i].pid == pid)
             return &mtask_task_list[i];
+    return NULL;
 }
 
 /*
- * Stops the task with by the UID
+ * Stops the task with by the PID
  */
-void mtask_stop_task(uint64_t uid){
+void mtask_stop_task(uint64_t pid){
     //Find the task and destoy it
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
-        if(mtask_task_list[i].uid == uid)
+        if(mtask_task_list[i].pid == pid)
             mtask_task_list[i].valid = 0;
     //Hang if we're terminating the current task
-    if(uid == mtask_get_uid()){
+    if(pid == mtask_get_pid()){
+        mtask_schedule();
         __asm__ volatile("sti");
         while(1);
     }
+}
+
+/*
+ * Checks if a task with the specified PID exists
+ */
+uint8_t mtask_exists(uint64_t pid){
+    for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
+        if(mtask_task_list[i].pid == pid)
+            return 1;
+    return 0;
 }
 
 /*
@@ -211,5 +228,92 @@ void mtask_dly_us(uint64_t us){
  * Adds privileges specified in mask to the currently running process
  */
 void mtask_escalate(uint64_t mask){
-    mtask_cur_task->privl |= mask;
+    if(mtask_cur_task->privl & TASK_PRIVL_SUDO_MODE) {
+        mtask_cur_task->privl |= mask;
+    } else {
+        //TODO: some kind of user input to confirm the escalation
+        mtask_cur_task->privl |= mask | TASK_PRIVL_SUDO_MODE;
+    }
+}
+
+/*
+ * Adds a handle pointer to the list of files opened by the handle owner PID
+ */
+void mtask_add_open_file(file_handle_t* ptr){
+    task_t* task = mtask_get_by_pid(ptr->pid);
+    //Go through the list
+    if(task != NULL){
+        for(int i = 0; i < MTASK_MAX_OPEN_FILES; i++){
+            //Find an unused entry
+            if(task->open_files[i] != 0){
+                task->open_files[i] = ptr;
+                break;
+            }
+        }
+    }
+}
+
+/*
+ * Removes a handle pointer from the list of files opened by the handle owner PID
+ */
+void mtask_remove_open_file(file_handle_t* ptr){
+    task_t* task = mtask_get_by_pid(ptr->pid);
+    //Go through the list
+    if(task != NULL){
+        for(int i = 0; i < MTASK_MAX_OPEN_FILES; i++){
+            //Find the matching entry
+            if(task->open_files[i] == ptr){
+                task->open_files[i] = 0;
+                break;
+            }
+        }
+    }
+}
+
+/*
+ * Allocates a number of memory pages and maps them for the specified process
+ */
+virt_addr_t mtask_palloc(uint64_t pid, uint64_t num){
+    task_t* task = mtask_get_by_pid(pid);
+    //Allocate pages
+    virt_addr_t krnl_addr = amalloc(4096 * num, 4096);
+    if(krnl_addr == NULL)
+        return NULL;
+    phys_addr_t phys_addr = vmem_virt_to_phys(vmem_get_cr3(), krnl_addr);
+    //Find an unused allocation entry and stick the address in there
+    for(int i = 0; i < MTASK_MAX_ALLOCATIONS; i++){
+        if(!task->allocations[i].used){
+            task->allocations[i].used = 1;
+            task->allocations[i].num = num;
+            task->allocations[i].krnl_map = krnl_addr;
+            task->allocations[i].proc_map = task->next_alloc;
+            break;
+        }
+    }
+    //Map the actual range
+    vmem_map_user(task->state.cr3, phys_addr, (phys_addr_t)((uint8_t*)phys_addr + (4096 * num)), task->next_alloc);
+    //Advance the next allocation address
+    virt_addr_t mapped_addr = task->next_alloc;
+    task->next_alloc = (virt_addr_t)((uint8_t*)task->next_alloc + (4096 * num));
+    //Return the resulting mapped address
+    return mapped_addr;
+}
+
+/*
+ * Deallocates a number of memory pages and unmaps them for the specified process
+ */
+void mtask_pfree(uint64_t pid, virt_addr_t proc_map){
+    task_t* task = mtask_get_by_pid(pid);
+    //Find an entry that corresponds to the mapped pages
+    for(int i = 0; i < MTASK_MAX_ALLOCATIONS; i++){
+        if(task->allocations[i].proc_map == proc_map){
+            //Free the pages
+            free(task->allocations[i].krnl_map);
+            //Unmap the pages
+            vmem_unmap(task->state.cr3, task->allocations[i].proc_map,
+                              (uint8_t*)task->allocations[i].proc_map + (4096 * task->allocations[i].num));
+            //Invalidate the entry
+            task->allocations[i].used = 0;
+        }
+    }
 }

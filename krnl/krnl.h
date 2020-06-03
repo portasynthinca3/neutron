@@ -16,8 +16,8 @@
 #define MAX_KRNL_MSG_SZ                     256
 
 //Kernel version
-#define KRNL_VERSION_STR "v0.6.0"
-#define KRNL_VERSION_NUM 1
+#define KRNL_VERSION_STR "v0.6.1"
+#define KRNL_VERSION_NUM 2
 
 //Structures
 

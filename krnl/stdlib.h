@@ -188,5 +188,6 @@ int _sprintf(char* str, const char* format, va_list valist);
 int sprintf(char* str, const char* format, ...);
 char* strcat(char* dest, char* src);
 int strcmp(const char* str1, const char* str2);
+int atoi(const char* str);
 
 #endif

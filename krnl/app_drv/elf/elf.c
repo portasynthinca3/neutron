@@ -14,8 +14,8 @@
  */
 uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
     //Check requested privileges
-    if(mtask_get_uid() > 0)
-        if(popcnt(privl ^ mtask_get_by_uid(mtask_get_uid())->privl) > 0)
+    if(mtask_get_pid() > 0)
+        if(popcnt(privl ^ mtask_get_by_pid(mtask_get_pid())->privl) > 0)
             return ELF_STATUS_ESCALATION_ERROR;
     //Open the file
     file_handle_t file;
@@ -95,8 +95,9 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
         }
     }
     //Allocate some memory for the stack and map it
-    void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(8192, 1));
-    vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 8192), (void*)(1ULL << 46));
+    void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(32768, 1));
+    vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 32768), (void*)(1ULL << 46));
     //Create a new task
-    uint64_t task_uid = mtask_create_task(8192 - 8, path, prio, 0, cr3, (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl);
+    uint64_t task_uid = mtask_create_task(32768 - 768, path, prio, 0, cr3, (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl);
+    return ELF_STATUS_OK;
 }

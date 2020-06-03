@@ -11,6 +11,10 @@ void main(void* args){
     sprintf(buf, "Neutron standard initializer version %s compiled on %s %s",
                  __APP_VERSION, __DATE__, __TIME__);
     _km_write("init", buf);
+    FILE* a = fopen("/sys/kvers", "r");
+    char buf2[64];
+    sprintf(buf, "Running on Neutron kernel version %s", fgets(buf2, 64, a));
+    _km_write("init", buf);
     //Open config file for reading
     _km_write("init", "loading config file");
     FILE* fp = fopen("/initrd/init.cfg", "r");
@@ -70,6 +74,9 @@ void main(void* args){
         //Increment the line number
         line_no++;
     }
+
+    //At this point, init's job is done.
+    fclose(fp);
 
     while(1);
 }

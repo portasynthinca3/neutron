@@ -41,6 +41,7 @@ phys_addr_t vmem_virt_to_phys(uint64_t cr3, virt_addr_t at);
 
 void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_st);
 void vmem_map_user(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_st);
+void vmem_unmap(uint64_t cr3, virt_addr_t v_st, virt_addr_t v_end);
 void vmem_map_defaults(uint64_t cr3);
 
 void vmem_invlpg(phys_addr_t addr);

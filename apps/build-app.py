@@ -66,7 +66,7 @@ with open(tmp_dir + '/app_desc.h', 'w') as f:
 print_status('Compiling')
 
 # build source files
-src_files = [src_dir + '/' + f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f))] + ['nlib/nlib.c']
+src_files = [src_dir + '/' + f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f)) and f.endswith('.c')] + ['nlib/nlib.c']
 for file in src_files:
     print('  Building: ' + file)
     code = os.system('gcc -g2 -nostdlib -ffreestanding -m64 -mno-sse2 -Wno-varargs -Inlib -I' + tmp_dir + ' -Og -c -o '

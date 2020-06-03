@@ -236,24 +236,6 @@ void* memset(void* dst, int ch, size_t size){
  * Copy a block of memory
  */
 void* memcpy(void* destination, const void* source, size_t num){
-    if(num == 0)
-        return destination;
-    #ifdef STDLIB_MEMCPY_WC
-    //Chck if the data is 8-byte aligned
-    if(((uint64_t)destination % 8 == 0) && ((uint64_t)source % 8 == 0) && (num % 8 == 0)){
-        //Tell the CPU we're gonna access the data soon so it can prefetch it
-        __asm__ volatile("prefetchnta %0" : : "m" (source));
-        //Copy the data
-        __asm__ volatile("_stdlib_memcpy_wc:"
-                         "  mov (%%rsi), %%rax;"
-                         "  movnti %%rax, (%%rdi);"
-                         "  add $8, %%rsi;"
-                         "  add $8, %%rdi;"
-                         "  loop _stdlib_memcpy_wc;" : : "S" (source), "D" (destination), "c" (num / 8));
-        //Return
-        return destination;
-    }
-    #endif
     //Q = 8 bytes at a time
     //D = 4 bytes at a time
     //W = 2 bytes at a time
@@ -718,10 +700,11 @@ int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
     int len1 = strlen(str1);
     int len2 = strlen(str2);
-    //Find the minimal one
-    int min_len = (len1 < len2) ? len1 : len2;
+    //Strings are not equal if they have different lengths (duh)
+    if(len1 != len2)
+        return (str1[0] > str2[0]) ? 1 : -1;
     //Go through each byte
-    for(int i = 0; i < min_len; i++){
+    for(int i = 0; i < len1; i++){
         //Return if the strings aren't equal
         if(str1[i] > str2[i])
             return 1;
@@ -730,6 +713,26 @@ int strcmp(const char* str1, const char* str2){
     }
     //If we didn't return, the strings are equal
     return 0;
+}
+
+/*
+ * Parse number from string representation
+ */
+int atoi(const char* str){
+    int n = 0;
+    char c;
+    //Fetch next character
+    while((c = *(str++)) != 0){
+        //If it's a digit, append it
+        if(c >= '0' && c <= '9'){
+            n *= 10;
+            n += c - '0';
+        } else {
+            //Error
+            return 0;
+        }
+    }
+    return n;
 }
 
 /*
