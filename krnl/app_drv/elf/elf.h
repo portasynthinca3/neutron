@@ -1,4 +1,5 @@
 #include "../../stdlib.h"
+#include "../../mtask/mtask.h"
 
 //Definitions
 
@@ -32,11 +33,15 @@ typedef struct {
 } __attribute__((packed)) elf_hdr_t;
 
 typedef struct {
-    uint64_t offset;
-    uint32_t info;
-    uint32_t addend;
-} __attribute__((packed)) elf_rela_t;
+    uint32_t name;
+    uint8_t  info;
+    uint8_t  other;
+    uint16_t shndx;
+    uint64_t val;
+    uint64_t size;
+} __attribute__((packed)) elf_sym_t;
 
 //Function prototypes
 
 uint8_t elf_load(char* path, uint64_t privl, uint8_t prio);
+void elf_get_sym(task_t* task, uint64_t addr, char* result);

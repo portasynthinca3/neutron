@@ -9,7 +9,6 @@
 #include "../krnl.h"
 
 task_t* mtask_task_list;
-uint32_t mtask_next_task;
 uint64_t mtask_next_pid;
 uint32_t mtask_cur_task_no;
 uint8_t mtask_enabled;
@@ -36,12 +35,11 @@ uint64_t mtask_is_enabled(void){
  */
 void mtask_init(void){
     //Allocate a buffer for the task list
-    mtask_task_list = (task_t*)amalloc((MTASK_TASK_COUNT * sizeof(task_t)),  16);
+    mtask_task_list = (task_t*)amalloc((MTASK_TASK_COUNT * sizeof(task_t)), 64);
     //Clear it
     memset(mtask_task_list, 0, (MTASK_TASK_COUNT * sizeof(task_t)));
     
     mtask_cur_task_no = 0;
-    mtask_next_task = 0;
     mtask_next_pid = 1;
     mtask_enabled = 0;
     //Initialize the scheduling timer
@@ -75,21 +73,16 @@ void mtask_stop(void){
  * Returns the PID
  */
 uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
-        void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl){
+        void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl, uint8_t* symtab,
+        uint8_t* strtab){
 
-    task_t* task = &mtask_task_list[mtask_next_task];
-    //Clear the opened file list
-    memset(task->open_files, 0, sizeof(file_handle_t*) * MTASK_MAX_OPEN_FILES);
+    //Find the first empty task descriptor
+    task_t* task = NULL;
+    for(int i = 0; i < MTASK_TASK_COUNT; i++)
+        if(!mtask_task_list[i].valid)
+            task = &mtask_task_list[i];
     //Clear the task registers (except for RCX, set it to the argument pointer)
-    task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    //Asign a PID
-    task->pid = mtask_next_pid++;
-    //Assign the priority and privileges
-    task->priority = priority;
-    task->prio_cnt = task->priority;
-    task->privl = privl;
-    //Copy the name
-    memcpy(task->name, name, strlen(name) + 1);
+    task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255};
     //Use the current address space or assign the suggested CR3
     uint64_t cr3 = _cr3;
     if(cr3 == 0)
@@ -101,25 +94,30 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
     void* task_stack = suggested_stack;
     if(task_stack == NULL)
         task_stack = calloc(stack_size, 1);
-    //Assign the task RSP
     task->state.rsp = (uint64_t)((uint8_t*)task_stack + stack_size);
-    //Assign the task RIP
-    task->state.rip = (uint64_t)func;
     //Assign the task RFLAGS
     uint64_t rflags;
     __asm__ volatile("pushfq; pop %0" : "=m" (rflags));
     rflags |= 1 << 9; //enable interrupts
     task->state.rflags = rflags;
-    //Reset some vars
+    //Set/reset some vars
     task->valid = 1;
+    task->pid = mtask_next_pid++;
+    memcpy(task->name, name, strlen(name) + 1);
+    memset(task->open_files, 0, sizeof(file_handle_t*) * MTASK_MAX_OPEN_FILES);
+    task->state.rip = (uint64_t)func;
     task->state_code = start ? TASK_STATE_RUNNING : TASK_STATE_WAITING_TO_RUN;
     task->blocked_till = 0;
     task->next_alloc = (virt_addr_t)((1ULL << 46) | (1ULL << 45));
-    //Set CS
     task->state.cs = 0x93;
+    task->symtab = symtab;
+    task->strtab = strtab;
+    task->priority = priority;
+    task->prio_cnt = task->priority;
+    task->privl = privl;
 
     //Check if it's the first task ever created
-    if((mtask_next_task++ == 0) && start){
+    if(task->pid == 1 && start){
         //Enable physwin
         vmem_enable_physwin();
         //Assign the current task
@@ -140,7 +138,7 @@ task_t* mtask_get_by_pid(uint64_t pid){
     if(pid == 0)
         return NULL;
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
-        if(mtask_task_list[i].pid == pid)
+        if(mtask_task_list[i].valid && mtask_task_list[i].pid == pid)
             return &mtask_task_list[i];
     return NULL;
 }
@@ -149,10 +147,7 @@ task_t* mtask_get_by_pid(uint64_t pid){
  * Stops the task with by the PID
  */
 void mtask_stop_task(uint64_t pid){
-    //Find the task and destoy it
-    for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++)
-        if(mtask_task_list[i].pid == pid)
-            mtask_task_list[i].valid = 0;
+    memset(mtask_get_by_pid(pid), 0, sizeof(task_t));
     //Hang if we're terminating the current task
     if(pid == mtask_get_pid()){
         mtask_schedule();
@@ -179,30 +174,28 @@ void mtask_schedule(void){
     if(mtask_cur_task->prio_cnt > 0) {
         //Decrease its available time
         mtask_cur_task->prio_cnt--;
+        return;
     } else {
         //If not, restore its time
         mtask_cur_task->prio_cnt = mtask_cur_task->priority;
         //Go find a new task
         while(1){
             //We scan through the task list to find a next task that's valid and not blocked
-            mtask_cur_task_no++;
-            if(mtask_cur_task_no >= mtask_next_task)
+            if(mtask_cur_task_no++ >= MTASK_TASK_COUNT)
                 mtask_cur_task_no = 0;
-
             //Remove blocks on tasks that need to be unblocked
-            if(mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_BlOCKED_CYCLES){
+            if(mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_BLOCKED_CYCLES){
                 if(rdtsc() >= mtask_task_list[mtask_cur_task_no].blocked_till){
                     mtask_task_list[mtask_cur_task_no].state_code = TASK_STATE_RUNNING;
                     mtask_task_list[mtask_cur_task_no].blocked_till = 0;
                 }
             }
 
-            if(mtask_task_list[mtask_cur_task_no].valid && (mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_RUNNING))
+            if(mtask_task_list[mtask_cur_task_no].valid && mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_RUNNING)
                 break;
         }
+        mtask_cur_task = &mtask_task_list[mtask_cur_task_no];
     }
-
-    mtask_cur_task = &mtask_task_list[mtask_cur_task_no];
 }
 
 /*
@@ -211,7 +204,7 @@ void mtask_schedule(void){
 void mtask_dly_cycles(uint64_t cycles){
     //Set the block
     mtask_cur_task->blocked_till = rdtsc() + cycles;
-    mtask_cur_task->state_code = TASK_STATE_BlOCKED_CYCLES;
+    mtask_cur_task->state_code = TASK_STATE_BLOCKED_CYCLES;
 }
 
 /*

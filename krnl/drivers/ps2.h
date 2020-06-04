@@ -21,5 +21,7 @@ int ps21_read(void);
 int ps22_read(void);
 void ps21_write(uint8_t val);
 void ps22_write(uint8_t val);
+void ps21_flush(void);
+void ps22_flush(void);
 
 #endif

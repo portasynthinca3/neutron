@@ -202,7 +202,7 @@ int fgetc(FILE* fp){
     if(fread(&c, 1, 1, fp) == 0)
         return -1;
     else
-        return c;
+        return (uint8_t)c;
 }
 
 /*
@@ -535,6 +535,30 @@ char* _sprintub16(char* str, uint64_t i, uint8_t min){
 }
 
 /*
+ * Prints floating-point value to the string
+ */
+char* _sprintd(char* str, double val){
+    uint8_t str_pos;
+    uint64_t bits = *(uint64_t*)&val;
+    //Negate the value and print a minus sign if the value is negative
+    if(val < 0){
+        val = -val;
+        str[str_pos++] = '-';
+    }
+    //Extract the exponent and mantissa
+    int16_t exponent = ((bits >> 52) & 0x7FF) - 1023;
+    uint64_t mantissa = bits & 0xFFFFFFFFFFFFF;
+    _sprintu(str + str_pos, mantissa, 1);
+    strcat(str, "e");
+    if(exponent < 0){
+        exponent = -exponent;
+        strcat(str, "-");
+    }
+    _sprintu(str + strlen(str), exponent, 1);
+    return str;
+}
+
+/*
  * Print formatted string
  */
 int sprintf(char* str, const char* format, ...){
@@ -585,6 +609,13 @@ int sprintf(char* str, const char* format, ...){
                         str[str_idx++] = buf[j];
                     break;
                 }
+                case 'f': { //floating point number
+                    char buf[64] = "\0";
+                    _sprintd(buf, va_arg(valist, double));
+                    for(uint64_t j = 0; j < strlen(buf); j++)
+                        str[str_idx++] = buf[j];
+                    break;
+                }
                 default: //nothing else
                     va_end(valist);
                     return -1;
@@ -630,13 +661,180 @@ int atexit(void (*func)(void)){
 }
 
 /*
- * Returns the absolute value of a number
+ * Returns the absolute value of x
  */
 int abs(int x){
     if(x >= 0)
         return x;
-    else
+    return -x;
+}
+
+/*
+ * Returns the minimum of two values
+ */
+int min(int a, int b){
+    if(a < b)
+        return a;
+    return b;
+}
+
+/*
+ * Returns the maximum of two values
+ */
+int max(int a, int b){
+    if(a > b)
+        return a;
+    return b;
+}
+
+/*
+ * Returns the arc cosine of x (in radians)
+ */
+double acos(double x){
+    return atan2(sqrt((1.0 + x) * (1.0 - x)), x);
+}
+
+/*
+ * Returns the arc sine of x (in radians)
+ */
+double asin(double x){
+    return atan2(x, sqrt((1.0 + x) * (1.0 - x)));
+}
+
+/*
+ * Returns the arc tangent of x (in radians)
+ */
+double atan(double x){
+    return atan2(1, x);
+}
+
+/*
+ * Returns the arc tangent of y/x (in radians)
+ */
+double atan2(double y, double x){
+    asm("fld %1; fld %2; fpatan; fstp %0;" : "=m"(x) : "m"(y), "m"(x));
+    return x;
+}
+
+/*
+ * Returns the cosine of x (x in radians)
+ */
+double cos(double x){
+    return sin(x + (M_PI / 2));
+}
+
+/*
+ * Returns the sine of x (x in radians)
+ */
+double sin(double x){
+    //black magic
+    float xx = x * x;
+    return x + (x * xx) * (-0.16612511580269618f + xx * (8.0394356072977748e-3f + xx * -1.49414020045938777495e-4f));
+}
+
+/*
+ * Returns the exponent of x
+ */
+double exp(double x){
+    //TODO
+    /*
+    double tmp;
+    asm("fld %1;"
+        "fldl2e;"
+        "fist %2;"
+        "fild %2;"
+        "fsub;"
+        "f2xm1;"
+        "fld1;"
+        "fadd;"
+        "fild %2;"
+        "fxch;"
+        "fscale;"
+        "fstp %0" :
+        "=m"(x) :
+        "m"(x), "m"(tmp));
+        */
+    return x;
+}
+
+/*
+ * Splits the integer and decimal part of a number
+ */
+double modf(double x, double* integer){
+    double tmp;
+    asm("fld %1; fist %2; fsub %2; fstp %0" : "=m"(x) : "m"(x), "m"(tmp));
+    if(integer != NULL)
+        *integer = tmp;
+}
+
+/*
+ * Returns x raised to the power of y
+ */
+double pow(double x, double y){
+    //TODO
+    /*
+    double tmp;
+    asm("fld %3;"
+        "fld %1;"
+        "fyl2x;"
+        "fist %2;"
+        "fild %2;"
+        "fsub;"
+        "f2xm1;"
+        "fld1;"
+        "fadd;"
+        "fild %2;"
+        "fxch;"
+        "fscale;"
+        "fstp %0" :
+        "=m"(x) :
+        "m"(x), "m"(tmp), "m"(y));
+        */
+    return x;
+}
+
+/*
+ * Returns the square root of x
+ */
+double sqrt(double x){
+    asm("fld %1; fsqrt; fstp %0;" : "=m"(x) : "m"(x));
+    return x;
+}
+
+/*
+ * Returns the ceiling-rounded value of x
+ */
+double ceil(double x){
+    double i;
+    double f = modf(x, &i);
+    if(f < DBL_EPSILON)
+        return i;
+    return i + 1;
+}
+
+/*
+ * Returns the absolute value of x
+ */
+double fabs(double x){
+    if(x < 0)
         return -x;
+    return x;
+}
+
+/*
+ * Returns the remainder of x/y
+ */
+double fmod(double x, double y){
+    return modf(x / y, NULL);
+}
+
+/*
+ * Returns the floor-rounded value of x
+ */
+double floor(double x){
+    double i;
+    double f = modf(x, &i);
+    return i;
 }
 
 //Random number generator state

@@ -6,9 +6,12 @@
 
 #include "ngui.h"
 #include "gfx.h"
+#include "ps2.h"
 
 //The current theme
 theme_t theme;
+//Current absolute cursor position
+p2d_t cursor_pos;
 
 /*
  * Parses the ARGB color
@@ -68,7 +71,22 @@ void load_theme(char* path){
         strcpy(val, eq_occur + 1);
 
         //Parse the config line
-        if(memcmp(key, "desktop.", 8) == 0){
+        if(memcmp(key, "cur.", 4) == 0){ //Cursor settings
+            char* cur = key + 4;
+            if(strcmp(cur, "image") == 0){
+                strcpy(theme.cur.image, val);
+                //Load the image file
+                FILE* img = fopen(val, "rb");
+                if(img != NULL){
+                    theme.cur.img_width = fgetc(img);
+                    theme.cur.img_height = fgetc(img);
+                    uint64_t img_data_sz = theme.cur.img_width * theme.cur.img_height * 4;
+                    theme.cur.img_data = (uint8_t*)malloc(img_data_sz);
+                    fread(theme.cur.img_data, 1, img_data_sz, img);
+                    fclose(img);
+                }
+            }
+        } else if(memcmp(key, "desktop.", 8) == 0){ //Desktop settings
             char* desk = key + 8;
             if(strcmp(desk, "color") == 0)
                 theme.desk.color = parse_color(val);
@@ -80,6 +98,8 @@ void load_theme(char* path){
                 theme.panel.height = atoi(val);
             else if(strcmp(panel, "color") == 0)
                 theme.panel.color = parse_color(val);
+            else if(strcmp(panel, "bar_height") == 0)
+                theme.panel.bar_height = atoi(val);
         }
     }
     fclose(fp);
@@ -89,11 +109,48 @@ void load_theme(char* path){
  * Draws the panel
  */
 void draw_panel(void){
-    //Calculate panel size and position
+    //Calculate overall size and position
     p2d_t size = P2D(gfx_res().x - (2 * theme.panel.margins), theme.panel.height);
     p2d_t pos  = P2D(theme.panel.margins, gfx_res().y - theme.panel.margins - size.y);
-    //Draw the rectangle
-    gfx_draw_filled_rect(pos, size, theme.panel.color);
+    //Draw the left square
+    gfx_draw_round_rect(pos, P2D(size.y, size.y), 4, theme.panel.color);
+    //Draw the main panel
+    gfx_draw_round_rect(P2D(pos.x + size.y + theme.panel.margins, pos.y),
+                        P2D(size.x - (size.y + theme.panel.margins), size.y), 4, theme.panel.color);
+    //Draw the top bar
+    gfx_draw_filled_rect(P2D(0, 0), P2D(gfx_res().x, theme.panel.bar_height), theme.panel.color);
+}
+
+/*
+ * Bit Scan and Reverse CPU instruction
+ * (used as a fast approximation of log base 2)
+ */
+uint64_t _bsr(uint64_t n){
+    uint64_t val;
+    asm("bsr %1, %0;" : "=r"(val) : "r"(n));
+    return val;
+}
+
+/*
+ * PS/2 mouse event handler
+ */
+void mouse_evt(mouse_evt_t evt){
+    //_bsr is a fast approximation of log base 2
+    int velocity = _bsr((abs(evt.rel_x) + abs(evt.rel_y)) / 10);
+    if(velocity < 1)
+        velocity = 1;
+    //Scale by the velocity
+    cursor_pos.x += evt.rel_x * velocity;
+    cursor_pos.y += evt.rel_y * velocity;
+    //Limit the cursor position to screen borders
+    if(cursor_pos.x < 0)
+        cursor_pos.x = 0;
+    if(cursor_pos.y < 0)
+        cursor_pos.y = 0;
+    if(cursor_pos.x >= gfx_res().x)
+        cursor_pos.x = gfx_res().x - 1;
+    if(cursor_pos.y >= gfx_res().y)
+        cursor_pos.y = gfx_res().y - 1;
 }
 
 /*
@@ -102,17 +159,22 @@ void draw_panel(void){
 void main(void* args){
     //Welcome everybody!
     _km_write(__APP_SHORT_NAME, "ngui is starting");
-    //Initialize the graphics library
+    //Initialize stuff
     gfx_init();
+    cursor_pos = P2D(gfx_res().x / 2, gfx_res().y / 2);
+    ps2_init();
+    ps2_set_mouse_cb(mouse_evt);
     //Load the GUI config file
     load_theme("ngui.cfg");
 
     //In an endless loop
     while(1){
-        //Fill the buffer with background color
+        //Update the PS/2 state
+        ps2_check();
+        //Draw everything
         gfx_fill(theme.desk.color);
-        //Draw the panel
         draw_panel();
+        gfx_draw_raw(cursor_pos, theme.cur.img_data, P2D(theme.cur.img_width, theme.cur.img_height));
         //Update the framebuffer
         gfx_flip();
     }

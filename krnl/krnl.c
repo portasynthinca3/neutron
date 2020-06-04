@@ -60,6 +60,8 @@ extern void exc_30(void);
 
 //Where the kernel is loaded in memory
 krnl_pos_t krnl_pos;
+uint16_t krnl_cs = 0;
+uint16_t krnl_ds = 0;
 //First and last kernel message pointers
 krnl_msg_t* first_msg;
 krnl_msg_t* last_msg;
@@ -135,6 +137,60 @@ krnl_pos_t krnl_get_pos(void){
 }
 
 /*
+ * Converts exception vector to its corresponding name
+ */
+char* krnl_exc_vect_to_str(uint8_t vect){
+    switch(vect){
+        case 0:
+            return "division by zero exception";
+        case 1:
+            return "debug trap";
+        case 2:
+            return "NMI";
+        case 3:
+            return "breakpoint excpetion";
+        case 4:
+            return "overflow excpetion";
+        case 5:
+            return "bound range exceeded exception";
+        case 6:
+            return "invalid opcode exception";
+        case 7:
+            return "FPU not available exception";
+        case 8:
+            return "double fault";
+        case 9:
+            return "coprocessor segment overrun";
+        case 10:
+            return "invalid TSS exception";
+        case 11:
+            return "segment not present exception";
+        case 12:
+            return "stack-segment fault";
+        case 13:
+            return "general protection fault";
+        case 14:
+            return "page fault";
+        case 16:
+            return "FPU exception";
+        case 17:
+            return "alignment check exception";
+        case 18:
+            return "machine check exception";
+        case 19:
+            return "SIMD exception";
+        case 20:
+            return "virtualization exception";
+        case 30:
+            return "security exception";
+        case 255:
+            return "[no exception]";
+        default:
+            return "[reserved exception number]";
+    }
+}
+
+/*
  * Dumps the task state on screen
  */
 void krnl_dump_task_state(task_t* task){
@@ -143,61 +199,74 @@ void krnl_dump_task_state(task_t* task){
     char temp2[20];
 
     //Print RAX-RBX, RSI, RDI, RSP, RBP
-    strcat(temp, "  RAX=");
-    strcat(temp, sprintub16(temp2, task->state.rax, 16));
+    strcat(temp, "RAX=");
+    strcat(temp, sprintub16(temp2, task->state.rax, 1));
     strcat(temp, " RBX=");
-    strcat(temp, sprintub16(temp2, task->state.rbx, 16));
+    strcat(temp, sprintub16(temp2, task->state.rbx, 1));
     strcat(temp, " RCX=");
-    strcat(temp, sprintub16(temp2, task->state.rcx, 16));
+    strcat(temp, sprintub16(temp2, task->state.rcx, 1));
     strcat(temp, " RDX=");
-    strcat(temp, sprintub16(temp2, task->state.rdx, 16));
+    strcat(temp, sprintub16(temp2, task->state.rdx, 1));
     strcat(temp, " RSI=");
-    strcat(temp, sprintub16(temp2, task->state.rsi, 16));
+    strcat(temp, sprintub16(temp2, task->state.rsi, 1));
     strcat(temp, " RDI=");
-    strcat(temp, sprintub16(temp2, task->state.rdi, 16));
+    strcat(temp, sprintub16(temp2, task->state.rdi, 1));
     strcat(temp, " RSP=");
-    strcat(temp, sprintub16(temp2, task->state.rsp, 16));
+    strcat(temp, sprintub16(temp2, task->state.rsp, 1));
     strcat(temp, " RBP=");
-    strcat(temp, sprintub16(temp2, task->state.rbp, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, sprintub16(temp2, task->state.rbp, 1));
+    krnl_write_msg(__FILE__, temp);
 
     //Print R8-R15
     temp[0] = 0;
-    strcat(temp, "  R8 =");
-    strcat(temp, sprintub16(temp2, task->state.r8, 16));
-    strcat(temp, " R9 =");
-    strcat(temp, sprintub16(temp2, task->state.r9, 16));
+    strcat(temp, "R8=");
+    strcat(temp, sprintub16(temp2, task->state.r8, 1));
+    strcat(temp, " R9=");
+    strcat(temp, sprintub16(temp2, task->state.r9, 1));
     strcat(temp, " R10=");
-    strcat(temp, sprintub16(temp2, task->state.r10, 16));
+    strcat(temp, sprintub16(temp2, task->state.r10, 1));
     strcat(temp, " R11=");
-    strcat(temp, sprintub16(temp2, task->state.r11, 16));
+    strcat(temp, sprintub16(temp2, task->state.r11, 1));
     strcat(temp, " R12=");
-    strcat(temp, sprintub16(temp2, task->state.r12, 16));
+    strcat(temp, sprintub16(temp2, task->state.r12, 1));
     strcat(temp, " R13=");
-    strcat(temp, sprintub16(temp2, task->state.r13, 16));
+    strcat(temp, sprintub16(temp2, task->state.r13, 1));
     strcat(temp, " R14=");
-    strcat(temp, sprintub16(temp2, task->state.r14, 16));
+    strcat(temp, sprintub16(temp2, task->state.r14, 1));
     strcat(temp, " R15=");
-    strcat(temp, sprintub16(temp2, task->state.r15, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, sprintub16(temp2, task->state.r15, 1));
+    krnl_write_msg(__FILE__, temp);
 
     //Print CR3, RIP, RFLAGS
     temp[0] = 0;
-    strcat(temp, "  CR3=");
-    strcat(temp, sprintub16(temp2, task->state.cr3, 16));
+    strcat(temp, "CR3=");
+    strcat(temp, sprintub16(temp2, task->state.cr3, 1));
     strcat(temp, " RIP=");
-    strcat(temp, sprintub16(temp2, task->state.rip, 16));
+    strcat(temp, sprintub16(temp2, task->state.rip, 1));
     strcat(temp, " RFL=");
-    strcat(temp, sprintub16(temp2, task->state.rflags, 16));
-    strcat(temp, " CS =");
-    strcat(temp, sprintub16(temp2, task->state.cs, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, sprintub16(temp2, task->state.rflags, 1));
+    strcat(temp, " CS=");
+    strcat(temp, sprintub16(temp2, task->state.cs, 1));
+    krnl_write_msg(__FILE__, temp);
 
-    //Print cycles
+    //Print exception vector
     temp[0] = 0;
-    strcat(temp, "  SW_CNT=");
-    strcat(temp, sprintub16(temp2, task->state.switch_cnt, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, "EXC_VECT=");
+    strcat(temp, sprintub16(temp2, task->state.exc_vector, 2));
+    strcat(temp, " (");
+    strcat(temp, krnl_exc_vect_to_str(task->state.exc_vector));
+    strcat(temp, ")");
+    krnl_write_msg(__FILE__, temp);
+
+    //Print SIMD exception information
+    if(task->state.exc_vector == 0x13){
+        uint32_t mxcsr = 0;
+        asm("stmxcsr %0" : "=m"(mxcsr));
+        temp[0] = 0;
+        strcat(temp, "MXCSR=");
+        strcat(temp, sprintub16(temp2, mxcsr, 8));
+        krnl_write_msg(__FILE__, temp);
+    }
 }
 
 /*
@@ -207,9 +276,9 @@ void krnl_dump(void){
     //Stop the schaeduler
     mtask_stop();
 
-    gfx_verbose_println("---=== NEUTRON KERNEL DUMP ===---");
+    krnl_write_msg(__FILE__, "full kernel dump:");
 
-    gfx_verbose_println("TASKS:");
+    krnl_write_msg(__FILE__, "tasks:");
     //Scan through the task list
     task_t* tasks = mtask_get_task_list();
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++){
@@ -224,19 +293,17 @@ void krnl_dump(void){
             strcat(temp, ", PID ");
             strcat(temp, sprintu(temp2, tasks[i].pid, 1));
             if(tasks[i].pid == mtask_get_pid())
-                strcat(temp, " [DUMP CAUSE]");
+                strcat(temp, " [running at dump]");
             if(tasks[i].state_code != TASK_STATE_RUNNING){
-                strcat(temp, " [BLOCKED TILL ");
-                strcat(temp, sprintub16(temp2, tasks[i].blocked_till, 16));
-                strcat(temp, " / CUR ");
-                strcat(temp, sprintub16(temp2, rdtsc(), 16));
+                strcat(temp, " [blocked till cycle ");
+                strcat(temp, sprintub16(temp2, tasks[i].blocked_till, 1));
+                strcat(temp, " / current ");
+                strcat(temp, sprintub16(temp2, rdtsc(), 1));
                 strcat(temp, "]");
-            } else {
-                strcat(temp, " [RUNNING]");
             }
-            gfx_verbose_println(temp);
+            krnl_write_msg(__FILE__, temp);
             krnl_dump_task_state(&tasks[i]);
-            gfx_verbose_println("");
+            krnl_write_msg(__FILE__, "");
         }
     }
 }
@@ -247,14 +314,21 @@ void krnl_dump(void){
 void krnl_exc(void){
     //Get the task that caused the exception
     task_t* task = mtask_get_by_pid(mtask_get_pid());
-    //If that task was running in userspace, just terminate it
-    if(task->state.cs == 0x93){
-        krnl_write_msgf(__FILE__, "Task %s with PID %i caused an exception at RIP=0x%x",
-            task->name, task->pid, task->state.rip);
+    //If that task was running in userspace
+    if(task->state.cs != krnl_cs){
+        //Print the exception info
+        char symbol[256];
+        elf_get_sym(task, task->state.rip, symbol);
+        krnl_write_msgf(__FILE__, "Task %s with PID %i caused %s at RIP=0x%x <%s>",
+            task->name, task->pid, krnl_exc_vect_to_str(task->state.exc_vector), task->state.rip, symbol);
+        krnl_write_msg(__FILE__, "Task state at exception:");
+        krnl_dump_task_state(task);
+        //Stop that task
         mtask_stop_task(task->pid);
+        while(1);
     }
     //Otherwise, the exception happened in kernel-space
-    //Panic! In the Kernel
+    //Panic! in the Kernel
     mtask_stop();
     krnl_dump();
     gfx_panic(task->state.rip, KRNL_PANIC_CPUEXC_CODE);
@@ -414,9 +488,12 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     __asm__ volatile("mov %0, %%cr0" : : "r" (sse_temp));
     __asm__ volatile("mov %%cr4, %0" : "=r" (sse_temp));
     sse_temp |=  (1 << 9);
+    sse_temp |=  (1 << 10);
     sse_temp |=  (1 << 18);
-    //sse_temp |=  (1 << 10);
     __asm__ volatile("mov %0, %%cr4" : : "r" (sse_temp));
+    __asm__ volatile("stmxcsr %0" : "=m"(sse_temp));
+    sse_temp |= 0xFC0;
+    __asm__ volatile("ldmxcsr %0" : : "m"(sse_temp));
     //Set extended control register
     uint64_t xcr0 = (1 << 0) | (1 << 1);
     __asm__ volatile("mov %0, %%ecx;"
@@ -452,8 +529,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 	//Disable interrupts
 	__asm__ volatile("cli");
     //Get the current code and data selectors
-    uint16_t krnl_cs = 0;
-    uint16_t krnl_ds = 0;
+    krnl_cs = 0;
+    krnl_ds = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (krnl_cs));
     __asm__ volatile("movw %%ds, %0" : "=r" (krnl_ds));
     krnl_write_msgf(__FILE__, "current selectors: cs: 0x%x, ds: 0x%x", krnl_cs, krnl_ds);
@@ -507,7 +584,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Set up the task state segment and its descriptor
     uint16_t tsss = 0x100;
     tss_t* tss = calloc(1, sizeof(tss_t));
-    tss->rsp0 = (uint64_t)malloc(8192) + 8192;
+    tss->rsp0 = (uint64_t)malloc(16384) + 16384;
     uint64_t tss_addr = (uint64_t)tss;
     uint64_t tss_size = sizeof(tss_t);
     uint64_t tss_desc_hi =   tss_addr               >> 32;   //Limit and base

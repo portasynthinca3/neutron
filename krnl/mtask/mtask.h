@@ -25,7 +25,8 @@ typedef struct {
     uint64_t r8,  r9,  r10, r11, r12, r13, r14, r15;
     uint64_t cr3, rip, rflags, switch_cnt;
     uint16_t cs;
-    uint8_t padding[14];
+    uint8_t exc_vector;
+    uint8_t padding[29];
     uint8_t xstate[1024];
 } __attribute__((packed)) task_state_t;
 
@@ -47,12 +48,15 @@ typedef struct {
 
     virt_addr_t next_alloc;
     page_alloc_t allocations[MTASK_MAX_ALLOCATIONS];
+
+    uint8_t* symtab;
+    uint8_t* strtab;
 } task_t;
 
 //Task state codes
 
 #define TASK_STATE_RUNNING                  0
-#define TASK_STATE_BlOCKED_CYCLES           1
+#define TASK_STATE_BLOCKED_CYCLES           1
 #define TASK_STATE_WAITING_TO_RUN           3
 #define TASK_STATE_WAITING_FOR_PRIVL_ESC    4
 
@@ -70,7 +74,8 @@ typedef struct {
 void mtask_init(void);
 void mtask_stop(void);
 uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
-        void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl);
+        void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl, uint8_t* symtab,
+        uint8_t* strtab);
 task_t* mtask_get_by_pid(uint64_t pid);
 void mtask_stop_task(uint64_t pid);
 uint64_t mtask_get_pid(void);

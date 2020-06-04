@@ -45,6 +45,9 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
     diskio_read(&file, (void*)&shrtrtab_offs, 8);
     //Some variables to help with loading
     uint64_t next_addr = 0;
+    uint8_t* symtab = NULL;
+    uint8_t* strtab = NULL;
+    uint32_t symtab_link = 0;
     //Go through the sections
     for(uint32_t i = 0; i < elf_hdr.hdr.sect_hdr_entry_cnt; i++){
         uint32_t offs = elf_hdr.hdr.sec_hdr_table_pos + (i * elf_hdr.hdr.sect_hdr_entry_sz);
@@ -58,6 +61,7 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
                 uint64_t addr;
                 uint64_t offs;
                 uint64_t size;
+                uint64_t link;
              } __attribute__((packed)) hdr;
         } sect_hdr;
         file.position = offs;
@@ -68,7 +72,7 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
         diskio_read(&file, s_name, 32);
         //Load the section if needed
         if(sect_hdr.hdr.type == 1 //SHT_PROGBITS
-           && sect_hdr.hdr.size > 0){
+            && sect_hdr.hdr.size > 0){
             //Allocate memory
             uint8_t* addr = (uint8_t*)amalloc(sect_hdr.hdr.size, 4096);
             //Copy the data
@@ -93,11 +97,59 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
                 next_addr += 4096 - (next_addr % 4096);
             }
         }
+        //Load the symbol table
+        if(sect_hdr.hdr.type == 2 //SHT_SYMTAB
+            && sect_hdr.hdr.size > 0){
+            //Copy the data
+            symtab = (uint8_t*)malloc(sect_hdr.hdr.size + sizeof(uint32_t));
+            file.position = sect_hdr.hdr.offs;
+            diskio_read(&file, symtab + sizeof(uint32_t), sect_hdr.hdr.size);
+            //Write the section size
+            *(uint32_t*)symtab = sect_hdr.hdr.size / sizeof(elf_sym_t);
+            //Set the linked section
+            symtab_link = sect_hdr.hdr.link;
+        }
+        //Load the symbol string table
+        if(i == symtab_link){
+            strtab = (uint8_t*)malloc(sect_hdr.hdr.size);
+            file.position = sect_hdr.hdr.offs;
+            diskio_read(&file, strtab, sect_hdr.hdr.size);
+        }
     }
     //Allocate some memory for the stack and map it
     void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(32768, 1));
     vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 32768), (void*)(1ULL << 46));
+
     //Create a new task
-    uint64_t task_uid = mtask_create_task(32768 - 768, path, prio, 0, cr3, (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl);
+    uint64_t task_uid = mtask_create_task(32768, path, prio, 0, cr3,
+        (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl, symtab, strtab);
     return ELF_STATUS_OK;
+}
+
+/*
+ * Returns the symbol name and offset into that symbol of an address for a task
+ */
+void elf_get_sym(task_t* task, uint64_t addr, char* result){
+    //Check if that task has a symbol and string table in the first place
+    if(task->symtab == NULL || task->strtab == NULL){
+        strcpy(result, "unknown");
+        return;
+    }
+    //Find the closest symbol
+    char symbol_name[256] = "\0";
+    uint32_t sym_cnt = *(uint32_t*)task->symtab;
+    elf_sym_t* sym_arr = (elf_sym_t*)(task->symtab + sizeof(uint32_t));
+    uint64_t closest_diff = 0xFFFFFFFFFFFFFFFF;
+    for(int i = 0; i < sym_cnt; i++){
+        elf_sym_t* sym = &sym_arr[i];
+        if(sym->val <= addr){
+            uint64_t diff = addr - sym->val;
+            if(diff < closest_diff){
+                closest_diff = diff;
+                strcpy(symbol_name, (char*)(task->strtab + sym->name));
+            }
+        }
+    }
+    //Construct the result string
+    sprintf(result, "%s+0x%x", symbol_name, closest_diff);
 }

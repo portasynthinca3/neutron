@@ -66,10 +66,6 @@ void ps2_init(void){
     //Map IRQs to CPU vectors
     ioapic_map_irq(0, 1,  33); //IRQ1  -> vector #33
     ioapic_map_irq(0, 12, 34); //IRQ12 -> vector #34
-    //Enable IRQs
-    cfg |= 3;
-    outb(PS2_COMMAND_REG, 0x60);
-    ps2_write_byte(cfg);
     //Reset and enable devices
     ps2_write_byte(0xFF);
     ps2_write_byte(0xF4);
@@ -77,6 +73,15 @@ void ps2_init(void){
     ps2_write_byte(0xFF);
     outb(PS2_COMMAND_REG, 0xD4);
     ps2_write_byte(0xF4);
+    //It might me a good idea to flush all buffers once again
+    for(int i = 0; i < 256; i++)
+        inb(PS2_DATA_PORT);
+    ps21_flush();
+    ps22_flush();
+    //Enable IRQs
+    cfg |= 3;
+    outb(PS2_COMMAND_REG, 0x60);
+    ps2_write_byte(cfg);
 
     krnl_write_msgf(__FILE__, "initialized", test_res);
 }
@@ -112,7 +117,7 @@ void ps21_intr(void){
     ps21_buf_wr = (ps21_buf_wr + 1) % PS2_BUF_SIZE;
     //Check for overflows
     if(ps21_buf_wr == ps21_buf_rd)
-        krnl_write_msgf(__FILE__, "oops, device 1 buffer overflow");
+        krnl_write_msgf(__FILE__, "device 1 buffer overflow");
 }
 
 /*
@@ -126,7 +131,7 @@ void ps22_intr(void){
     ps22_buf_wr = (ps22_buf_wr + 1) % PS2_BUF_SIZE;
     //Check for overflows
     if(ps22_buf_wr == ps22_buf_rd)
-        krnl_write_msgf(__FILE__, "oops, device 2 buffer overflow");
+        krnl_write_msgf(__FILE__, "device 2 buffer overflow");
 }
 
 /*
@@ -138,6 +143,7 @@ int ps21_read(void){
         return -1;
     uint8_t data = ps21_buf[ps21_buf_rd];
     ps21_buf_rd = (ps21_buf_rd + 1) % PS2_BUF_SIZE;
+    return data;
 }
 
 /*
@@ -149,6 +155,7 @@ int ps22_read(void){
         return -1;
     uint8_t data = ps22_buf[ps22_buf_rd];
     ps22_buf_rd = (ps22_buf_rd + 1) % PS2_BUF_SIZE;
+    return data;
 }
 
 /*
@@ -164,4 +171,18 @@ void ps21_write(uint8_t val){
 void ps22_write(uint8_t val){
     outb(PS2_COMMAND_REG, 0xD4);
     ps2_write_byte(val);
+}
+
+/*
+ * Discard all data in the first PS/2 device's buffer
+ */
+void ps21_flush(void){
+    ps21_buf_rd = ps21_buf_wr = 0;
+}
+
+/*
+ * Discard all data in the second PS/2 device's buffer
+ */
+void ps22_flush(void){
+    ps22_buf_rd = ps22_buf_wr = 0;
 }

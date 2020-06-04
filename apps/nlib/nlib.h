@@ -28,6 +28,8 @@
 #define LONG_MIN        -9223372036854775808
 #define LONG_MAX        9223372036854775807
 #define ULONG_MAX       18446744073709551615
+#define DBL_EPSILON     1E-9
+#define M_PI            3.14159265358979323846
 
 #define EOF             -1
 #define FOPEN_MAX       256
@@ -116,6 +118,7 @@ int    atoi        (const char* str);
 long   atol        (const char* str);
 char*  _sprintu    (char* str, uint64_t i, uint8_t min);
 char*  _sprintub16 (char* str, uint64_t i, uint8_t min);
+char*  _sprintd    (char* str, double val);
 int    sprintf     (char* str, const char* format, ...);
 //Flow control
 void   abort  (void);
@@ -123,6 +126,22 @@ void   exit   (void);
 int    atexit (void (*func)(void));
 //Maths
 int    abs   (int x);
+int    min   (int a, int b);
+int    max   (int a, int b);
+double acos  (double x);
+double asin  (double x);
+double atan  (double x);
+double atan2 (double y, double x);
+double cos   (double x);
+double sin   (double x);
+double exp   (double x);
+double modf  (double x, double* integer);
+double pow   (double x, double y);
+double sqrt  (double x);
+double ceil  (double x);
+double fabs  (double x);
+double floor (double x);
+double fmod  (double x, double y);
 int    rand  (void);
 void   srand (unsigned int seed);
 //Memory control

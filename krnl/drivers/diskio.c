@@ -175,18 +175,15 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
         handle->info.device.bridge.is_bridge = 0;
         //Determine the actual device name
         if(strcmp(name, "ps21") == 0){
-            if(mode == DISKIO_FILE_ACCESS_READ_WRITE)
-                handle->info.device.device_no = DEV_FILE_PS21;
-            else
-                return DISKIO_STATUS_NOT_ALLOWED;
+            handle->info.device.device_no = DEV_FILE_PS21;
+            ps21_flush();
         } else if(strcmp(name, "ps22") == 0){
-            if(mode == DISKIO_FILE_ACCESS_READ_WRITE)
-                handle->info.device.device_no = DEV_FILE_PS22;
-            else
-                return DISKIO_STATUS_NOT_ALLOWED;
+            handle->info.device.device_no = DEV_FILE_PS22;
+            ps22_flush();
         } else if(strcmp(name, "fb") == 0){
-            if(mode == DISKIO_FILE_ACCESS_WRITE)
+            if(mode == DISKIO_FILE_ACCESS_WRITE){
                 handle->info.device.device_no = DEV_FILE_FB;
+            }
             else
                 return DISKIO_STATUS_READ_PROTECTED;
         }
@@ -363,7 +360,7 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
                 case DEV_FILE_PS21: {
                     int cnt = 0;
                     int data = 0;
-                    while((data = ps21_read()) != -1)
+                    while(cnt < len && (data = ps21_read()) != -1)
                         ((uint8_t*)buf)[cnt++] = (uint8_t)data;
                     if(cnt != len)
                         return DISKIO_STATUS_EOF | ((uint64_t)cnt << 32);
@@ -373,7 +370,7 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
                 case DEV_FILE_PS22: {
                     int cnt = 0;
                     int data = 0;
-                    while((data = ps22_read()) != -1)
+                    while(cnt < len && (data = ps22_read()) != -1)
                         ((uint8_t*)buf)[cnt++] = (uint8_t)data;
                     if(cnt != len)
                         return DISKIO_STATUS_EOF | ((uint64_t)cnt << 32);

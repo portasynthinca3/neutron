@@ -30,17 +30,19 @@ mtask_save_state:
     mov r12, [rsp+16] ;//CS
     mov r10, [rsp+24] ;//RFLAGS
     mov r11, [rsp+32] ;//RSP
+    mov r13b,[rsp-120] ;//Exception vector
     ;//Store them
     mov [rax+128], r8
     mov [rax+136], r9
     mov [rax+160], r12
     mov [rax+144], r10
     mov [rax+ 56], r11
+    mov [rax+162], r13b
     ;//Save MM, XMM-ZMM and ST registers
     xchg rax, rbx
     mov edx, 0xFFFFFFFF
     mov eax, 0xFFFFFFFF
-    ;//xsave [rbx+176]
+    xsaveq [rbx+192]
     xchg rax, rbx
     ;//Increment the switch counter
     inc qword ptr [rax+152]
@@ -68,7 +70,8 @@ mtask_restore_state:
     xchg rax, rbx
     mov edx, 0xFFFFFFFF
     mov eax, 0xFFFFFFFF
-    ;//xrstor [rbx+176]
+    mov dword ptr [rbx+216], 0x00001F80 ;//mask SIMD interrupts
+    xrstorq [rbx+192]
     xchg rax, rbx
     ;//Load GPRs
     mov rbx, [rax+  8]

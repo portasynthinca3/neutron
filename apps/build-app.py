@@ -69,7 +69,7 @@ print_status('Compiling')
 src_files = [src_dir + '/' + f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f)) and f.endswith('.c')] + ['nlib/nlib.c']
 for file in src_files:
     print('  Building: ' + file)
-    code = os.system('gcc -g2 -nostdlib -ffreestanding -m64 -mno-sse2 -Wno-varargs -Inlib -I' + tmp_dir + ' -Og -c -o '
+    code = os.system('gcc -g2 -nostdlib -ffreestanding -m64 -Wno-varargs -Inlib -I' + tmp_dir + ' -Og -c -o '
                      + build_dir + '/' + path.splitext(os.path.basename(file))[0] + '.o ' + file)
     # terminate on compilation error
     if code != 0:

@@ -74,7 +74,7 @@ for path in c_files:
 	path_obj = 'build/' + os.path.basename(path) + '.o'
 	c_obj.append(path_obj)
 	print('  Compiling: ' + path)
-	execute('x86_64-w64-mingw32-gcc -g2 -fno-pie -ffreestanding -mcmodel=large -mno-red-zone -m64 -mno-sse2 ' + ('-Og' if '-d' in sys.argv else '-Os') +
+	execute('x86_64-w64-mingw32-gcc -g2 -fno-pie -ffreestanding -mcmodel=large -mno-red-zone -m64 ' + ('-Og' if '-d' in sys.argv else '-Os') +
 			' -fstack-protector -Ignu-efi/inc -Ignu-efi/lib -Ignu-efi/inc/x86_64 -Ignu-efi/inc/protocol -nostdlib -Wno-varargs -c -o ' + path_obj + ' ' + path)
 
 print_status('Linking')
