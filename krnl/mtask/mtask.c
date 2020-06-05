@@ -16,7 +16,6 @@ task_t* mtask_cur_task;
 
 /*
  * Returns the current task pointer
- * (used only by mtask_sw.s)
  */
 task_t* mtask_get_cur_task(void){
     return mtask_cur_task;
@@ -37,8 +36,18 @@ void mtask_init(void){
     //Allocate a buffer for the task list
     mtask_task_list = (task_t*)amalloc((MTASK_TASK_COUNT * sizeof(task_t)), 64);
     //Clear it
-    memset(mtask_task_list, 0, (MTASK_TASK_COUNT * sizeof(task_t)));
+    memset(mtask_task_list, 0, MTASK_TASK_COUNT * sizeof(task_t));
+    //Create a task with PID 0 for handling excceptions within the kernel while it's booting
+    mtask_task_list[0] = (task_t){
+        .valid = 1,
+        .pid = 0,
+        .name = "KERNEL (booting)",
+        .priority = 0,
+        .state_code = TASK_STATE_RUNNING,
+        .privl = TASK_PRIVL_EVERYTHING
+    };
     
+    mtask_cur_task = &mtask_task_list[0];
     mtask_cur_task_no = 0;
     mtask_next_pid = 1;
     mtask_enabled = 0;
@@ -191,7 +200,9 @@ void mtask_schedule(void){
                 }
             }
 
-            if(mtask_task_list[mtask_cur_task_no].valid && mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_RUNNING)
+            if(mtask_task_list[mtask_cur_task_no].valid &&
+               mtask_task_list[mtask_cur_task_no].state_code == TASK_STATE_RUNNING &&
+               mtask_task_list[mtask_cur_task_no].pid != 0) //don't switch to the booting kernel
                 break;
         }
         mtask_cur_task = &mtask_task_list[mtask_cur_task_no];
@@ -256,7 +267,7 @@ void mtask_remove_open_file(file_handle_t* ptr){
         for(int i = 0; i < MTASK_MAX_OPEN_FILES; i++){
             //Find the matching entry
             if(task->open_files[i] == ptr){
-                task->open_files[i] = 0;
+                task->open_files[i] = NULL;
                 break;
             }
         }

@@ -2,10 +2,11 @@
 
 #include "nlib.h"
 #include "gfx.h"
+#include "ps2.h"
 
 //Structure definitions
 
-//Cursor properties structure
+//Cursor properties
 typedef struct {
     char image[128];
     uint64_t img_width,
@@ -13,17 +14,22 @@ typedef struct {
     uint8_t* img_data;
 } cur_prop_t;
 
-//Desktop properties structure
+//Desktop properties
 typedef struct {
     color32_t color;
 } desk_prop_t;
 
-//Panel properties structure
+//Panel properties
 typedef struct {
     uint32_t margins,
              height,
              bar_height;
+    uint64_t movement_time,
+             hold_time;
     color32_t color;
+    //Animation state
+    uint64_t last_state_ch;
+    uint8_t  state; //0=waiting to hide, 1=moving up, 2=moving down, 3=waiting to show
 } panel_prop_t;
 
 //Theme structure
@@ -35,6 +41,9 @@ typedef struct {
 
 //Function prototypes
 
-void load_theme (char* path);
-void draw_panel (void);
-void main       (void* args);
+color32_t parse_color (char* str);
+void      load_theme  (char* path);
+void      draw_panel  (void);
+void      mouse_evt   (mouse_evt_t evt);
+void      get_cpu_fq  (void);
+void      main        (void* args);

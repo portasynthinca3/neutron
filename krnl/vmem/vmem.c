@@ -34,7 +34,7 @@ uint64_t vmem_ident_cr3;
 //2. Calculate the offset into the page
 //3. Perform the access through the first page
 //4. Forget about this madness forever
-//Addresses for there special pages are:
+//Addresses for these special pages are:
 //1 - 0xFFFFFFFFFFFFB000
 //2 - 0xFFFFFFFFFFFFD000
 

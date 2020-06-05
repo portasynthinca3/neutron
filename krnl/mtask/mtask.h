@@ -81,6 +81,7 @@ void mtask_stop_task(uint64_t pid);
 uint64_t mtask_get_pid(void);
 uint8_t mtask_exists(uint64_t pid);
 task_t* mtask_get_task_list(void);
+task_t* mtask_get_cur_task(void);
 
 void mtask_save_state(void);
 void mtask_restore_state(void);

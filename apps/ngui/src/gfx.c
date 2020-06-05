@@ -68,6 +68,8 @@ void gfx_fill(color32_t color){
  * Draws a horizontal line
  */
 void gfx_draw_hor_line(p2d_t pos, uint64_t w, color32_t c){
+    if(pos.y >= res_y || pos.y < 0)
+        return;
     //Calculate the scanline start
     uint64_t st = pos.y * res_x;
     //Draw each pixel in the line
@@ -187,7 +189,6 @@ void gfx_draw_xbm(p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h
  * Draw a raw image
  */
 void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
-    //Create a counter
     uint32_t pos = 0;
     //Go through each pixel
     for(int64_t y = position.y; y < position.y + raw_size.y; y++){

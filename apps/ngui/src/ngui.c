@@ -12,6 +12,8 @@
 theme_t theme;
 //Current absolute cursor position
 p2d_t cursor_pos;
+//CPU frequency (cycles/ms)
+uint64_t cpu_fq;
 
 /*
  * Parses the ARGB color
@@ -100,6 +102,10 @@ void load_theme(char* path){
                 theme.panel.color = parse_color(val);
             else if(strcmp(panel, "bar_height") == 0)
                 theme.panel.bar_height = atoi(val);
+            else if(strcmp(panel, "movement_time") == 0)
+                theme.panel.movement_time = cpu_fq * atol(val);
+            else if(strcmp(panel, "hold_time") == 0)
+                theme.panel.hold_time = cpu_fq * atol(val);
         }
     }
     fclose(fp);
@@ -109,21 +115,53 @@ void load_theme(char* path){
  * Draws the panel
  */
 void draw_panel(void){
+    //Draw the top bar
+    gfx_draw_filled_rect(P2D(0, 0), P2D(gfx_res().x, theme.panel.bar_height), theme.panel.color);
     //Calculate overall size and position
+    int32_t panel_offs = 0;
+    if(theme.panel.state == 3){
+        if(cursor_pos.y >= gfx_res().y - 10){
+            theme.panel.state = 1;
+            theme.panel.last_state_ch = rdtsc();
+        } else {
+            return;
+        }
+    } else if(theme.panel.state == 0){
+        if(cursor_pos.y >= gfx_res().y - (theme.panel.height + theme.panel.margins)){
+            theme.panel.state = 0;
+            theme.panel.last_state_ch = rdtsc();
+        }
+        if(rdtsc() - theme.panel.last_state_ch >= theme.panel.hold_time){
+            theme.panel.state = 2;
+            theme.panel.last_state_ch = rdtsc();
+        }
+    } else if(theme.panel.state == 1){
+        panel_offs = theme.panel.height + theme.panel.margins - 
+            (uint64_t)(theme.panel.height + theme.panel.margins) *
+            (rdtsc() - theme.panel.last_state_ch) / theme.panel.movement_time;
+        if(panel_offs <= 0){
+            theme.panel.state = 0;
+            theme.panel.last_state_ch = rdtsc();
+        }
+    } else if(theme.panel.state == 2){
+        panel_offs = (uint64_t)(theme.panel.height + theme.panel.margins) *
+            (rdtsc() - theme.panel.last_state_ch) / theme.panel.movement_time;
+        if(panel_offs > theme.panel.height + theme.panel.margins){
+            theme.panel.state = 3;
+            theme.panel.last_state_ch = rdtsc();
+        }
+    }
     p2d_t size = P2D(gfx_res().x - (2 * theme.panel.margins), theme.panel.height);
-    p2d_t pos  = P2D(theme.panel.margins, gfx_res().y - theme.panel.margins - size.y);
+    p2d_t pos  = P2D(theme.panel.margins, gfx_res().y - theme.panel.margins - size.y + panel_offs);
     //Draw the left square
     gfx_draw_round_rect(pos, P2D(size.y, size.y), 4, theme.panel.color);
     //Draw the main panel
     gfx_draw_round_rect(P2D(pos.x + size.y + theme.panel.margins, pos.y),
                         P2D(size.x - (size.y + theme.panel.margins), size.y), 4, theme.panel.color);
-    //Draw the top bar
-    gfx_draw_filled_rect(P2D(0, 0), P2D(gfx_res().x, theme.panel.bar_height), theme.panel.color);
 }
 
 /*
- * Bit Scan and Reverse CPU instruction
- * (used as a fast approximation of log base 2)
+ * Bit Scan and Reverse
  */
 uint64_t _bsr(uint64_t n){
     uint64_t val;
@@ -135,8 +173,8 @@ uint64_t _bsr(uint64_t n){
  * PS/2 mouse event handler
  */
 void mouse_evt(mouse_evt_t evt){
-    //_bsr is a fast approximation of log base 2
-    int velocity = _bsr((abs(evt.rel_x) + abs(evt.rel_y)) / 10);
+    //_bsr is used as a fast approximation of log base 2
+    int velocity = _bsr((abs(evt.rel_x) + abs(evt.rel_y)) / 50);
     if(velocity < 1)
         velocity = 1;
     //Scale by the velocity
@@ -154,6 +192,17 @@ void mouse_evt(mouse_evt_t evt){
 }
 
 /*
+ * Gets CPU frequency from /sys/cpufq
+ */
+void get_cpu_fq(void){
+    FILE* f = fopen("/sys/cpufq", "r");
+    char buf[64];
+    fgets(buf, 64, f);
+    cpu_fq = atol(buf) / 1000;
+    fclose(f);
+}
+
+/*
  * Entry point
  */
 void main(void* args){
@@ -164,6 +213,7 @@ void main(void* args){
     cursor_pos = P2D(gfx_res().x / 2, gfx_res().y / 2);
     ps2_init();
     ps2_set_mouse_cb(mouse_evt);
+    get_cpu_fq();
     //Load the GUI config file
     load_theme("ngui.cfg");
 

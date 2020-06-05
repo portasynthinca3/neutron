@@ -28,32 +28,39 @@ exc_7:
     movb [rsp-128], 7
     jmp exc_wrapper
 exc_8:
+    add rsp, 8
     movb [rsp-128], 8
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_9:
     movb [rsp-128], 9
     jmp exc_wrapper
 exc_10:
+    add rsp, 8
     movb [rsp-128], 10
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_11:
+    add rsp, 8
     movb [rsp-128], 11
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_12:
+    add rsp, 8
     movb [rsp-128], 12
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_13:
+    add rsp, 8
     movb [rsp-128], 13
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_14:
+    add rsp, 8
     movb [rsp-128], 14
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_16:
     movb [rsp-128], 16
     jmp exc_wrapper
 exc_17:
+    add rsp, 8
     movb [rsp-128], 17
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 exc_18:
     movb [rsp-128], 18
     jmp exc_wrapper
@@ -64,26 +71,15 @@ exc_20:
     movb [rsp-128], 20
     jmp exc_wrapper
 exc_30:
+    add rsp, 8
     movb [rsp-128], 30
-    jmp exc_wrapper_code
+    jmp exc_wrapper
 
 exc_wrapper:
     ;//Disable interrupts
     cli
     ;//Save task state
     call mtask_save_state
-    ;//Clear direction flag
-    cld
-    ;//Call the exception handler
-    call krnl_exc
-    iretq
-exc_wrapper_code:
-    ;//Disable interrupts
-    cli
-    ;//Save task state
-    add rsp, 8
-    call mtask_save_state
-    sub rsp, 8
     ;//Clear direction flag
     cld
     ;//Call the exception handler

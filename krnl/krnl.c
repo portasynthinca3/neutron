@@ -313,7 +313,7 @@ void krnl_dump(void){
  */
 void krnl_exc(void){
     //Get the task that caused the exception
-    task_t* task = mtask_get_by_pid(mtask_get_pid());
+    task_t* task = mtask_get_cur_task();
     //If that task was running in userspace
     if(task->state.cs != krnl_cs){
         //Print the exception info
