@@ -104,16 +104,16 @@ typedef struct {
     acpi_gas_t x_gpe1_blk;
 } __attribute__((packed)) acpi_fadt_t;
 
-//Initialization functions
+//Function prototypes
 
-uint32_t acpi_init(void);
-uint8_t acpi_sdt_checksum(acpi_sdt_hdr_t* rsdt);
-acpi_rsdp_t* acpi_find_rsdp(void);
-void* rsdt_find(char* table);
-
+//Initialization
+uint32_t acpi_init (void);
+//Finding tables
+uint8_t      acpi_sdt_checksum (acpi_sdt_hdr_t* rsdt);
+acpi_rsdp_t* acpi_find_rsdp    (void);
+void*        rsdt_find         (char* table);
 //Power management
-
-void acpi_shutdown(void);
-void acpi_reboot(void);
+void acpi_shutdown (void);
+void acpi_reboot   (void);
 
 #endif

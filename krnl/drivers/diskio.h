@@ -92,12 +92,12 @@ typedef struct {
 
 //Function prototypes
 
-void diskio_init(void);
-void diskio_mount(diskio_dev_t device, char* path);
-uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode);
-uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len);
-uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len);
-uint64_t diskio_seek(file_handle_t* handle, uint64_t pos);
-void diskio_close(file_handle_t* handle);
+void     diskio_init  (void);
+void     diskio_mount (diskio_dev_t device, char* path);
+uint8_t  diskio_open  (char* path, file_handle_t* handle, uint8_t mode);
+uint64_t diskio_read  (file_handle_t* handle, void* buf, uint64_t len);
+uint64_t diskio_write (file_handle_t* handle, void* buf, uint64_t len);
+uint64_t diskio_seek  (file_handle_t* handle, uint64_t pos);
+void     diskio_close (file_handle_t* handle);
 
 #endif

@@ -71,31 +71,32 @@ typedef struct {
 
 //Function prototypes
 
-void mtask_init(void);
-void mtask_stop(void);
+//Global control
+void mtask_init (void);
+void mtask_stop (void);
+//Task creating/destruction/getting/setting/etc.
 uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, uint8_t identity_map, uint64_t _cr3,
-        void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl, uint8_t* symtab,
-        uint8_t* strtab);
-task_t* mtask_get_by_pid(uint64_t pid);
-void mtask_stop_task(uint64_t pid);
-uint64_t mtask_get_pid(void);
-uint8_t mtask_exists(uint64_t pid);
-task_t* mtask_get_task_list(void);
-task_t* mtask_get_cur_task(void);
-
-void mtask_save_state(void);
-void mtask_restore_state(void);
-void mtask_schedule(void);
-
-void mtask_dly_cycles(uint64_t cycles);
-void mtask_dly_us(uint64_t us);
-
-void mtask_escalate(uint64_t mask);
-
-void mtask_add_open_file(file_handle_t* ptr);
-void mtask_remove_open_file(file_handle_t* ptr);
-
-virt_addr_t mtask_palloc(uint64_t pid, uint64_t num);
-void mtask_pfree(uint64_t pid, virt_addr_t proc_map);
+                           void* suggested_stack, uint8_t start, void(*func)(void*), void* args, uint64_t privl, uint8_t* symtab,
+                           uint8_t* strtab);
+void     mtask_stop_task     (uint64_t pid);
+task_t*  mtask_get_by_pid    (uint64_t pid);
+uint64_t mtask_get_pid       (void);
+uint8_t  mtask_exists        (uint64_t pid);
+task_t*  mtask_get_task_list (void);
+task_t*  mtask_get_cur_task  (void);
+void     mtask_escalate      (uint64_t mask);
+//Save/restore/schedule
+void mtask_save_state    (void);
+void mtask_restore_state (void);
+void mtask_schedule      (void);
+//Delays
+void mtask_dly_cycles (uint64_t cycles);
+void mtask_dly_us     (uint64_t us);
+//Opened files control
+void mtask_add_open_file    (file_handle_t* ptr);
+void mtask_remove_open_file (file_handle_t* ptr);
+//Memory allocation control
+virt_addr_t mtask_palloc (uint64_t pid, uint64_t num);
+void        mtask_pfree  (uint64_t pid, virt_addr_t proc_map);
 
 #endif

@@ -11,16 +11,16 @@
 //#define STDLIB_MEMCPY_WC
 
 //Standard type definitions
-
-typedef unsigned char uint8_t;
-typedef signed char int8_t;
-typedef unsigned short uint16_t;
-typedef signed short int16_t;
-typedef unsigned int uint32_t;
-typedef signed int int32_t;
+typedef unsigned char          uint8_t;
+typedef signed char            int8_t;
+typedef unsigned short         uint16_t;
+typedef signed short           int16_t;
+typedef unsigned int           uint32_t;
+typedef signed int             int32_t;
 typedef long long unsigned int uint64_t;
-typedef long long signed int int64_t;
-typedef uint64_t size_t;
+typedef long long signed int   int64_t;
+typedef uint64_t               size_t;
+typedef int64_t                time_t;
 
 /*
  * Structure defining a linked list node
@@ -127,67 +127,53 @@ void abort();
 void puts_e9(char* str);
 
 //Low-level functions
-
-void load_idt(idt_desc_t* idt);
-void bswap_dw(int* value);
-uint64_t rdtsc(void);
-uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16_t* mo, uint16_t* y);
-void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access);
-int memcmp(const void* lhs, const void* rhs, size_t cnt);
-uint64_t rdmsr(uint32_t msr);
-void wrmsr(uint32_t msr, uint64_t val);
-uint32_t rand(void);
-uint64_t popcnt(uint64_t n);
-
+void     load_idt   (idt_desc_t* idt);
+void     bswap_dw   (int* value);
+uint64_t rdtsc      (void);
+void     gdt_create (uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access);
+int      memcmp     (const void* lhs, const void* rhs, size_t cnt);
+uint64_t rdmsr      (uint32_t msr);
+void     wrmsr      (uint32_t msr, uint64_t val);
+uint32_t rand       (void);
+uint64_t popcnt     (uint64_t n);
 //Dynamic memory functions
-
-void* stdlib_physbase(void);
-uint64_t stdlib_usable_ram(void);
-uint64_t stdlib_used_ram(void);
-uint64_t dram_init(void);
-void dram_shift(void);
-void* malloc(size_t size);
-void* amalloc(size_t size, size_t gran);
-void free(void* ptr);
-void* calloc(uint64_t num, size_t size);
-
+void*    stdlib_physbase   (void);
+uint64_t stdlib_usable_ram (void);
+uint64_t stdlib_used_ram   (void);
+uint64_t dram_init         (void);
+void     dram_shift        (void);
+void*    malloc            (size_t size);
+void*    amalloc           (size_t size, size_t gran);
+void     free              (void* ptr);
+void*    calloc            (uint64_t num, size_t size);
 //Memory operation functions
-
-void* memset(void* dst, int ch, size_t size);
-void* memcpy(void* destination, const void* source, size_t num);
-char* strcpy(char* dest, char* src);
-
+void* memset (void* dst, int ch, size_t size);
+void* memcpy (void* destination, const void* source, size_t num);
+char* strcpy (char* dest, char* src);
 //I/O port operation functions
-
-void outl(uint16_t port, uint32_t value);
-uint32_t inl(uint16_t port);
-void outw(uint16_t port, uint16_t value);
-uint16_t inw(uint16_t port);
-void outb(uint16_t port, uint8_t value);
-uint8_t inb(uint16_t port);
-void rep_insw(uint16_t port, uint32_t count, uint16_t* buf);
-
+void     outl     (uint16_t port, uint32_t value);
+uint32_t inl      (uint16_t port);
+void     outw     (uint16_t port, uint16_t value);
+uint16_t inw      (uint16_t port);
+void     outb     (uint16_t port, uint8_t value);
+uint8_t  inb      (uint16_t port);
+void     rep_insw (uint16_t port, uint32_t count, uint16_t* buf);
 //FIFO buffer operations
-
-void fifo_pushb(uint8_t* buffer, uint16_t* head, uint8_t value);
-uint8_t fifo_popb(uint8_t* buffer, uint16_t* head, uint16_t* tail);
-uint8_t fifo_av(uint16_t* head, uint16_t* tail);
-
+void    fifo_pushb (uint8_t* buffer, uint16_t* head, uint8_t value);
+uint8_t fifo_popb  (uint8_t* buffer, uint16_t* head, uint16_t* tail);
+uint8_t fifo_av    (uint16_t* head, uint16_t* tail);
 //Linked list operations
-
-list_node_t* list_append(list_node_t* first, void* element);
-void* list_get_at_idx(list_node_t* first, uint32_t idx);
-
+list_node_t* list_append     (list_node_t* first, void* element);
+void*        list_get_at_idx (list_node_t* first, uint32_t idx);
 //String functions
-
-size_t strlen(const char* str);
-char* sprintu(char* str, uint64_t i, uint8_t min);
-char* sprintub16(char* str, uint64_t i, uint8_t min);
-int _sprintf_argcnt(char* fmt);
-int _sprintf(char* str, const char* format, va_list valist);
-int sprintf(char* str, const char* format, ...);
-char* strcat(char* dest, char* src);
-int strcmp(const char* str1, const char* str2);
-int atoi(const char* str);
+size_t strlen          (const char* str);
+char*  sprintu         (char* str, uint64_t i, uint8_t min);
+char*  sprintub16      (char* str, uint64_t i, uint8_t min);
+int    _sprintf_argcnt (char* fmt);
+int    _sprintf        (char* str, const char* format, va_list valist);
+int    sprintf         (char* str, const char* format, ...);
+char*  strcat          (char* dest, char* src);
+int    strcmp          (const char* str1, const char* str2);
+int    atoi            (const char* str);
 
 #endif

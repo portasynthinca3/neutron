@@ -78,14 +78,18 @@ typedef struct {
 #define LAPIC_REG_TIMR_CURCNT           0x390
 #define LAPIC_REG_TIMR_DIVCONF          0x3E0
 
-void apic_init(void);
-uint32_t lapic_reg_rd(uint32_t reg);
-void lapic_reg_wr(uint32_t reg, uint32_t val);
-uint32_t lapic_get_id(void);
-void lapic_eoi(void);
+//Function prototypes
 
-uint32_t ioapic_reg_rd(uint32_t id, uint32_t reg);
-void ioapic_reg_wr(uint32_t id, uint32_t reg, uint32_t val);
-void ioapic_map_irq(uint32_t id, uint8_t irq, uint8_t vect);
+//Common
+void apic_init (void);
+//LAPIC operations
+uint32_t lapic_reg_rd (uint32_t reg);
+void     lapic_reg_wr (uint32_t reg, uint32_t val);
+uint32_t lapic_get_id (void);
+void     lapic_eoi    (void);
+//I/O APIC operations
+uint32_t ioapic_reg_rd  (uint32_t id, uint32_t reg);
+void     ioapic_reg_wr  (uint32_t id, uint32_t reg, uint32_t val);
+void     ioapic_map_irq (uint32_t id, uint8_t irq, uint8_t vect);
 
 #endif

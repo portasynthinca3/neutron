@@ -1,5 +1,5 @@
 .intel_syntax noprefix
-.globl   exc_0, exc_1, exc_2, exc_3, exc_4, exc_5, exc_6, exc_7, exc_8, exc_9, exc_10, exc_11, exc_12, exc_13, exc_14, exc_16, exc_17, exc_18, exc_19, exc_20, exc_30, apic_timer_isr_wrap, apic_error_isr_wrap, ps21_isr_wrap, ps22_isr_wrap
+.globl   exc_0, exc_1, exc_2, exc_3, exc_4, exc_5, exc_6, exc_7, exc_8, exc_9, exc_10, exc_11, exc_12, exc_13, exc_14, exc_16, exc_17, exc_18, exc_19, exc_20, exc_30, apic_timer_isr_wrap, apic_error_isr_wrap, ps21_isr_wrap, ps22_isr_wrap, rtc_isr_wrap
 .align   8
 
 ;//Specific handlers for each exception
@@ -111,21 +111,19 @@ apic_timer_isr_wrap:
     jmp mtask_restore_state
 
 ps21_isr_wrap:
-    ;//Disable interrupts
     cli
-    ;//Save task state
     call mtask_save_state
-    ;//Call the handler
     call ps21_intr
-    ;//Restore task state (return)
     jmp mtask_restore_state
 
 ps22_isr_wrap:
-    ;//Disable interrupts
     cli
-    ;//Save task state
     call mtask_save_state
-    ;//Call the handler
     call ps22_intr
-    ;//Restore task state (return)
+    jmp mtask_restore_state
+
+rtc_isr_wrap:
+    cli
+    call mtask_save_state
+    call rtc_intr
     jmp mtask_restore_state

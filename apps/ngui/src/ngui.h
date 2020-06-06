@@ -27,6 +27,7 @@ typedef struct {
     uint64_t movement_time,
              hold_time;
     color32_t color;
+    uint8_t* icon_data;
     //Animation state
     uint64_t last_state_ch;
     uint8_t  state; //0=waiting to hide, 1=moving up, 2=moving down, 3=waiting to show

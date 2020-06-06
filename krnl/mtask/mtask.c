@@ -41,7 +41,7 @@ void mtask_init(void){
     mtask_task_list[0] = (task_t){
         .valid = 1,
         .pid = 0,
-        .name = "KERNEL (booting)",
+        .name = "KERNEL",
         .priority = 0,
         .state_code = TASK_STATE_RUNNING,
         .privl = TASK_PRIVL_EVERYTHING

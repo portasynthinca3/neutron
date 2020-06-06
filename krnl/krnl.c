@@ -17,6 +17,7 @@
 #include "./drivers/acpi.h"
 #include "./drivers/initrd.h"
 #include "./drivers/ps2.h"
+#include "./drivers/cmos.h"
 
 #include "./fonts/jb-mono-10.h"
 
@@ -34,6 +35,7 @@
 extern void apic_timer_isr_wrap(void);
 extern void ps21_isr_wrap(void);
 extern void ps22_isr_wrap(void);
+extern void rtc_isr_wrap(void);
 
 //Exception wrapper definitions
 extern void exc_0(void);
@@ -288,7 +290,6 @@ void krnl_dump(void){
             char temp[200];
             temp[0] = 0;
             char temp2[20];
-            strcat(temp, " ");
             strcat(temp, tasks[i].name);
             strcat(temp, ", PID ");
             strcat(temp, sprintu(temp2, tasks[i].pid, 1));
@@ -563,6 +564,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     idt[33] = IDT_ENTRY_ISR((uint64_t)(&ps21_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     idt[34] = IDT_ENTRY_ISR((uint64_t)(&ps22_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[35] = IDT_ENTRY_ISR((uint64_t)(&rtc_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Load IDT
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(idt_entry_t);
@@ -617,9 +619,10 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status("Initializing APIC", 80);
     apic_init();
 
-    //Initialize PS/2
-    krnl_boot_status("Initializing PS/2", 85);
+    //Initialize... stuff...
+    krnl_boot_status("Initializing some hardware", 85);
     ps2_init();
+    rtc_init();
 
     //Initialize the multitasking system
     krnl_boot_status("Initializing multitasking", 90);

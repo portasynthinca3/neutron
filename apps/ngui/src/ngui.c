@@ -106,6 +106,16 @@ void load_theme(char* path){
                 theme.panel.movement_time = cpu_fq * atol(val);
             else if(strcmp(panel, "hold_time") == 0)
                 theme.panel.hold_time = cpu_fq * atol(val);
+            else if(strcmp(panel, "icon") == 0){
+                //Load the image file
+                FILE* img = fopen(val, "rb");
+                if(img != NULL){
+                    fseek(img, 2);
+                    theme.panel.icon_data = (uint8_t*)malloc(24 * 24 * 4);
+                    fread(theme.panel.icon_data, 1, 24 * 24 * 4, img);
+                    fclose(img);
+                }
+            }
         }
     }
     fclose(fp);
@@ -117,7 +127,7 @@ void load_theme(char* path){
 void draw_panel(void){
     //Draw the top bar
     gfx_draw_filled_rect(P2D(0, 0), P2D(gfx_res().x, theme.panel.bar_height), theme.panel.color);
-    //Calculate overall size and position
+    //Calculate overall panel size and position
     int32_t panel_offs = 0;
     if(theme.panel.state == 3){
         if(cursor_pos.y >= gfx_res().y - 10){
@@ -154,7 +164,12 @@ void draw_panel(void){
     p2d_t size = P2D(gfx_res().x - (2 * theme.panel.margins), theme.panel.height);
     p2d_t pos  = P2D(theme.panel.margins, gfx_res().y - theme.panel.margins - size.y + panel_offs);
     //Draw the left square
-    gfx_draw_round_rect(pos, P2D(size.y, size.y), 4, theme.panel.color);
+    color32_t left_sqr_color = theme.panel.color;
+    if(gfx_point_in_rect(cursor_pos, P2D(pos.x, pos.y), P2D(theme.panel.height, theme.panel.height)))
+        left_sqr_color = gfx_blend_colors(left_sqr_color, COLOR32(255, 255, 255, 255), 5);
+    gfx_draw_round_rect(pos, P2D(size.y, size.y), 4, left_sqr_color);
+    gfx_draw_raw(P2D(pos.x + (theme.panel.height - 24) / 2, pos.y + (theme.panel.height - 24) / 2),
+                 theme.panel.icon_data, P2D(24, 24));
     //Draw the main panel
     gfx_draw_round_rect(P2D(pos.x + size.y + theme.panel.margins, pos.y),
                         P2D(size.x - (size.y + theme.panel.margins), size.y), 4, theme.panel.color);
@@ -216,6 +231,8 @@ void main(void* args){
     get_cpu_fq();
     //Load the GUI config file
     load_theme("ngui.cfg");
+
+    theme.panel.state = 0;
 
     //In an endless loop
     while(1){

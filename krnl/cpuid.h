@@ -71,7 +71,7 @@
 #define CPUID_FEAT_ECX_RDRND                (1 << 30)
 #define CPUID_FEAT_ECX_HYPERVISOR           (1 << 31)
 
-void cpuid_get_leaf(uint32_t leaf, uint32_t subleaf, uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx);
-void cpuid_get_vendor(char str[13], uint32_t* max);
-void cpuid_get_feat(uint32_t* edx, uint32_t* ecx);
-void cpuid_get_brand(char* str);
+void cpuid_get_leaf   (uint32_t leaf, uint32_t subleaf, uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx);
+void cpuid_get_vendor (char str[13], uint32_t* max);
+void cpuid_get_feat   (uint32_t* edx, uint32_t* ecx);
+void cpuid_get_brand  (char* str);

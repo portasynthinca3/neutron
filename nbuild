@@ -19,6 +19,7 @@ krnl/drivers/timr.c
 krnl/drivers/acpi.c
 krnl/drivers/initrd.c
 krnl/drivers/ps2.c
+krnl/drivers/cmos.c
 
 # Application support stuff
 
