@@ -121,7 +121,7 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
     vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 32768), (void*)(1ULL << 46));
 
     //Create a new task
-    uint64_t task_uid = mtask_create_task(32768, path, prio, 0, cr3,
+    mtask_create_task(32768, path, prio, 0, cr3,
         (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl, symtab, strtab);
     return ELF_STATUS_OK;
 }

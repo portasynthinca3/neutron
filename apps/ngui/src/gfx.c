@@ -95,7 +95,7 @@ void gfx_draw_vert_line(p2d_t pos, uint64_t h, color32_t c){
  */
 void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
     //Draw each horizontal line in the rectangle
-    for(uint64_t y = pos.y; y < pos.y + size.y; y++)
+    for(int64_t y = pos.y; y < pos.y + size.y; y++)
         gfx_draw_hor_line((p2d_t){.x = pos.x, .y = y}, size.x, c);
 }
 

@@ -41,10 +41,11 @@ void mtask_init(void){
     mtask_task_list[0] = (task_t){
         .valid = 1,
         .pid = 0,
-        .name = "KERNEL",
+        .name = "KERNEL (booting)",
         .priority = 0,
         .state_code = TASK_STATE_RUNNING,
-        .privl = TASK_PRIVL_EVERYTHING
+        .privl = TASK_PRIVL_EVERYTHING,
+        .state.exc_vector = 255
     };
     
     mtask_cur_task = &mtask_task_list[0];
@@ -59,7 +60,7 @@ void mtask_init(void){
  * Gets a PID of the currently running task
  */
 uint64_t mtask_get_pid(void){
-    return mtask_task_list[mtask_cur_task_no].pid;
+    return mtask_cur_task->pid;
 }
 
 /*
@@ -132,6 +133,8 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
         //Assign the current task
         mtask_cur_task = task;
         mtask_cur_task_no = 0;
+        //Inavlidate the PID 0 task
+        mtask_task_list[0].valid = 0;
         //Switch to the newly created task
         mtask_enabled = 1;
         __asm__ volatile("jmp mtask_restore_state");

@@ -127,15 +127,14 @@ void abort();
 void puts_e9(char* str);
 
 //Low-level functions
-void     load_idt   (idt_desc_t* idt);
-void     bswap_dw   (int* value);
-uint64_t rdtsc      (void);
-void     gdt_create (uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access);
-int      memcmp     (const void* lhs, const void* rhs, size_t cnt);
-uint64_t rdmsr      (uint32_t msr);
-void     wrmsr      (uint32_t msr, uint64_t val);
-uint32_t rand       (void);
-uint64_t popcnt     (uint64_t n);
+void     load_idt (idt_desc_t* idt);
+void     bswap_dw (uint32_t* value);
+uint64_t rdtsc    (void);
+int      memcmp   (const void* lhs, const void* rhs, size_t cnt);
+uint64_t rdmsr    (uint32_t msr);
+void     wrmsr    (uint32_t msr, uint64_t val);
+uint32_t rand     (void);
+uint64_t popcnt   (uint64_t n);
 //Dynamic memory functions
 void*    stdlib_physbase   (void);
 uint64_t stdlib_usable_ram (void);

@@ -19,15 +19,6 @@ uint64_t ps22_buf_rd = 0;
  * Initializes the PS/2 controller
  */
 void ps2_init(void){
-    //Check if there's a PS/2 controller at all
-    //Find the FADT table
-    acpi_fadt_t* fadt = rsdt_find("FACP");
-    //Check its presence and boot architecture flag 1
-    if(fadt != NULL && fadt->boot_arch_flags & 2 == 0){
-        krnl_write_msg(__FILE__, "no controller found");
-        return;
-    }
-    krnl_write_msg(__FILE__, "controller found");
     //Disable both PS/2 devices
     outb(PS2_COMMAND_REG, 0xAD);
     outb(PS2_COMMAND_REG, 0xA7);
@@ -67,12 +58,10 @@ void ps2_init(void){
     ioapic_map_irq(0, 1,  33); //IRQ1  -> vector #33
     ioapic_map_irq(0, 12, 34); //IRQ12 -> vector #34
     //Reset and enable devices
-    ps2_write_byte(0xFF);
-    ps2_write_byte(0xF4);
-    outb(PS2_COMMAND_REG, 0xD4);
-    ps2_write_byte(0xFF);
-    outb(PS2_COMMAND_REG, 0xD4);
-    ps2_write_byte(0xF4);
+    ps21_write(0xFF);
+    ps21_write(0xF4);
+    ps22_write(0xFF);
+    ps22_write(0xF4);
     //It might me a good idea to flush all buffers once again
     for(int i = 0; i < 256; i++)
         inb(PS2_DATA_PORT);
@@ -91,7 +80,7 @@ void ps2_init(void){
  */
 uint8_t ps2_read_byte(void){
     //Wait for bit 0 of the status register to be set
-    while(inb(PS2_STATUS_REG) & 1 == 0);
+    while((inb(PS2_STATUS_REG) & 1) == 0);
     //Read data
     return inb(PS2_DATA_PORT);
 }
@@ -101,7 +90,7 @@ uint8_t ps2_read_byte(void){
  */
 void ps2_write_byte(uint8_t val){
     //Wait for bit 1 of the status register to be cleared
-    while(inb(PS2_STATUS_REG) & 2 == 0);
+    while(inb(PS2_STATUS_REG) & 2);
     //Write data
     outb(PS2_DATA_PORT, val);
 }

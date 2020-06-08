@@ -21,9 +21,9 @@ typedef struct {
 
 //Panel properties
 typedef struct {
-    uint32_t margins,
-             height,
-             bar_height;
+    int32_t margins,
+            height,
+            bar_height;
     uint64_t movement_time,
              hold_time;
     color32_t color;
@@ -42,6 +42,7 @@ typedef struct {
 
 //Function prototypes
 
+void      time_read   (char* buf);
 color32_t parse_color (char* str);
 void      load_theme  (char* path);
 void      draw_panel  (void);

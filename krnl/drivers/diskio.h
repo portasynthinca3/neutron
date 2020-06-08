@@ -33,6 +33,7 @@
 #define SYS_FILE_KVERN                              1
 #define SYS_FILE_KVERS                              2
 #define SYS_FILE_DRES                               3
+#define SYS_FILE_TIME                               4
 
 //Virtual files in the /dev/ directory
 #define DEV_FILE_PS21                               0

@@ -13,7 +13,8 @@ void main(void* args){
     _km_write("init", buf);
     FILE* a = fopen("/sys/kvers", "r");
     char buf2[64];
-    sprintf(buf, "Running on Neutron kernel version %s", fgets(buf2, 64, a));
+    fgets(buf2, 64, a);
+    sprintf(buf, "Running on Neutron kernel version %s", buf2);
     _km_write("init", buf);
     //Open config file for reading
     _km_write("init", "loading config file");

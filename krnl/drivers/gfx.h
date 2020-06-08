@@ -64,9 +64,9 @@ p2d_t gfx_glyph       (p2d_t pos, color32_t color, color32_t bcolor, uint32_t c)
 p2d_t gfx_puts        (p2d_t pos, color32_t color, color32_t bcolor, char* s);
 p2d_t gfx_text_bounds (char* s);
 //Debugging
-void gfx_panic(uint64_t ip, uint64_t code);
-void gfx_verbose_println(char* msg);
-void gfx_set_verbose(uint8_t v);
+__attribute__((noreturn)) void gfx_panic           (uint64_t ip, uint64_t code);
+                          void gfx_verbose_println (char* msg);
+                          void gfx_set_verbose     (uint8_t v);
 //Utility
 uint8_t gfx_point_in_rect(p2d_t p, p2d_t pos, p2d_t sz);
 color32_t gfx_blend_colors(color32_t b, color32_t f, uint8_t a);

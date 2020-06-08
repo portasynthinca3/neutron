@@ -16,6 +16,58 @@ p2d_t cursor_pos;
 uint64_t cpu_fq;
 
 /*
+ * Reads the time and converts it to the H:M:S<newline>DD-MM-YYYY format
+ */
+void time_read(char* buf){
+    //Get the timestamp
+    char buf2[64];
+    int64_t stamp;
+    FILE* time = fopen("/sys/time", "r");
+    fgets(buf2, 64, time);
+    fclose(time);
+    stamp = atol(buf2) / 1000; //convert to seconds
+    //Convert it to the time and date
+    int64_t days[4][12] = {{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+                           {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+                           {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+                           {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
+    int64_t y, mo, d, h, m, s;
+    int64_t day;
+    s = stamp % 60; stamp /= 60;
+    m = stamp % 60; stamp /= 60;
+    h = stamp % 24; stamp /= 24;
+    y = 0;
+    day = 0;
+    while(day += ((y % 400 == 0 || (y % 4 == 0 && y % 100 != 0)) ? 366 : 365) <= stamp){
+        y++;
+
+        char fuck[64];
+        sprintf(fuck, "%i %i %i", day, y, stamp);
+        _km_write(__FILE__, fuck);
+    }
+    
+    day -= (y % 400 == 0 || (y % 4 == 0 && y % 100 != 0)) ? 366 : 365;
+    stamp -= day;
+    
+    mo = 0;
+    for (mo = 0; mo < 12; mo++) {
+        if (stamp >= days[y % 4][mo])
+            stamp -= days[y % 4][mo];
+        else
+            break;
+    }
+    mo++;
+    d = stamp + 1;
+    y += 1970;
+    //Print it to the buffer
+    sprintf(buf, "%s%i:%s%i:%s%i %i-%i-%i",
+        h < 10 ? "0" : "", h,
+        m < 10 ? "0" : "", m,
+        s < 10 ? "0" : "", s,
+        d, mo, y);
+}
+
+/*
  * Parses the ARGB color
  */
 color32_t parse_color(char* str){
@@ -233,6 +285,13 @@ void main(void* args){
     load_theme("ngui.cfg");
 
     theme.panel.state = 0;
+    theme.panel.last_state_ch = rdtsc();
+
+    while(1){
+        char buf[128];
+        time_read(buf);
+        _km_write(__FILE__, buf);
+    }
 
     //In an endless loop
     while(1){

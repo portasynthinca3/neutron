@@ -197,12 +197,11 @@ size_t fwrite(const void* ptr, size_t size_of_elements, size_t number_of_element
  */
 int fgetc(FILE* fp){
     //Read one byte
-    char c;
+    volatile char c = 0;
     //Return -1 on error
-    if(fread(&c, 1, 1, fp) == 0)
+    if(fread((char*)&c, 1, 1, fp) == 0)
         return -1;
-    else
-        return (uint8_t)c;
+    return (uint8_t)c;
 }
 
 /*
@@ -225,17 +224,18 @@ char* fgets(char* buf, int n, FILE* fp){
                 buf[cnt++] = c;
         }
     }
+    return buf;
 }
 
 /*
  * Write character to file
  */
-int fputc(int c, FILE* fp){
+int fputc(volatile int c, FILE* fp){
     //Check character range
     if(c < 0 || c > 255)
         return -1;
     //Write byte and check status
-    if(fwrite(&c, 1, 1, fp) != 0)
+    if(fwrite((int*)&c, 1, 1, fp) != 0)
         return c;
     else
         return -1;
@@ -357,14 +357,14 @@ void* memcpy(void* destination, const void* source, size_t num){
  * Copy a string to other string
  */
 char* strcpy(char* dest, char* src){
-    memcpy(dest, src, strlen(src) + 1);
+    return memcpy(dest, src, strlen(src) + 1);
 }
 
 /*
  * Find the first occurence of a character in a block of memory
  */
 void* memchr(const void* str, int c, size_t n){
-    char chr;
+    char chr = 0;
     uint64_t cnt = 0;
     //Walk through the string
     while(cnt++ < n){
@@ -383,7 +383,7 @@ char* strchr(const char* str, int c){
     char chr;
     uint64_t cnt = 0;
     //Walk through the string
-    while(chr = *(str + cnt)){
+    while((chr = *(str + cnt))){
         //Return the occurence if it was found
         if(chr == c)
             return (void*)((uint64_t)str + cnt);
@@ -401,9 +401,9 @@ char* strpbrk(const char *str1, const char *str2){
     char chr, chr2;
     uint64_t cnt = 0, cnt2 = 0;
     //Walk through the string
-    while(chr = *(char*)(str1++)){
+    while((chr = *(char*)(str1++))){
         //Go through each characther in str2 and compare it against the current character
-        while(chr2 = *(char*)(str1 + cnt2++))
+        while((chr2 = *(char*)(str1 + cnt2++)))
             if(chr2 == chr) //Return the occurence
                 return (void*)((uint64_t)str1 + cnt);
         //Increment the counter
@@ -538,7 +538,7 @@ char* _sprintub16(char* str, uint64_t i, uint8_t min){
  * Prints floating-point value to the string
  */
 char* _sprintd(char* str, double val){
-    uint8_t str_pos;
+    uint8_t str_pos = 0;
     uint64_t bits = *(uint64_t*)&val;
     //Negate the value and print a minus sign if the value is negative
     if(val < 0){
@@ -765,6 +765,7 @@ double modf(double x, double* integer){
     asm("fld %1; fist %2; fsub %2; fstp %0" : "=m"(x) : "m"(x), "m"(tmp));
     if(integer != NULL)
         *integer = tmp;
+    return x - tmp;
 }
 
 /*
@@ -833,7 +834,7 @@ double fmod(double x, double y){
  */
 double floor(double x){
     double i;
-    double f = modf(x, &i);
+    modf(x, &i);
     return i;
 }
 

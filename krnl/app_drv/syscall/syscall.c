@@ -92,11 +92,9 @@ uint64_t syscall_handle(void){
                     return elf_load((char*)p0, p1, mtask_get_by_pid(mtask_get_pid())->priority);
                 case 3: //allocate pages
                     return (uint64_t)mtask_palloc(mtask_get_pid(), p0);
-                    break;
                 case 4: //free pages
                     mtask_pfree(mtask_get_pid(), (virt_addr_t)p0);
                     return 0;
-                    break;
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;
             }
@@ -136,7 +134,7 @@ uint64_t syscall_handle(void){
                         case DISKIO_STATUS_EOF:
                             return (6ULL << 32) | (status >> 32);
                         case DISKIO_STATUS_OK:
-                            return 0;
+                            return p2;
                     }
                 }
                 case 2: { //write bytes
@@ -181,7 +179,7 @@ uint64_t syscall_handle(void){
             switch(subfunc){
                 case 0: //write message
                     //check task privileges
-                    if(mtask_get_by_pid(mtask_get_pid())->privl & TASK_PRIVL_KMESG == 0)
+                    if((mtask_get_by_pid(mtask_get_pid())->privl & TASK_PRIVL_KMESG) == 0)
                         return 1;
                     //check filename and message pointers (should be in userspace)
                     if(p0 + strlen((char*)p0) >= 0x800000000000ULL)
@@ -190,6 +188,7 @@ uint64_t syscall_handle(void){
                         return 0xFFFFFFFFFFFFFFFF;
                     //write the message
                     krnl_write_msg((char*)p0, (char*)p1);
+                    return 0;
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;
             }

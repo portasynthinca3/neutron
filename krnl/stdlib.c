@@ -164,7 +164,7 @@ void* malloc(size_t size){
         #endif
     }
     free_block_t* current = &(free_block_t){.next = first_free_block};
-    while(current = current->next){
+    while((current = current->next)){
         if(current->size + 16 >= size){
             //Link the previous block to the next one
             //  as the current one will not be free soon
@@ -255,7 +255,7 @@ void* memcpy(void* destination, const void* source, size_t num){
  * Copy a string to other string
  */
 char* strcpy(char* dest, char* src){
-    memcpy(dest, src, strlen(src) + 1);
+    return memcpy(dest, src, strlen(src) + 1);
 }
 
 /*
@@ -290,7 +290,7 @@ void load_gdt(){
 /*
  * Convert big endian doubleword to little endian one and vice versa
  */
-void bswap_dw(int* value){
+void bswap_dw(uint32_t* value){
     __asm__("bswapl %%eax" : "=a" (*value) : "a" (*value));
 }
 
@@ -549,8 +549,6 @@ int _sprintf_argcnt(char* fmt){
  * Print formatted string
  */
 int _sprintf(char* str, const char* format, va_list valist){
-    //Get the number of arguments
-    uint64_t argcnt = _sprintf_argcnt((char*)format);
     //Parse the format
     uint64_t str_idx = 0;
     for(uint64_t i = 0; i < strlen(format); i++){
@@ -609,8 +607,9 @@ int _sprintf(char* str, const char* format, va_list valist){
 int sprintf(char* str, const char* format, ...){
     va_list valist;
     va_start(valist, _sprintf_argcnt((char*)format));
-    _sprintf(str, format, valist);
+    int result = _sprintf(str, format, valist);
     va_end(valist);
+    return result;
 }
 
 /*
@@ -669,36 +668,6 @@ int atoi(const char* str){
         }
     }
     return n;
-}
-
-/*
- * Create a GDT entry
- */
-void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access){
-    //Calculate the entry base pointer
-    idt_desc_t desc;
-    __asm__ volatile("sgdt %0" : : "m" (desc)); //Store the GDT descriptor
-    void* entry_ptr = (uint8_t*)desc.base + (sel * 8);
-
-    //Set limit[15:0]
-    *(uint16_t*)((uint8_t*)entry_ptr + 0) = limit & 0xFFFF;
-    //Set base[15:0]
-    *(uint16_t*)((uint8_t*)entry_ptr + 2) = base & 0xFFFF;
-    //Set base[23:16]
-    *(uint16_t*)((uint8_t*)entry_ptr + 4) = (base >> 16) & 0xFF;
-    //Set access byte
-    *(uint8_t*)((uint8_t*)entry_ptr + 5) = access;
-    //Set limit[19:16]
-    *(uint8_t*)((uint8_t*)entry_ptr + 6) = (limit >> 16) & 0xF;
-    //Set flags
-    *(uint8_t*)((uint8_t*)entry_ptr + 6) |= (flags & 0xF) << 4;
-    //Set base[31:24]
-    *(uint8_t*)((uint8_t*)entry_ptr + 4) = (base >> 24) & 0xFF;
-
-    //Load GDT
-    if(desc.limit < sel * 8) //Increase the limit if it won't fit
-        desc.limit = sel * 8;
-    __asm__ volatile("lgdt %0" : : "m" (desc));
 }
 
 /*

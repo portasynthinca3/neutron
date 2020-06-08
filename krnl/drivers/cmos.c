@@ -9,6 +9,13 @@
 time_t cur_timestamp = 0;
 
 /*
+ * Returns the current timestamp
+ */
+time_t time_get(void){
+    return cur_timestamp;
+}
+
+/*
  * Writes a value to the CMOS register
  */
 void cmos_write(uint8_t reg, uint8_t val){
@@ -95,11 +102,28 @@ int64_t rtc_read_time(void){
 /*
  * Converts date and time to timestamp
  */
-int64_t rtc_to_timestamp(uint64_t y, int64_t mo, int64_t d, int64_t h, int64_t m, int64_t s, int64_t ms){
+time_t rtc_to_timestamp(int64_t y, int64_t mo, int64_t d, int64_t h, int64_t m, int64_t s, int64_t ms){
     y -= 1970;
-    int64_t days[4][12] = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+    int64_t days[4][12] = {{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
                            {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
                            {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-                           {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
-    return ((((y/4*(365*4+1)+days[y%4][mo]+d)*24+h)*60+m)*60+s)*1000+ms;
+                           {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
+
+    time_t stamp = y * 3600 * 24 * 365;
+    //Add extra days for leap years
+    for (int i = 0; i < y; i++)
+        if (i % 400 == 0 || (i % 4 == 0 && i % 100 != 0))
+            stamp += 3600 * 24;
+    //Add days for this year
+    for (int i = 1; i < mo; i++)
+        stamp += 3600 * 24 * days[y % 4][i - 1];
+    //Add days, hours, minutes and seconds
+    stamp += (d - 1) * 3600 * 24;
+    stamp += h * 3600;
+    stamp += m * 60;
+    stamp += s;
+    //Add milliseconds
+    stamp *= 1000;
+    stamp += ms;
+    return stamp;
 }

@@ -269,6 +269,15 @@ void krnl_dump_task_state(task_t* task){
         strcat(temp, sprintub16(temp2, mxcsr, 8));
         krnl_write_msg(__FILE__, temp);
     }
+    //Print PF information
+    if(task->state.exc_vector == 0x0E){
+        uint64_t cr2 = 0;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+        temp[0] = 0;
+        strcat(temp, "CR2=");
+        strcat(temp, sprintub16(temp2, cr2, 1));
+        krnl_write_msg(__FILE__, temp);
+    }
 }
 
 /*
@@ -430,7 +439,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
         krnl_msg_t* msg = first_msg;
         do
             krnl_print_msg(msg);
-        while(msg = msg->next);
+        while((msg = msg->next));
     }
 
     krnl_write_msgf(__FILE__, "mapped default regions to upper half");

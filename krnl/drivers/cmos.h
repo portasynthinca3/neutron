@@ -24,7 +24,8 @@ uint8_t cmos_read  (uint8_t reg);
 void    rtc_init         (void);
 void    rtc_intr         (void);
 int64_t rtc_read_time    (void);
-//Time convertion
-time_t  rtc_to_timestamp (uint64_t y, int64_t mo, int64_t d, int64_t h, int64_t m, int64_t s, int64_t ms);
+//Timekeeping
+time_t  time_get         (void);
+time_t  rtc_to_timestamp (int64_t y, int64_t mo, int64_t d, int64_t h, int64_t m, int64_t s, int64_t ms);
 
 #endif

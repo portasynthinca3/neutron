@@ -41,6 +41,8 @@ void ps2_init(void){
     //Set mouse sampling rate to 60
     fputc(0xF3, mouse);
     fputc(60, mouse);
+    //Enable packet streaming
+    fputc(0xF4, mouse);
     //Flush any data
     while(fgetc(kbd) != -1);
     while(fgetc(mouse) != -1);
@@ -52,7 +54,7 @@ void ps2_init(void){
 void ps2_check(void){
     //TODO: keyboard
     //Check mouse
-    uint64_t mouse_data = 0;
+    int64_t mouse_data = 0;
     while((mouse_data = fgetc(mouse)) != -1){
         //First byte - flags
         if(mouse_byte == 0){

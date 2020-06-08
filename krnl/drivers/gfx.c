@@ -188,7 +188,6 @@ void gfx_choose_best(void){
     uint32_t best_res_x = 0;
     uint32_t best_res_y = 0;
     uint32_t best_mode_num = 0;
-    uint8_t best_mode_is_rgb = 0;
     //Go through each mode and query its properties
     for(uint32_t i = 0; i < graphics_output->Mode->MaxMode; i++){
         //Query mode information
@@ -218,7 +217,6 @@ void gfx_choose_best(void){
             best_res_y = mode_res_y;
             best_res_x = mode_res_x;
             best_mode_num = i;
-            best_mode_is_rgb = (mode_info->PixelFormat == PixelRedGreenBlueReserved8BitPerColor);
         }
     }
     //Set the mode
@@ -275,8 +273,8 @@ void gfx_set_font(const unsigned char* fnt){
         //Get glyph info pointer
         const uint8_t* ginfo = font.ptr + 24 + (28 * i);
         //Get bitmap width and height
-        int32_t bmp_width = *(int32_t*)(ginfo + 8); bswap_dw(&bmp_width);
-        int32_t bmp_height = *(int32_t*)(ginfo + 4); bswap_dw(&bmp_height);
+        int32_t bmp_width = *(int32_t*)(ginfo + 8); bswap_dw((uint32_t*)&bmp_width);
+        int32_t bmp_height = *(int32_t*)(ginfo + 4); bswap_dw((uint32_t*)&bmp_height);
         //Cache the bitmap offset
         font.bmp[i] = bmp_offs;
         //Add to the total offset
@@ -506,11 +504,11 @@ p2d_t gfx_glyph(p2d_t pos, color32_t color, color32_t bcolor, uint32_t c){
     } else if(c == ' ') //Treat the missing space character specially
         return (p2d_t){font.size / 2, font.size};
     //Get the glyph properties
-    int32_t height = *(int32_t*)(glyph_ptr + 4); bswap_dw(&height);
-    int32_t width = *(int32_t*)(glyph_ptr + 8); bswap_dw(&width);
-    int32_t x_advance = *(int32_t*)(glyph_ptr + 12); bswap_dw(&x_advance);
-    int32_t dy = *(int32_t*)(glyph_ptr + 16); bswap_dw(&dy);
-    int32_t dx = *(int32_t*)(glyph_ptr + 20); bswap_dw(&dx);
+    int32_t height = *(int32_t*)(glyph_ptr + 4); bswap_dw((uint32_t*)&height);
+    int32_t width = *(int32_t*)(glyph_ptr + 8); bswap_dw((uint32_t*)&width);
+    int32_t x_advance = *(int32_t*)(glyph_ptr + 12); bswap_dw((uint32_t*)&x_advance);
+    int32_t dy = *(int32_t*)(glyph_ptr + 16); bswap_dw((uint32_t*)&dy);
+    int32_t dx = *(int32_t*)(glyph_ptr + 20); bswap_dw((uint32_t*)&dx);
     //Calculate the video buffer offset
     uint64_t buf_offset = ((pos.y - dy) * res_x) + pos.x + dx;
     //Render the bitmap
@@ -629,7 +627,7 @@ p2d_t gfx_text_bounds(char* s){
 /*
  * Draw a panic screen
  */
-void gfx_panic(uint64_t ip, uint64_t code){
+__attribute__((noreturn)) void gfx_panic(uint64_t ip, uint64_t code){
     //Flip the main buffer to the working one
     gfx_set_buf(GFX_BUF_VBE);
     gfx_flip();

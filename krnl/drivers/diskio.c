@@ -8,6 +8,7 @@
 #include "./timr.h"
 #include "./gfx.h"
 #include "./ps2.h"
+#include "./cmos.h"
 
 #include "./initrd.h"
 
@@ -122,7 +123,7 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
     //Check if it's a system file
     if(memcmp(path, "/sys/", 5) == 0){
         //Check privileges
-        if(cur_task->privl & TASK_PRIVL_SYSFILES == 0)
+        if((cur_task->privl & TASK_PRIVL_SYSFILES) == 0)
             return DISKIO_STATUS_NOT_ALLOWED;
         char* name = path + 5;
         //Setup the handle
@@ -155,13 +156,18 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
                 handle->info.device.device_no = SYS_FILE_DRES;
             else
                 return DISKIO_STATUS_WRITE_PROTECTED;
+        } else if(strcmp(name, "time") == 0){
+            if(mode == DISKIO_FILE_ACCESS_READ)
+                handle->info.device.device_no = SYS_FILE_TIME;
+            else
+                return DISKIO_STATUS_WRITE_PROTECTED;
         }
         return DISKIO_STATUS_OK;
     }
     //Check if it's a device file
     if(memcmp(path, "/dev/", 5) == 0){
         //Check privileges
-        if(cur_task->privl & TASK_PRIVL_DEVFILES == 0)
+        if((cur_task->privl & TASK_PRIVL_DEVFILES) == 0)
             return DISKIO_STATUS_NOT_ALLOWED;
         char* name = path + 5;
         //Setup the handle
@@ -237,7 +243,7 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
     if(handle->pid != mtask_get_pid())
         return DISKIO_STATUS_NOT_ALLOWED;
     //Check if read access is allowed
-    if(handle->mode & DISKIO_FILE_ACCESS_READ == 0)
+    if((handle->mode & DISKIO_FILE_ACCESS_READ) == 0)
         return DISKIO_STATUS_READ_PROTECTED;
     //Limit the length to the remaining file length
     uint64_t act_len = len;
@@ -342,6 +348,9 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
                 case SYS_FILE_DRES:
                     sprintf(fbuf, "%ix%i", gfx_res_x(), gfx_res_y());
                     break;
+                case SYS_FILE_TIME:
+                    sprintf(fbuf, "%i", time_get());
+                    break;
             }
             //Copy the data and advance the position
             act_len = len;
@@ -380,6 +389,7 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
             }
         } break;
     }
+    return DISKIO_STATUS_INVL_SIGNATURE;
 }
 
 /*
@@ -393,7 +403,7 @@ uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
     if(handle->pid != mtask_get_pid())
         return DISKIO_STATUS_NOT_ALLOWED;
     //Check if write access is allowed
-    if(handle->mode & DISKIO_FILE_ACCESS_WRITE == 0)
+    if((handle->mode & DISKIO_FILE_ACCESS_WRITE) == 0)
         return DISKIO_STATUS_WRITE_PROTECTED;
     //Different device/FS types require different access schemes
     switch(handle->info.device.bus_type){
@@ -443,6 +453,7 @@ uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
             }
         } break;
     }
+    return DISKIO_STATUS_INVL_SIGNATURE;
 }
 
 /*
