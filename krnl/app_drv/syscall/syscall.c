@@ -28,36 +28,6 @@ uint64_t syscall_get_krnl_rsp(void){
 }
 
 /*
- * Various serialization/deserialization functions
- */
-uint64_t _ser_p2d_t(p2d_t p){
-    return ((uint64_t)p.x << 32) | (uint64_t)p.y;
-}
-
-p2d_t _deser_p2d_t(uint64_t p){
-    return (p2d_t){
-        .x = (int32_t)(p >> 32),
-        .y = (int32_t)p
-    };
-}
-
-uint64_t _ser_color32_t(color32_t c){
-    return ((uint64_t)c.a << 24) |
-           ((uint64_t)c.b << 16) |
-           ((uint64_t)c.g <<  8) |
-           ((uint64_t)c.r);
-}
-
-color32_t _deser_color32_t(uint64_t c){
-    return (color32_t){
-        .r = (uint8_t)c,
-        .g = (uint8_t)(c >> 8),
-        .b = (uint8_t)(c >> 16),
-        .a = (uint8_t)(c >> 24)
-    };
-}
-
-/*
  * Handles a system call
  */
 uint64_t syscall_handle(void){
