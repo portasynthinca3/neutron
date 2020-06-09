@@ -32,33 +32,7 @@ void time_read(char* buf){
                            {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
                            {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
     int64_t y, mo, d, h, m, s;
-    int64_t day;
-    s = stamp % 60; stamp /= 60;
-    m = stamp % 60; stamp /= 60;
-    h = stamp % 24; stamp /= 24;
-    y = 0;
-    day = 0;
-    while(day += ((y % 400 == 0 || (y % 4 == 0 && y % 100 != 0)) ? 366 : 365) <= stamp){
-        y++;
-
-        char fuck[64];
-        sprintf(fuck, "%i %i %i", day, y, stamp);
-        _km_write(__FILE__, fuck);
-    }
-    
-    day -= (y % 400 == 0 || (y % 4 == 0 && y % 100 != 0)) ? 366 : 365;
-    stamp -= day;
-    
-    mo = 0;
-    for (mo = 0; mo < 12; mo++) {
-        if (stamp >= days[y % 4][mo])
-            stamp -= days[y % 4][mo];
-        else
-            break;
-    }
-    mo++;
-    d = stamp + 1;
-    y += 1970;
+    //somrthing idk
     //Print it to the buffer
     sprintf(buf, "%s%i:%s%i:%s%i %i-%i-%i",
         h < 10 ? "0" : "", h,
@@ -291,13 +265,11 @@ void main(void* args){
     theme.panel.state = 0;
     theme.panel.last_state_ch = rdtsc();
 
-/*
     while(1){
         char buf[128];
         time_read(buf);
         _km_write(__FILE__, buf);
     }
-*/
 
     //In an endless loop
     while(1){
@@ -307,7 +279,6 @@ void main(void* args){
         gfx_fill(theme.desk.color);
         draw_panel();
         gfx_draw_raw(cursor_pos, theme.cur.img_data, P2D(theme.cur.img_width, theme.cur.img_height));
-        gfx_draw_str(theme.global.main_font, P2D(cursor_pos.x + 10, cursor_pos.y + 10), COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), "Hello, World!");
         //Update the framebuffer
         gfx_flip();
     }
