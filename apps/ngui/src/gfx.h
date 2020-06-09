@@ -13,6 +13,17 @@ typedef struct {
     uint8_t b, g, r, a;
 } __attribute__((packed)) color32_t;
 
+//Structure defining a font
+typedef struct {
+    uint8_t* data;
+    uint32_t g_count;
+    uint32_t ver;
+    uint32_t size;
+    uint32_t ascent;
+    uint32_t descent;
+    uint32_t* bmp;
+} font_t;
+
 //Definitions
 
 //Macro for converting R, G and B values to color32_t
@@ -39,6 +50,11 @@ void gfx_fill_circ_helper (p2d_t pos, int32_t r, uint8_t corners, int32_t d, col
 void gfx_draw_rect        (p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_xbm         (p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
 void gfx_draw_raw         (p2d_t pos, uint8_t* raw_ptr, p2d_t raw_size);
+//Text drawing functions
+font_t* gfx_load_font   (const char* path);
+p2d_t   gfx_glyph       (font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c);
+p2d_t   gfx_draw_str    (font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s);
+p2d_t   gfx_text_bounds (font_t* font, char* s);
 //Utility
 uint8_t   gfx_point_in_rect (p2d_t p, p2d_t pos, p2d_t sz);
 color32_t gfx_blend_colors  (color32_t b, color32_t f, uint8_t a);

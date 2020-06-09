@@ -168,6 +168,10 @@ void load_theme(char* path){
                     fclose(img);
                 }
             }
+        } else if(memcmp(key, "global.", 6) == 0){ //Global settings
+            char* global = key + 7;
+            if(strcmp(global, "main_font") == 0)
+                theme.global.main_font = gfx_load_font(val);
         }
     }
     fclose(fp);
@@ -287,11 +291,13 @@ void main(void* args){
     theme.panel.state = 0;
     theme.panel.last_state_ch = rdtsc();
 
+/*
     while(1){
         char buf[128];
         time_read(buf);
         _km_write(__FILE__, buf);
     }
+*/
 
     //In an endless loop
     while(1){
@@ -301,6 +307,7 @@ void main(void* args){
         gfx_fill(theme.desk.color);
         draw_panel();
         gfx_draw_raw(cursor_pos, theme.cur.img_data, P2D(theme.cur.img_width, theme.cur.img_height));
+        gfx_draw_str(theme.global.main_font, P2D(cursor_pos.x + 10, cursor_pos.y + 10), COLOR32(255, 255, 255, 255), COLOR32(0, 0, 0, 0), "Hello, World!");
         //Update the framebuffer
         gfx_flip();
     }

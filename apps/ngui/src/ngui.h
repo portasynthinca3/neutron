@@ -33,11 +33,17 @@ typedef struct {
     uint8_t  state; //0=waiting to hide, 1=moving up, 2=moving down, 3=waiting to show
 } panel_prop_t;
 
+//Global properties
+typedef struct {
+    font_t* main_font;
+} global_prop_t;
+
 //Theme structure
 typedef struct {
-    cur_prop_t   cur;
-    desk_prop_t  desk;
-    panel_prop_t panel;
+    cur_prop_t    cur;
+    desk_prop_t   desk;
+    panel_prop_t  panel;
+    global_prop_t global;
 } theme_t;
 
 //Function prototypes

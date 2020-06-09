@@ -2,6 +2,7 @@
 //Standard GUI manager - graphics library
 
 #include "nlib.h"
+#include "app_desc.h"
 
 #include "gfx.h"
 
@@ -203,6 +204,195 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
                 d_buf[(y * res_x) + x] = gfx_blend_colors(d_buf[(y * res_x) + x], COLOR32(255, r, g, b), a);
         }
     }
+}
+
+/*
+ * Set the font that will be used in future
+ */
+font_t* gfx_load_font(const char* path){
+    font_t* font = (font_t*)malloc(sizeof(font_t));
+    //Read the font file
+    FILE* file = fopen(path, "rb");
+    if(file == NULL){
+        _km_write(__APP_SHORT_NAME, "Error loading font");
+        return NULL;
+    }
+    uint8_t* data_buf = (uint8_t*)malloc(64 * 1024);
+    fread(data_buf, 1, 64 * 1024, file);
+    fclose(file);
+    font->data = data_buf;
+    //Get the font info (keep in mind that all VLW values are in the retarded big-endian)
+    font->g_count = *(uint32_t*)(font->data + 0); bswap_dw(&font->g_count);
+    font->ver = *(uint32_t*)(font->data + 4); bswap_dw(&font->ver);
+    font->size = *(uint32_t*)(font->data + 8); bswap_dw(&font->size);
+    font->ascent = *(uint32_t*)(font->data + 16); bswap_dw(&font->ascent);
+    font->descent = *(uint32_t*)(font->data + 20); bswap_dw(&font->descent);
+    //Allocate some space for the bitmap pointer cache
+    font->bmp = (uint32_t*)malloc(font->g_count * sizeof(uint32_t));
+    //Walk through the font file to cache each glyph's bitmap position
+    uint32_t bmp_offs = 24 + (28 * font->g_count);
+    for(uint32_t i = 0; i < font->g_count; i++){
+        //Get glyph info pointer
+        const uint8_t* ginfo = font->data + 24 + (28 * i);
+        //Get bitmap width and height
+        int32_t bmp_width = *(int32_t*)(ginfo + 8); bswap_dw((uint32_t*)&bmp_width);
+        int32_t bmp_height = *(int32_t*)(ginfo + 4); bswap_dw((uint32_t*)&bmp_height);
+        //Cache the bitmap offset
+        font->bmp[i] = bmp_offs;
+        //Add to the total offset
+        bmp_offs += bmp_width * bmp_height;
+    }
+    //Return the loaded font
+    return font;
+}
+
+/*
+ * Put a glyph with backgrund color in video buffer, return the size of the draw character
+ */
+p2d_t gfx_glyph(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c){
+    //Find the glyph
+    const uint8_t* glyph_ptr = NULL;
+    uint32_t glyph_no = 0;
+    for(uint32_t i = 0; i < font->g_count; i++){
+        //Calculate the pointer
+        const uint8_t* ptr = font->data + 24 + (28 * i);
+        //Check the codepoint
+        uint32_t cp = *(uint32_t*)ptr; bswap_dw(&cp);
+        //Check the equality
+        if(cp == c){
+            glyph_ptr = ptr;
+            glyph_no = i;
+            break;
+        }
+    }
+    //If no such codepoint exists, draw a rectangle and return
+    if((glyph_ptr == NULL) && (c != ' ')){
+        gfx_draw_rect((p2d_t){pos.x + 1, pos.y - font->ascent}, (p2d_t){font->size / 2, font->ascent + font->descent - 3}, color);
+        return (p2d_t){font->size / 2 + 2, font->size};
+    } else if(c == ' ') //Treat the missing space character specially
+        return (p2d_t){font->size / 2, font->size};
+    //Get the glyph properties
+    int32_t height = *(int32_t*)(glyph_ptr + 4); bswap_dw((uint32_t*)&height);
+    int32_t width = *(int32_t*)(glyph_ptr + 8); bswap_dw((uint32_t*)&width);
+    int32_t x_advance = *(int32_t*)(glyph_ptr + 12); bswap_dw((uint32_t*)&x_advance);
+    int32_t dy = *(int32_t*)(glyph_ptr + 16); bswap_dw((uint32_t*)&dy);
+    int32_t dx = *(int32_t*)(glyph_ptr + 20); bswap_dw((uint32_t*)&dx);
+    //Calculate the video buffer offset
+    int64_t buf_offset = ((pos.y - dy) * res_x) + pos.x + dx;
+    //Render the bitmap
+    uint8_t* bmp_offs = (uint8_t*)font->data + font->bmp[glyph_no];
+    for(uint32_t y = 0; y < height; y++){
+        for(uint32_t x = 0; x < width; x++){
+            //Get the alpha value
+            uint8_t alpha = *bmp_offs;
+            //Check buffer boundary
+            if(buf_offset < res_x * res_y && buf_offset >= 0){
+                //Interpolate between the background color and the foreground color
+                color32_t c = d_buf[buf_offset];
+                if(color.a > 0){
+                    c = gfx_blend_colors(c, bcolor, bcolor.a);
+                    color32_t f = gfx_blend_colors(c, color, color.a);
+                    c = gfx_blend_colors(c, f, alpha);
+                }
+                d_buf[buf_offset] = c;
+            }
+            //Advance the video buffer pointer
+            buf_offset++;
+            bmp_offs++;
+        }
+        //Advance the video buffer pointer by one line
+        buf_offset += res_x - width;
+    }
+    //Report the character width and height
+    return (p2d_t){x_advance, font->size};
+}
+
+/*
+ * Put a string in video buffer
+ */
+p2d_t gfx_draw_str(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s){
+    p2d_t sz = (p2d_t){.x = 0, .y = font->size};
+    //Data byte, position, state, currently decoded codepoint and counter
+    char c = 0;
+    uint32_t codepoint = 0;
+    uint8_t utf8_len = 0;
+    p2d_t pos_actual = pos;
+    uint32_t state = 0;
+    uint32_t i = 0;
+    //Fetch the next character
+    while((c = s[i++]) != 0){
+        if(state == 0){ //First UTF-8 byte
+            codepoint = 0; //Reset the codepoint
+            //Check if it's a 1, 2, 3 or a 4-byte encoding
+            if((c & 0b10000000) == 0){
+                utf8_len = 1;
+                codepoint = c & 0b01111111;
+                state = 4; //Reading done
+            } else if((c & 0b11100000) == 0b11000000){
+                utf8_len = 2;
+                codepoint = c & 0b00011111;
+                codepoint <<= 6;
+                state = 1; //Second byte
+            } else if((c & 0b11110000) == 0b11100000){
+                utf8_len = 3;
+                codepoint = c & 0b00001111;
+                codepoint <<= 12;
+                state = 2; //Third byte
+            } else if((c & 0b11111000) == 0b11110000){
+                utf8_len = 3;
+                codepoint = c & 0b00000111;
+                codepoint <<= 17;
+                state = 3; //Fourth byte
+            }
+        } else if(state == 1){ //Second UTF-8 byte
+            if((c & 0b11000000) != 0b10000000)
+                return sz; //Invalid UTF-8 sequence
+            codepoint |= (uint32_t)(c & 0b00111111) << ((utf8_len - 2) * 6); //Extract 6 least significant bits and shift them in place
+            if(utf8_len == 2)
+                state = 4; //Reading done
+            else
+                state = 2; //Read third byte
+        } else if(state == 2){ //Third UTF-8 byte
+            if((c & 0b11000000) != 0b10000000)
+                return sz; //Invalid UTF-8 sequence
+            codepoint |= (uint32_t)(c & 0b00111111) << ((utf8_len - 3) * 6); //Extract 6 least significant bits and shift them in place
+            if(utf8_len == 3)
+                state = 4; //Reading done
+            else
+                state = 2; //Read fourth byte
+        } else if(state == 3){ //Fourth UTF-8 byte
+            if((c & 0b11000000) != 0b10000000)
+                return sz; //Invalid UTF-8 sequence
+            codepoint |= c & 0b00111111; //Extract 6 least significant bits
+            state = 4; //Reading done
+        }
+        if(state == 4){ //Reading done
+            switch(codepoint){
+                case '\n': //Carriage return
+                    pos_actual.x = pos.x;
+                    pos_actual.y += font->size;
+                    sz.y += font->size;
+                    break;
+                default: { //Print the char and advance its position
+                    p2d_t char_size = gfx_glyph(font, pos_actual, color, bcolor, codepoint);
+                    pos_actual.x += char_size.x;
+                    if(pos_actual.x - pos.x > sz.x)
+                        sz.x = pos_actual.x - pos.x;
+                    break;
+                }
+            }
+            state = 0; //Back to reading the first byte
+        }
+    }
+    return sz;
+}
+
+/*
+ * Calculate the bounds of a string if it was rendered on screen
+ */
+p2d_t gfx_text_bounds(font_t* font, char* s){
+    //Print the text transparently to retrieve the size
+    return gfx_draw_str(font, (p2d_t){0, 0}, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), s);
 }
 
 /*

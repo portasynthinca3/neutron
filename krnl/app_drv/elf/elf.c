@@ -117,11 +117,11 @@ uint8_t elf_load(char* path, uint64_t privl, uint8_t prio){
         }
     }
     //Allocate some memory for the stack and map it
-    void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(32768, 1));
-    vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 32768), (void*)(1ULL << 46));
+    void* stack = vmem_virt_to_phys(vmem_get_cr3(), calloc(131072, 1));
+    vmem_map_user(cr3, stack, (void*)((uint8_t*)stack + 131072), (void*)(1ULL << 46));
 
     //Create a new task
-    mtask_create_task(32768, path, prio, 0, cr3,
+    mtask_create_task(131072, path, prio, 0, cr3,
         (void*)(1ULL << 46), 1, (void(*)(void*))elf_hdr.hdr.entry_pos, NULL, privl, symtab, strtab);
     return ELF_STATUS_OK;
 }

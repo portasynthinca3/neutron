@@ -148,4 +148,5 @@ void   srand (unsigned int seed);
 void* malloc (uint64_t num);
 void  free   (void* ptr);
 //Non-standard functions
-uint64_t rdtsc (void);
+uint64_t rdtsc    (void);
+void     bswap_dw (uint32_t* value);

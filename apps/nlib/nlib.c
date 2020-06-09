@@ -884,3 +884,10 @@ uint64_t rdtsc(void){
     __asm__ volatile("rdtsc" : "=d" (h), "=a" (l));
     return (uint64_t)((uint64_t)h << 32) | l;
 }
+
+/*
+ * Convert big endian doubleword to little endian one and vice versa
+ */
+void bswap_dw(uint32_t* value){
+    __asm__("bswapl %%eax" : "=a" (*value) : "a" (*value));
+}

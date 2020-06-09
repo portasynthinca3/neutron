@@ -644,6 +644,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //THIS way of doing things is BAD. Nevermand in an operating system kernel!
     //I really hope this is a temporary fix.
 
+    //RETARDED RETARDED RETARDED     VVVV     RETARDED RETARDED RETARDED
+
     //Scan through the loaded kernel image and find integers values of which belong to this range.
     //Replace them with their upper-half variants.
     //    (basically, this is poor man's relocation)
@@ -660,7 +662,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     }
     krnl_pos.offset = orig_pos;
 
-    krnl_write_msgf(__FILE__, "done \"relocating\"");
+    krnl_write_msgf(__FILE__, "finished \"relocating\"");
 
     //Run the initialization task
     syscall_init();
