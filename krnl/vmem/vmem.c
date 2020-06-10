@@ -8,6 +8,7 @@
 #include "../stdlib.h"
 #include "../cpuid.h"
 #include "../drivers/gfx.h"
+#include "../krnl.h"
 
 //A flag that indicates whether PCIDs are supported or not
 uint8_t pcid_supported = 0;
@@ -34,7 +35,7 @@ uint64_t vmem_ident_cr3;
 //2. Calculate the offset into the page
 //3. Perform the access through the first page
 //4. Forget about this madness forever
-//Addresses for there special pages are:
+//Addresses for these special pages are:
 //1 - 0xFFFFFFFFFFFFB000
 //2 - 0xFFFFFFFFFFFFD000
 
@@ -173,6 +174,8 @@ void vmem_init(void){
     cr3 &= ~0xFFFULL; //full pls :>
     __asm__ volatile("mov %0, %%cr3" : : "r" (cr3));
 
+    krnl_writec_f("Cleared PCID in CR3\r\n");
+
     //Enable Process Context Identifiers (PCIDs) and 4-level paging, disable SMAP and PKE
     uint64_t cr4;
     __asm__ volatile("mov %%cr4, %0" : "=r" (cr4));
@@ -183,6 +186,7 @@ void vmem_init(void){
     pcid_supported = (ecx & CPUID_FEAT_ECX_PCID) > 0;
     if(pcid_supported)
         cr4 |= (1 << 17); //Then enable it
+    krnl_writec_f("PCIDs are %ssupported\r\n", pcid_supported ? "" : "not ");
     cr4 &= ~((1ULL << 21) | (1ULL << 22)); //Disable SMAP and PKE
     __asm__ volatile("mov %0, %%cr4" : : "r" (cr4));
 
@@ -191,8 +195,10 @@ void vmem_init(void){
     __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
     cr0 &= ~(1 << 16);
     __asm__ volatile("mov %0, %%cr0" : : "r" (cr0));
+    krnl_writec_f("Disabled write protection for ring 0\r\n");
 
     vmem_ident_cr3 = vmem_get_cr3();
+    krnl_writec_f("Boot CR3=0x%x\r\n", vmem_ident_cr3);
 }
 
 /*
@@ -479,6 +485,7 @@ void vmem_map(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_t v_s
     physwin_disbl = p_disbl;
     vmem_set_cr3(p_cr3);
 }
+
 /*
  * Maps a virtual address range to a physical address range, while setting access mode to userland
  */
@@ -492,6 +499,29 @@ void vmem_map_user(uint64_t cr3, phys_addr_t p_st, phys_addr_t p_end, virt_addr_
     for(uint64_t offs = 0; offs < p_end - p_st; offs += 4096){
         //Map one page
         vmem_create_page_user(cr3, (uint8_t*)v_st + offs, (uint8_t*)p_st + offs);
+    }
+
+    physwin_disbl = p_disbl;
+    vmem_set_cr3(p_cr3);
+}
+
+/*
+ * Unmaps a virtual address range
+ */
+void vmem_unmap(uint64_t cr3, virt_addr_t v_st, virt_addr_t v_end){
+    uint64_t p_cr3 = vmem_get_cr3();
+    vmem_set_cr3(vmem_ident_cr3);
+    uint8_t p_disbl = physwin_disbl;
+    physwin_disbl = 1;
+
+    //Loop through the range
+    for(uint64_t offs = 0; offs < v_end - v_st; offs += 4096){
+        //Get the PT address for that page and calculate the PTE address
+        phys_addr_t pt_addr = vmem_addr_pt(cr3, (virt_addr_t)((uint8_t*)v_st + offs));
+        uint64_t pte_idx = (((uint64_t)v_st + offs) >> 12) & 0x1FF;
+        uint64_t* pte_addr = (uint64_t*)((uint8_t*)pt_addr + (pte_idx * 8));
+        //Invalidate that PTE entry
+        *pte_addr = 0;
     }
 
     physwin_disbl = p_disbl;

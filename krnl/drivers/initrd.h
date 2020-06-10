@@ -9,8 +9,10 @@ typedef struct {
     char name[56];
 } __attribute__((packed)) initrd_file_t;
 
-uint8_t initrd_init(void);
-initrd_file_t initrd_read(char* name);
-uint8_t* initrd_contents(char* name);
+//Function prototypes
+
+uint8_t       initrd_init     (void);
+initrd_file_t initrd_read     (char* name);
+uint8_t*      initrd_contents (char* name);
 
 #endif

@@ -38,135 +38,22 @@ uint64_t _syscall(uint32_t func, uint32_t subfunc,
     return ret;
 }
 
-/*
- * System call serialization/deserialization functions
- */
-inline uint64_t _ser_p2d_t(p2d_t p){
-    return ((uint64_t)p.x << 32) | (uint64_t)p.y;
-}
-
-inline p2d_t _deser_p2d_t(uint64_t p){
-    return (p2d_t){
-        .x = (int32_t)(p >> 32),
-        .y = (int32_t)p
-    };
-}
-
-inline uint64_t _ser_color32_t(color32_t c){
-    return ((uint64_t)c.a << 24) |
-           ((uint64_t)c.b << 16) |
-           ((uint64_t)c.g <<  8) |
-           ((uint64_t)c.r);
-}
-
-inline color32_t _deser_color32_t(uint64_t c){
-    return (color32_t){
-        .r = (uint8_t)c,
-        .g = (uint8_t)(c >> 8),
-        .b = (uint8_t)(c >> 16),
-        .a = (uint8_t)(c >> 24)
-    };
-}
-
-
-// -----===== SYSTEM CALLS: GRAPHICS =====-----
-
-
-/*
- * System call: Graphics: Print a string in verbose mode
- */
-inline uint64_t _gfx_println_verbose(char* str){
-    return _syscall(0, 0, (uint64_t)str, 0, 0, 0, 0);
-}
-
-/*
- * System call: Graphics: Get resolution
- */
-inline p2d_t _gfx_get_res(void){
-    return _deser_p2d_t(_syscall(0, 1, 0, 0, 0, 0, 0));
-}
-
-/*
- * System call: Graphics: Flip buffers
- */
-inline sc_state_t _gfx_flip(void){
-    return _syscall(0, 2, 0, 0, 0, 0, 0);
-}
-
-/*
- * System call: Graphics: Fill buffer
- */
-inline sc_state_t _gfx_fill(color32_t c){
-    return _syscall(0, 3, _ser_color32_t(c), 0, 0, 0, 0);
-}
-
-/*
- * System call: Graphics: Fill rectangle
- */
-inline sc_state_t _gfx_fill_rect(color32_t c, p2d_t pos, p2d_t sz){
-    return _syscall(0, 4,
-        _ser_color32_t(c),
-        _ser_p2d_t(pos),
-        _ser_p2d_t(sz),
-        0, 0);
-}
-
-/*
- * System call: Graphics: Draw rectangle
- */
-inline sc_state_t _gfx_draw_rect(color32_t c, p2d_t pos, p2d_t sz){
-    return _syscall(0, 5,
-        _ser_color32_t(c),
-        _ser_p2d_t(pos),
-        _ser_p2d_t(sz),
-        0, 0);
-}
-
-/*
- * System call: Graphics: Draw raw image
- */
-inline sc_state_t _gfx_draw_raw(uint8_t* img, p2d_t pos, p2d_t sz){
-    return _syscall(0, 6,
-        (uint64_t)img,
-        _ser_p2d_t(pos),
-        _ser_p2d_t(sz),
-        0, 0);
-}
-
-/*
- * System call: Graphics: Text bounds
- */
-inline p2d_t _gfx_text_bounds(char* str){
-    return _deser_p2d_t(_syscall(0, 7, (uint64_t)str, 0, 0, 0, 0));
-}
-
-/*
- * System call: Graphics: Print string
- */
-inline sc_state_t _gfx_draw_str(p2d_t pos, color32_t fg, color32_t bg, char* str){
-    return _syscall(0, 8,
-        (uint64_t)str,
-        _ser_p2d_t(pos),
-        (_ser_color32_t(fg) << 32) | _ser_color32_t(bg),
-        0, 0);
-}
-
 
 // -----===== SYSTEM CALLS: TASK MANAGEMENT =====-----
 
 
 /*
- * System call: Task management: Get task UID
+ * System call: Task management: Get task PID
  */
-inline uint64_t _task_get_uid(void){
+inline uint64_t _task_get_pid(void){
     return _syscall(1, 0, 0, 0, 0, 0, 0);
 }
 
 /*
  * System call: Task management: Terminate task
  */
-inline sc_state_t _task_terminate(uint64_t uid){
-    return _syscall(1, 1, uid, 0, 0, 0, 0);
+inline sc_state_t _task_terminate(uint64_t pid){
+    return _syscall(1, 1, pid, 0, 0, 0, 0);
 }
 
 /*
@@ -174,6 +61,20 @@ inline sc_state_t _task_terminate(uint64_t uid){
  */
 inline uint64_t _task_load(char* path, uint64_t privl){
     return _syscall(1, 2, (uint64_t)path, privl, 0, 0, 0);
+}
+
+/*
+ * System call: Task management: Allocate pages
+ */
+inline void* _task_palloc(uint64_t num){
+    return (void*)_syscall(1, 3, num, 0, 0, 0, 0);
+}
+
+/*
+ * System call: Task management: Free pages
+ */
+inline sc_state_t _task_pfree(void* start){
+    return _syscall(1, 4, (uint64_t)start, 0, 0, 0, 0);
 }
 
 
@@ -188,14 +89,36 @@ inline sc_state_t _fs_open(char* path, uint64_t mode){
 }
 
 /*
- * System call: Filesystem: Open file
+ * System call: Filesystem: Read bytes
  */
 inline sc_state_t _fs_read_bytes(FILE* file, void* buf, size_t len){
     return _syscall(2, 1, (uint64_t)file, (uint64_t)buf, len, 0, 0);
 }
 
+/*
+ * System call: Filesystem: Write bytes
+ */
+inline sc_state_t _fs_write_bytes(FILE* file, void* buf, size_t len){
+    return _syscall(2, 2, (uint64_t)file, (uint64_t)buf, len, 0, 0);
+}
+
+/*
+ * System call: Filesystem: Seek
+ */
+inline sc_state_t _fs_seek(FILE* file, uint64_t pos){
+    return _syscall(2, 3, (uint64_t)file, pos, 0, 0, 0);
+}
+
+/*
+ * System call: Filesystem: Close file
+ */
+inline sc_state_t _fs_close(FILE* file){
+    return _syscall(2, 4, (uint64_t)file, 0, 0, 0, 0);
+}
+
 
 // -----===== SYSTEM CALLS: KERNEL MESSAGES =====-----
+
 
 /*
  * System call: Kernel messages: Write message
@@ -207,13 +130,16 @@ inline sc_state_t _km_write(char* file, char* msg){
 
 // -----===== FILE I/O =====-----
 
+
 /*
  * Open a file
  */
 FILE* fopen(const char* filename, const char* mode){
     //Parse mode
     uint64_t m = 0;
-    if(strcmp(mode, "r") == 0 || strcmp(mode, "rb") == 0)
+    if(strcmp(mode, "r+") == 0)
+        m = FS_MODE_READ | FS_MODE_WRITE;
+    else if(strcmp(mode, "r") == 0 || strcmp(mode, "rb") == 0)
         m = FS_MODE_READ;
     else if(strcmp(mode, "w") == 0 || strcmp(mode, "wb") == 0)
         m = FS_MODE_WRITE;
@@ -249,16 +175,33 @@ size_t fread(void* ptr, size_t size_of_elements, size_t number_of_elements, FILE
 }
 
 /*
+ * Write buffer contents to file
+ */
+size_t fwrite(const void* ptr, size_t size_of_elements, size_t number_of_elements, FILE* a_file){
+    //Make a system call
+    sc_state_t state = _fs_write_bytes(a_file, (void*)ptr, size_of_elements * number_of_elements);
+    //Parse the state
+    uint64_t act_size = size_of_elements * number_of_elements;
+    switch(state >> 32){
+        case FS_RD_STATUS_EOF:
+            act_size = (uint32_t)state;
+        case FS_STATUS_OK:
+            return act_size;
+        default:
+            return 0;
+    }
+}
+
+/*
  * Read one character from file
  */
 int fgetc(FILE* fp){
     //Read one byte
-    char c;
+    volatile char c = 0;
     //Return -1 on error
-    if(fread(&c, 1, 1, fp) == 0)
+    if(fread((char*)&c, 1, 1, fp) == 0)
         return -1;
-    else
-        return c;
+    return (uint8_t)c;
 }
 
 /*
@@ -281,6 +224,52 @@ char* fgets(char* buf, int n, FILE* fp){
                 buf[cnt++] = c;
         }
     }
+    return buf;
+}
+
+/*
+ * Write character to file
+ */
+int fputc(volatile int c, FILE* fp){
+    //Check character range
+    if(c < 0 || c > 255)
+        return -1;
+    //Write byte and check status
+    if(fwrite((int*)&c, 1, 1, fp) != 0)
+        return c;
+    else
+        return -1;
+}
+
+/*
+ * Write zero-terminated string to file
+ */
+int fputs(const char* s, FILE* fp){
+    //Write bytes and check status
+    if(fwrite(s, 1, strlen(s), fp) != 0)
+        return 1;
+    else
+        return -1;
+}
+
+/*
+ * Seek to absolute file position
+ */
+int fseek(FILE* fp, uint64_t offs){
+    if(_fs_seek(fp, offs) == FS_STATUS_OK)
+        return 0;
+    else
+        return -1;
+}
+
+/*
+ * Close the file
+ */
+int fclose(FILE* fp){
+    if(_fs_close(fp) == FS_STATUS_OK)
+        return 0;
+    else
+        return -1;
 }
 
 
@@ -325,10 +314,11 @@ int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
     int len1 = strlen(str1);
     int len2 = strlen(str2);
-    //Find the minimal one
-    int min_len = (len1 < len2) ? len1 : len2;
+    //Strings are not equal if they have different lengths (duh)
+    if(len1 != len2)
+        return (str1[0] > str2[0]) ? 1 : -1;
     //Go through each byte
-    for(int i = 0; i < min_len; i++){
+    for(int i = 0; i < len1; i++){
         //Return if the strings aren't equal
         if(str1[i] > str2[i])
             return 1;
@@ -367,14 +357,14 @@ void* memcpy(void* destination, const void* source, size_t num){
  * Copy a string to other string
  */
 char* strcpy(char* dest, char* src){
-    memcpy(dest, src, strlen(src) + 1);
+    return memcpy(dest, src, strlen(src) + 1);
 }
 
 /*
  * Find the first occurence of a character in a block of memory
  */
 void* memchr(const void* str, int c, size_t n){
-    char chr;
+    char chr = 0;
     uint64_t cnt = 0;
     //Walk through the string
     while(cnt++ < n){
@@ -393,7 +383,7 @@ char* strchr(const char* str, int c){
     char chr;
     uint64_t cnt = 0;
     //Walk through the string
-    while(chr = *(str + cnt)){
+    while((chr = *(str + cnt))){
         //Return the occurence if it was found
         if(chr == c)
             return (void*)((uint64_t)str + cnt);
@@ -411,9 +401,9 @@ char* strpbrk(const char *str1, const char *str2){
     char chr, chr2;
     uint64_t cnt = 0, cnt2 = 0;
     //Walk through the string
-    while(chr = *(char*)(str1++)){
+    while((chr = *(char*)(str1++))){
         //Go through each characther in str2 and compare it against the current character
-        while(chr2 = *(char*)(str1 + cnt2++))
+        while((chr2 = *(char*)(str1 + cnt2++)))
             if(chr2 == chr) //Return the occurence
                 return (void*)((uint64_t)str1 + cnt);
         //Increment the counter
@@ -545,6 +535,30 @@ char* _sprintub16(char* str, uint64_t i, uint8_t min){
 }
 
 /*
+ * Prints floating-point value to the string
+ */
+char* _sprintd(char* str, double val){
+    uint8_t str_pos = 0;
+    uint64_t bits = *(uint64_t*)&val;
+    //Negate the value and print a minus sign if the value is negative
+    if(val < 0){
+        val = -val;
+        str[str_pos++] = '-';
+    }
+    //Extract the exponent and mantissa
+    int16_t exponent = ((bits >> 52) & 0x7FF) - 1023;
+    uint64_t mantissa = bits & 0xFFFFFFFFFFFFF;
+    _sprintu(str + str_pos, mantissa, 1);
+    strcat(str, "e");
+    if(exponent < 0){
+        exponent = -exponent;
+        strcat(str, "-");
+    }
+    _sprintu(str + strlen(str), exponent, 1);
+    return str;
+}
+
+/*
  * Print formatted string
  */
 int sprintf(char* str, const char* format, ...){
@@ -595,6 +609,13 @@ int sprintf(char* str, const char* format, ...){
                         str[str_idx++] = buf[j];
                     break;
                 }
+                case 'f': { //floating point number
+                    char buf[64] = "\0";
+                    _sprintd(buf, va_arg(valist, double));
+                    for(uint64_t j = 0; j < strlen(buf); j++)
+                        str[str_idx++] = buf[j];
+                    break;
+                }
                 default: //nothing else
                     va_end(valist);
                     return -1;
@@ -614,9 +635,8 @@ int sprintf(char* str, const char* format, ...){
  * Abnormal program termination
  */
 void abort(void){
-    _gfx_println_verbose("*** PROGRAM ABORTED");
     //terminate the current process
-    _task_terminate(_task_get_uid());
+    _task_terminate(_task_get_pid());
 }
 
 //Function to call upon call of exit()
@@ -629,11 +649,11 @@ void exit(void){
     if(__atexit_func != NULL)
         __atexit_func();
     //Terminate the current process
-    _task_terminate(_task_get_uid());
+    _task_terminate(_task_get_pid());
 }
 
 /*
- * Assign the function yo be called by exit()
+ * Assign the function to be called by exit()
  */
 int atexit(void (*func)(void)){
     __atexit_func = func;
@@ -641,13 +661,181 @@ int atexit(void (*func)(void)){
 }
 
 /*
- * Returns the absolute value of a number
+ * Returns the absolute value of x
  */
 int abs(int x){
     if(x >= 0)
         return x;
-    else
+    return -x;
+}
+
+/*
+ * Returns the minimum of two values
+ */
+int min(int a, int b){
+    if(a < b)
+        return a;
+    return b;
+}
+
+/*
+ * Returns the maximum of two values
+ */
+int max(int a, int b){
+    if(a > b)
+        return a;
+    return b;
+}
+
+/*
+ * Returns the arc cosine of x (in radians)
+ */
+double acos(double x){
+    return atan2(sqrt((1.0 + x) * (1.0 - x)), x);
+}
+
+/*
+ * Returns the arc sine of x (in radians)
+ */
+double asin(double x){
+    return atan2(x, sqrt((1.0 + x) * (1.0 - x)));
+}
+
+/*
+ * Returns the arc tangent of x (in radians)
+ */
+double atan(double x){
+    return atan2(1, x);
+}
+
+/*
+ * Returns the arc tangent of y/x (in radians)
+ */
+double atan2(double y, double x){
+    asm("fld %1; fld %2; fpatan; fstp %0;" : "=m"(x) : "m"(y), "m"(x));
+    return x;
+}
+
+/*
+ * Returns the cosine of x (x in radians)
+ */
+double cos(double x){
+    return sin(x + (M_PI / 2));
+}
+
+/*
+ * Returns the sine of x (x in radians)
+ */
+double sin(double x){
+    //black magic
+    float xx = x * x;
+    return x + (x * xx) * (-0.16612511580269618f + xx * (8.0394356072977748e-3f + xx * -1.49414020045938777495e-4f));
+}
+
+/*
+ * Returns the exponent of x
+ */
+double exp(double x){
+    //TODO
+    /*
+    double tmp;
+    asm("fld %1;"
+        "fldl2e;"
+        "fist %2;"
+        "fild %2;"
+        "fsub;"
+        "f2xm1;"
+        "fld1;"
+        "fadd;"
+        "fild %2;"
+        "fxch;"
+        "fscale;"
+        "fstp %0" :
+        "=m"(x) :
+        "m"(x), "m"(tmp));
+        */
+    return x;
+}
+
+/*
+ * Splits the integer and decimal part of a number
+ */
+double modf(double x, double* integer){
+    double tmp;
+    asm("fld %1; fist %2; fsub %2; fstp %0" : "=m"(x) : "m"(x), "m"(tmp));
+    if(integer != NULL)
+        *integer = tmp;
+    return x - tmp;
+}
+
+/*
+ * Returns x raised to the power of y
+ */
+double pow(double x, double y){
+    //TODO
+    /*
+    double tmp;
+    asm("fld %3;"
+        "fld %1;"
+        "fyl2x;"
+        "fist %2;"
+        "fild %2;"
+        "fsub;"
+        "f2xm1;"
+        "fld1;"
+        "fadd;"
+        "fild %2;"
+        "fxch;"
+        "fscale;"
+        "fstp %0" :
+        "=m"(x) :
+        "m"(x), "m"(tmp), "m"(y));
+        */
+    return x;
+}
+
+/*
+ * Returns the square root of x
+ */
+double sqrt(double x){
+    asm("fld %1; fsqrt; fstp %0;" : "=m"(x) : "m"(x));
+    return x;
+}
+
+/*
+ * Returns the ceiling-rounded value of x
+ */
+double ceil(double x){
+    double i;
+    double f = modf(x, &i);
+    if(f < DBL_EPSILON)
+        return i;
+    return i + 1;
+}
+
+/*
+ * Returns the absolute value of x
+ */
+double fabs(double x){
+    if(x < 0)
         return -x;
+    return x;
+}
+
+/*
+ * Returns the remainder of x/y
+ */
+double fmod(double x, double y){
+    return modf(x / y, NULL);
+}
+
+/*
+ * Returns the floor-rounded value of x
+ */
+double floor(double x){
+    double i;
+    modf(x, &i);
+    return i;
 }
 
 //Random number generator state
@@ -667,4 +855,192 @@ int rand(void){
 void srand(unsigned int seed){
     __r_s = seed;
     __r_s |= (uint64_t)rand() << 32;
+}
+
+/*
+ * Allocates a chunk of memory
+ */
+void* malloc(uint64_t num){
+    if(num == 0)
+        return NULL;
+    //Round to the page size
+    num += 4096 - (num % 4096);
+    //Allocate pages
+    return _task_palloc(num / 4096);
+}
+
+/*
+ * Frees a chunk of memory
+ */
+void free(void* ptr){
+    _task_pfree(ptr);
+}
+
+/*
+ * Read the amount of cycles executed by the CPU
+ */
+uint64_t rdtsc(void){
+    uint32_t h, l;
+    __asm__ volatile("mfence; lfence; rdtsc;" : "=d" (h), "=a" (l));
+    return (uint64_t)((uint64_t)h << 32) | l;
+}
+
+/*
+ * Convert big endian doubleword to little endian one and vice versa
+ */
+void bswap_dw(uint32_t* value){
+    __asm__("bswapl %%eax" : "=a" (*value) : "a" (*value));
+}
+
+/*
+ * Returns the node pointed for that index
+ */
+ll_node_t* _ll_get_node(ll_t* list, uint64_t idx){
+    if(idx == 0){
+        return list->first;
+    } else if(idx == ll_size(list) - 1){
+        return list->last;
+    } else {
+        ll_node_t* cur_node = list->first;
+        uint64_t   cur_idx  = 0;
+        while((cur_node) && (cur_node = cur_node->next) && (++cur_idx <= idx));
+        cur_node = cur_node->prev;
+        return cur_node;
+    }
+}
+
+/*
+ * Creates a linked list
+ */
+ll_t* ll_create(void){
+    //Create and initialize the list
+    ll_t* list = (ll_t*)malloc(sizeof(ll_t));
+    list->first = NULL;
+    list->last = NULL;
+    list->size = 0;
+    list->cur_iter = NULL;
+    list->iter_dir = LL_ITER_DIR_UP;
+    return list;
+}
+
+/*
+ * Destroys the linked lists
+ */
+void ll_destroy(ll_t* list){
+    free(list);
+}
+
+/*
+ * Insert an item into the list
+ */
+void ll_insert(ll_t* list, void* item, uint64_t idx){
+    //Create and initialize the node
+    ll_node_t* node = malloc(sizeof(ll_node_t));
+    node->item = item;
+    node->next = NULL;
+    node->prev = NULL;
+    //Get the node that corresponds to that index
+    ll_node_t* cur_node = _ll_get_node(list, idx);
+    //Link everything together
+    node->prev = cur_node->prev;
+    node->next = cur_node;
+    cur_node->prev = node;
+    if(node->prev != NULL)
+        node->prev->next = node;
+    if(idx == 0)
+        list->first = node;
+    //Increase the size
+    list->size++;
+}
+
+/*
+ * Sets the element at the specified index
+ */
+void ll_set(ll_t* list, void* item, uint64_t idx){
+    _ll_get_node(list, idx)->item = item;
+}
+
+/*
+ * Appends a value to the linked list
+ */
+void ll_append(ll_t* list, void* item){
+    //Create and initialize the node
+    ll_node_t* node = malloc(sizeof(ll_node_t));
+    node->item = item;
+    node->next = NULL;
+    //Place it in the list and update the link to the previous node
+    if(list->first == NULL){
+        list->first = list->last = node;
+        node->prev = NULL;
+    } else {
+        node->prev = list->last;
+        list->last->next = node;
+        list->last = node;
+    }
+    list->size++;
+}
+
+/*
+ * Removes the element at the specified index
+ */
+void ll_remove(ll_t* list, uint64_t idx){
+    ll_node_t* node = _ll_get_node(list, idx);
+    //Link the previous and last elements
+    if(node->prev != NULL)
+        node->prev->next = node->next;
+    if(node->next != NULL)
+        node->next->prev = node->prev;
+    //Free the memory used by the node
+    free(node);
+}
+
+/*
+ * Swaps two items in a list
+ */
+void ll_swap(ll_t* list, int64_t idx1, int64_t idx2){
+    //Get nodes that correspond to these indicies
+    ll_node_t* n1 = _ll_get_node(list, idx1);
+    ll_node_t* n2 = _ll_get_node(list, idx2);
+    //Swap the items
+    void* tmp = n1->item;
+    n1->item = n2->item;
+    n2->item = tmp;
+}
+
+/*
+ * Returns the number of items in the list
+ */
+uint64_t ll_size(ll_t* list){
+    return list->size;
+}
+
+/*
+ * Gets the element at the specified index
+ */
+void* ll_get(ll_t* list, uint64_t idx){
+    return _ll_get_node(list, idx)->item;
+}
+
+/*
+ * Iterate through the list
+ */
+void* ll_iter(ll_t* list, uint8_t dir){
+    list->iter_dir = dir;
+    //Get the next node and item
+    void* item;
+    if(list->cur_iter == NULL)
+        list->cur_iter = (dir == LL_ITER_DIR_UP) ? list->first : list->last;
+    else 
+        list->cur_iter = (dir == LL_ITER_DIR_UP) ? list->cur_iter->next : list->cur_iter->prev;
+    ll_node_t* node = list->cur_iter;
+    if(node == NULL){
+        item = NULL;
+        node = NULL;
+    } else {
+        item = node->item;
+    }
+    //Update the current iteration node
+    list->cur_iter = node;
+    //Return the item pointer
+    return item;
 }

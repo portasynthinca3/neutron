@@ -66,10 +66,10 @@ with open(tmp_dir + '/app_desc.h', 'w') as f:
 print_status('Compiling')
 
 # build source files
-src_files = [src_dir + '/' + f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f))] + ['nlib/nlib.c']
+src_files = [src_dir + '/' + f for f in os.listdir(src_dir) if path.isfile(path.join(src_dir, f)) and f.endswith('.c')] + ['nlib/nlib.c']
 for file in src_files:
     print('  Building: ' + file)
-    code = os.system('gcc -g2 -nostdlib -ffreestanding -m64 -mno-sse2 -Wno-varargs -Inlib -I' + tmp_dir + ' -Og -c -o '
+    code = os.system('gcc -g2 -nostdlib -mno-red-zone -ffreestanding -m64 -Wall -Wno-varargs -Inlib -I' + tmp_dir + ' -Og -c -o '
                      + build_dir + '/' + path.splitext(os.path.basename(file))[0] + '.o ' + file)
     # terminate on compilation error
     if code != 0:
@@ -77,7 +77,7 @@ for file in src_files:
 
 # link
 print_status('Linking')
-code = os.system('ld -melf_x86_64 -nostdlib -e main -o ' + build_dir + '/app.elf '
+code = os.system('ld -melf_x86_64 -nostdlib -e main --section-start=.text=0x801000 -o ' + build_dir + '/app.elf '
                + ' '.join([build_dir + '/' + path.splitext(os.path.basename(f))[0] + '.o' for f in src_files]))
 if code != 0:
     exit()

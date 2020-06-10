@@ -1,91 +1,85 @@
 .intel_syntax noprefix
-.globl   exc_0, exc_1, exc_2, exc_3, exc_4, exc_5, exc_6, exc_7, exc_8, exc_9, exc_10, exc_11, exc_12, exc_13, exc_14, exc_16, exc_17, exc_18, exc_19, exc_20, exc_30, apic_timer_isr_wrap, apic_error_isr_wrap
+.globl   exc_0, exc_1, exc_2, exc_3, exc_4, exc_5, exc_6, exc_7, exc_8, exc_9, exc_10, exc_11, exc_12, exc_13, exc_14, exc_16, exc_17, exc_18, exc_19, exc_20, exc_30, apic_timer_isr_wrap, apic_error_isr_wrap, ps21_isr_wrap, ps22_isr_wrap, rtc_isr_wrap
 .align   8
 
 ;//Specific handlers for each exception
 exc_0:
-    push 0
+    movb [rsp-128], 0
     jmp exc_wrapper
 exc_1:
-    push 1
+    movb [rsp-128], 1
     jmp exc_wrapper
 exc_2:
-    push 2
+    movb [rsp-128], 2
     jmp exc_wrapper
 exc_3:
-    push 3
+    movb [rsp-128], 3
     jmp exc_wrapper
 exc_4:
-    push 4
+    movb [rsp-128], 4
     jmp exc_wrapper
 exc_5:
-    push 5
+    movb [rsp-128], 5
     jmp exc_wrapper
 exc_6:
-    push 6
+    movb [rsp-128], 6
     jmp exc_wrapper
 exc_7:
-    push 7
+    movb [rsp-128], 7
     jmp exc_wrapper
 exc_8:
-    push 8
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 8
+    jmp exc_wrapper
 exc_9:
-    push 9
+    movb [rsp-128], 9
     jmp exc_wrapper
 exc_10:
-    push 10
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 10
+    jmp exc_wrapper
 exc_11:
-    push 11
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 11
+    jmp exc_wrapper
 exc_12:
-    push 12
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 12
+    jmp exc_wrapper
 exc_13:
-    push 13
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 13
+    jmp exc_wrapper
 exc_14:
-    push 14
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 14
+    jmp exc_wrapper
 exc_16:
-    push 16
+    movb [rsp-128], 16
     jmp exc_wrapper
 exc_17:
-    push 17
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 17
+    jmp exc_wrapper
 exc_18:
-    push 18
+    movb [rsp-128], 18
     jmp exc_wrapper
 exc_19:
-    push 19
+    movb [rsp-128], 19
     jmp exc_wrapper
 exc_20:
-    push 20
+    movb [rsp-128], 20
     jmp exc_wrapper
 exc_30:
-    push 30
-    jmp exc_wrapper_code
+    add rsp, 8
+    movb [rsp-128], 30
+    jmp exc_wrapper
 
 exc_wrapper:
     ;//Disable interrupts
     cli
     ;//Save task state
-    add rsp, 8
     call mtask_save_state
-    sub rsp, 8
-    ;//Clear direction flag
-    cld
-    ;//Call the exception handler
-    call krnl_exc
-    iretq
-exc_wrapper_code:
-    ;//Disable interrupts
-    cli
-    ;//Save task state
-    add rsp, 16
-    call mtask_save_state
-    sub rsp, 16
     ;//Clear direction flag
     cld
     ;//Call the exception handler
@@ -114,4 +108,22 @@ apic_timer_isr_wrap:
     apic_timer_isr_wrap_cont:
     call mtask_save_state
     call mtask_schedule
+    jmp mtask_restore_state
+
+ps21_isr_wrap:
+    cli
+    call mtask_save_state
+    call ps21_intr
+    jmp mtask_restore_state
+
+ps22_isr_wrap:
+    cli
+    call mtask_save_state
+    call ps22_intr
+    jmp mtask_restore_state
+
+rtc_isr_wrap:
+    cli
+    call mtask_save_state
+    call rtc_intr
     jmp mtask_restore_state

@@ -18,8 +18,8 @@ krnl/drivers/apic.c
 krnl/drivers/timr.c
 krnl/drivers/acpi.c
 krnl/drivers/initrd.c
-krnl/drivers/human_io/kbd.c
-krnl/drivers/human_io/mouse.c
+krnl/drivers/ps2.c
+krnl/drivers/cmos.c
 
 # Application support stuff
 
@@ -36,7 +36,6 @@ krnl/app_drv/syscall/syscall_wrap.s
 -m 512 \
 -overcommit mem-lock=off \
 -smp 1,sockets=1,cores=1,threads=1 \
--uuid 9681faaf-3395-4000-ae75-bd7005a26ada \
 -no-user-config \
 -nodefaults \
 -rtc base=utc,driftfix=slew \

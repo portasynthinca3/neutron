@@ -23,6 +23,8 @@ uint16_t acpi_slp_en;
 uint16_t acpi_sci_en;
 uint8_t acpi_pm1_ctl_len;
 
+acpi_rsdt_t* rsdt;
+
 /*
  * Initializes ACPI
  */
@@ -36,7 +38,7 @@ uint32_t acpi_init(void){
     }
 
     //Fetch RSDT from RSDP
-    acpi_rsdt_t* rsdt = (acpi_rsdt_t*)(uint64_t)rsdp->rsdt_ptr;
+    rsdt = (acpi_rsdt_t*)(uint64_t)rsdp->rsdt_ptr;
     //Check if it's valid
     if(!acpi_sdt_checksum(&rsdt->hdr)){
         krnl_write_msgf(__FILE__, "error: RSDP in invalid");
@@ -44,7 +46,7 @@ uint32_t acpi_init(void){
     }
 
     //Find FADT
-    acpi_fadt_t* fadt = rsdt_find(rsdt, "FACP");
+    acpi_fadt_t* fadt = rsdt_find("FACP");
     if(fadt == NULL){
         krnl_write_msgf(__FILE__, "error: FADT not found");
         return 0;
@@ -155,13 +157,13 @@ acpi_rsdp_t* acpi_find_rsdp(void){
 /*
  * Finds an ACPI table in ACPI RSDT
  */
-void* rsdt_find(acpi_rsdt_t* rsdt, char* table){
+void* rsdt_find(char* table){
     //Calculate the number of entries RSDT has
     uint32_t rsdt_entries = (rsdt->hdr.len - sizeof(rsdt->hdr)) / 4;
     //Cycle through each entry
     for(uint32_t e = 0; e < rsdt_entries; e++){
         //Get the SDT header
-        acpi_sdt_hdr_t* hdr = (acpi_sdt_hdr_t*)(uint64_t)(rsdt->ptrs + e);
+        acpi_sdt_hdr_t* hdr = (acpi_sdt_hdr_t*)(uint64_t)(rsdt->ptrs[e]);
         //Compare its signature with the desired one
         if(*(uint32_t*)(hdr) == *(uint32_t*)(table))
             return (void*)hdr;

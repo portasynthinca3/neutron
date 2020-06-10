@@ -8,6 +8,7 @@
 #include "./drivers/gfx.h"
 #include "./mtask/mtask.h"
 #include "./vmem/vmem.h"
+#include "./krnl.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
@@ -121,6 +122,8 @@ uint64_t dram_init(void){
         while(1);
     }
 
+    krnl_writec_f("RAM base: 0x%x, top: 0x%x\r\n", gen_free_base, gen_free_top);
+
     //Return the map key
     return map_key;
 }
@@ -130,13 +133,17 @@ uint64_t dram_init(void){
  */
 void dram_shift(void){
     //Map the range
+    krnl_writec_f("Mapping the dynamic RAM range\r\n");
     vmem_map(vmem_get_cr3(), gen_free_base_initial, gen_free_top, (void*)0xFFFFC00000000000ULL);
     //Shift the ranges
+    krnl_writec_f("Shifting\r\n");
     gen_free_top = (void*)((uint64_t)gen_free_top - (uint64_t)gen_free_base + 0xFFFFC00000000000ULL);
     gen_free_base = (void*)((uint64_t)gen_free_base - (uint64_t)gen_free_base_initial + 0xFFFFC00000000000ULL);
     gen_free_base_initial = (void*)0xFFFFC00000000000ULL;
+    krnl_writec_f("Shifted the allocation region\r\n");
     //Enable address translation
     vmem_enable_trans();
+    krnl_writec_f("Enabled software address translation\r\n");
 }
 
 /*
@@ -164,7 +171,7 @@ void* malloc(size_t size){
         #endif
     }
     free_block_t* current = &(free_block_t){.next = first_free_block};
-    while(current = current->next){
+    while((current = current->next)){
         if(current->size + 16 >= size){
             //Link the previous block to the next one
             //  as the current one will not be free soon
@@ -236,24 +243,6 @@ void* memset(void* dst, int ch, size_t size){
  * Copy a block of memory
  */
 void* memcpy(void* destination, const void* source, size_t num){
-    if(num == 0)
-        return destination;
-    #ifdef STDLIB_MEMCPY_WC
-    //Chck if the data is 8-byte aligned
-    if(((uint64_t)destination % 8 == 0) && ((uint64_t)source % 8 == 0) && (num % 8 == 0)){
-        //Tell the CPU we're gonna access the data soon so it can prefetch it
-        __asm__ volatile("prefetchnta %0" : : "m" (source));
-        //Copy the data
-        __asm__ volatile("_stdlib_memcpy_wc:"
-                         "  mov (%%rsi), %%rax;"
-                         "  movnti %%rax, (%%rdi);"
-                         "  add $8, %%rsi;"
-                         "  add $8, %%rdi;"
-                         "  loop _stdlib_memcpy_wc;" : : "S" (source), "D" (destination), "c" (num / 8));
-        //Return
-        return destination;
-    }
-    #endif
     //Q = 8 bytes at a time
     //D = 4 bytes at a time
     //W = 2 bytes at a time
@@ -273,7 +262,7 @@ void* memcpy(void* destination, const void* source, size_t num){
  * Copy a string to other string
  */
 char* strcpy(char* dest, char* src){
-    memcpy(dest, src, strlen(src) + 1);
+    return memcpy(dest, src, strlen(src) + 1);
 }
 
 /*
@@ -308,7 +297,7 @@ void load_gdt(){
 /*
  * Convert big endian doubleword to little endian one and vice versa
  */
-void bswap_dw(int* value){
+void bswap_dw(uint32_t* value){
     __asm__("bswapl %%eax" : "=a" (*value) : "a" (*value));
 }
 
@@ -480,70 +469,6 @@ size_t strlen(const char* str){
 }
 
 /*
- * Read RTC hour, minute, second, day, month and year registers
- * Returns 0 if the data is valid
- */
-uint8_t read_rtc_time(uint16_t* h, uint16_t* m, uint16_t* s, uint16_t* d, uint16_t* mo, uint16_t* y){
-    //Read CMOS Status Register A
-    outb(0x70, 0x0A);
-    uint8_t status_a = inb(0x71);
-    uint32_t i = 0;
-    //If bit 7 is set, we wait for it to reset and then read the time OR 10k iterations and return
-    while(status_a & (1 << 7) && (i++ <= 10000)){
-        outb(0x70, 0x0A);
-        status_a = inb(0x71);
-    }
-    if(i++ >= 10000)
-        return 0;
-    //Read hours
-    outb(0x70, 0x04);
-    *h = inb(0x71);
-    //Read minutes
-    outb(0x70, 0x02);
-    *m = inb(0x71);
-    //Read seconds
-    outb(0x70, 0x00);
-    *s = inb(0x71);
-    //Read day
-    outb(0x70, 0x07);
-    *d = inb(0x71);
-    //Read month
-    outb(0x70, 0x08);
-    *mo = inb(0x71);
-    //Read year
-    outb(0x70, 0x09);
-    *y = inb(0x71);
-
-    //Read Status Register B to find out the data format
-    outb(0x70, 0x0B);
-    uint8_t status_b = inb(0x71);
-    //If bit 2 is set, the values are BCD
-    if(!(status_b & (1 << 2))){
-        *h = (((*h >> 4) & 0x0F) * 10) + (*h & 0x0F);
-        *m = (((*m >> 4) & 0x0F) * 10) + (*m & 0x0F);
-        *s = (((*s >> 4) & 0x0F) * 10) + (*s & 0x0F);
-        *d = (((*d >> 4) & 0x0F) * 10) + (*d & 0x0F);
-        *mo = (((*mo >> 4) & 0x0F) * 10) + (*mo & 0x0F);
-        *y = (((*y >> 4) & 0x0F) * 10) + (*y & 0x0F);
-    }
-    //If bit 1 is set, the time is in the 12-hour format
-    //  add 12 to the hour count if its highest bit is set
-    if(status_b & (1 << 1)){
-        if(*h & (1 << 7)){
-            *h += 12;
-            //Reset the highest bit as this bit set will now mess with the value
-            *h &= ~(1 << 7);
-        }
-    }
-
-    //We're in the 21st century after all
-    *y += 2000;
-
-    //Success!
-    return 1;
-}
-
-/*
  * Print an uint64_t to the string
  */
 char* sprintu(char* str, uint64_t i, uint8_t min){
@@ -631,8 +556,6 @@ int _sprintf_argcnt(char* fmt){
  * Print formatted string
  */
 int _sprintf(char* str, const char* format, va_list valist){
-    //Get the number of arguments
-    uint64_t argcnt = _sprintf_argcnt((char*)format);
     //Parse the format
     uint64_t str_idx = 0;
     for(uint64_t i = 0; i < strlen(format); i++){
@@ -691,8 +614,9 @@ int _sprintf(char* str, const char* format, va_list valist){
 int sprintf(char* str, const char* format, ...){
     va_list valist;
     va_start(valist, _sprintf_argcnt((char*)format));
-    _sprintf(str, format, valist);
+    int result = _sprintf(str, format, valist);
     va_end(valist);
+    return result;
 }
 
 /*
@@ -718,10 +642,11 @@ int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
     int len1 = strlen(str1);
     int len2 = strlen(str2);
-    //Find the minimal one
-    int min_len = (len1 < len2) ? len1 : len2;
+    //Strings are not equal if they have different lengths (duh)
+    if(len1 != len2)
+        return (str1[0] > str2[0]) ? 1 : -1;
     //Go through each byte
-    for(int i = 0; i < min_len; i++){
+    for(int i = 0; i < len1; i++){
         //Return if the strings aren't equal
         if(str1[i] > str2[i])
             return 1;
@@ -733,33 +658,23 @@ int strcmp(const char* str1, const char* str2){
 }
 
 /*
- * Create a GDT entry
+ * Parse number from string representation
  */
-void gdt_create(uint16_t sel, uint32_t base, uint32_t limit, uint8_t flags, uint8_t access){
-    //Calculate the entry base pointer
-    idt_desc_t desc;
-    __asm__ volatile("sgdt %0" : : "m" (desc)); //Store the GDT descriptor
-    void* entry_ptr = (uint8_t*)desc.base + (sel * 8);
-
-    //Set limit[15:0]
-    *(uint16_t*)((uint8_t*)entry_ptr + 0) = limit & 0xFFFF;
-    //Set base[15:0]
-    *(uint16_t*)((uint8_t*)entry_ptr + 2) = base & 0xFFFF;
-    //Set base[23:16]
-    *(uint16_t*)((uint8_t*)entry_ptr + 4) = (base >> 16) & 0xFF;
-    //Set access byte
-    *(uint8_t*)((uint8_t*)entry_ptr + 5) = access;
-    //Set limit[19:16]
-    *(uint8_t*)((uint8_t*)entry_ptr + 6) = (limit >> 16) & 0xF;
-    //Set flags
-    *(uint8_t*)((uint8_t*)entry_ptr + 6) |= (flags & 0xF) << 4;
-    //Set base[31:24]
-    *(uint8_t*)((uint8_t*)entry_ptr + 4) = (base >> 24) & 0xFF;
-
-    //Load GDT
-    if(desc.limit < sel * 8) //Increase the limit if it won't fit
-        desc.limit = sel * 8;
-    __asm__ volatile("lgdt %0" : : "m" (desc));
+int atoi(const char* str){
+    int n = 0;
+    char c;
+    //Fetch next character
+    while((c = *(str++)) != 0){
+        //If it's a digit, append it
+        if(c >= '0' && c <= '9'){
+            n *= 10;
+            n += c - '0';
+        } else {
+            //Error
+            return 0;
+        }
+    }
+    return n;
 }
 
 /*

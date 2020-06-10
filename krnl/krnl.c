@@ -14,9 +14,10 @@
 #include "./drivers/pci.h"
 #include "./drivers/apic.h"
 #include "./drivers/timr.h"
-#include "./drivers/human_io/mouse.h"
 #include "./drivers/acpi.h"
 #include "./drivers/initrd.h"
+#include "./drivers/ps2.h"
+#include "./drivers/cmos.h"
 
 #include "./fonts/jb-mono-10.h"
 
@@ -30,8 +31,11 @@
 #include "./app_drv/elf/elf.h"
 #include "./app_drv/syscall/syscall.h"
 
-extern void enable_a20(void);
+//ISR wrappers
 extern void apic_timer_isr_wrap(void);
+extern void ps21_isr_wrap(void);
+extern void ps22_isr_wrap(void);
+extern void rtc_isr_wrap(void);
 
 //Exception wrapper definitions
 extern void exc_0(void);
@@ -58,6 +62,8 @@ extern void exc_30(void);
 
 //Where the kernel is loaded in memory
 krnl_pos_t krnl_pos;
+uint16_t krnl_cs = 0;
+uint16_t krnl_ds = 0;
 //First and last kernel message pointers
 krnl_msg_t* first_msg;
 krnl_msg_t* last_msg;
@@ -119,6 +125,25 @@ void krnl_write_msgf(char* file, char* msg, ...){
 }
 
 /*
+ * Prints a formatted message to the UEFI ConsoleOut protocol
+ */
+void krnl_writec_f(char* msg, ...){
+    //Print the formatted message
+    char buf[1024];
+    va_list valist;
+    va_start(valist, _sprintf_argcnt(msg));
+    _sprintf(buf, msg, valist);
+    //Expand the buffer, becuase UEFI uses retarded 16-bit characters
+    for(int i = 1023; i >= 1; i -= 2){
+        buf[i] = buf[i / 2];
+        buf[i / 2] = 0;
+    }
+    //Print the buffer
+    krnl_efi_systable->ConOut->OutputString(krnl_efi_systable->ConOut, (CHAR16*)(buf + 1));
+    va_end(valist);
+}
+
+/*
  * Gets the EFI system table pointer
  */
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
@@ -133,6 +158,60 @@ krnl_pos_t krnl_get_pos(void){
 }
 
 /*
+ * Converts exception vector to its corresponding name
+ */
+char* krnl_exc_vect_to_str(uint8_t vect){
+    switch(vect){
+        case 0:
+            return "division by zero exception";
+        case 1:
+            return "debug trap";
+        case 2:
+            return "NMI";
+        case 3:
+            return "breakpoint excpetion";
+        case 4:
+            return "overflow excpetion";
+        case 5:
+            return "bound range exceeded exception";
+        case 6:
+            return "invalid opcode exception";
+        case 7:
+            return "FPU not available exception";
+        case 8:
+            return "double fault";
+        case 9:
+            return "coprocessor segment overrun";
+        case 10:
+            return "invalid TSS exception";
+        case 11:
+            return "segment not present exception";
+        case 12:
+            return "stack-segment fault";
+        case 13:
+            return "general protection fault";
+        case 14:
+            return "page fault";
+        case 16:
+            return "FPU exception";
+        case 17:
+            return "alignment check exception";
+        case 18:
+            return "machine check exception";
+        case 19:
+            return "SIMD exception";
+        case 20:
+            return "virtualization exception";
+        case 30:
+            return "security exception";
+        case 255:
+            return "[no exception]";
+        default:
+            return "[reserved exception number]";
+    }
+}
+
+/*
  * Dumps the task state on screen
  */
 void krnl_dump_task_state(task_t* task){
@@ -141,61 +220,83 @@ void krnl_dump_task_state(task_t* task){
     char temp2[20];
 
     //Print RAX-RBX, RSI, RDI, RSP, RBP
-    strcat(temp, "  RAX=");
-    strcat(temp, sprintub16(temp2, task->state.rax, 16));
+    strcat(temp, "RAX=");
+    strcat(temp, sprintub16(temp2, task->state.rax, 1));
     strcat(temp, " RBX=");
-    strcat(temp, sprintub16(temp2, task->state.rbx, 16));
+    strcat(temp, sprintub16(temp2, task->state.rbx, 1));
     strcat(temp, " RCX=");
-    strcat(temp, sprintub16(temp2, task->state.rcx, 16));
+    strcat(temp, sprintub16(temp2, task->state.rcx, 1));
     strcat(temp, " RDX=");
-    strcat(temp, sprintub16(temp2, task->state.rdx, 16));
+    strcat(temp, sprintub16(temp2, task->state.rdx, 1));
     strcat(temp, " RSI=");
-    strcat(temp, sprintub16(temp2, task->state.rsi, 16));
+    strcat(temp, sprintub16(temp2, task->state.rsi, 1));
     strcat(temp, " RDI=");
-    strcat(temp, sprintub16(temp2, task->state.rdi, 16));
+    strcat(temp, sprintub16(temp2, task->state.rdi, 1));
     strcat(temp, " RSP=");
-    strcat(temp, sprintub16(temp2, task->state.rsp, 16));
+    strcat(temp, sprintub16(temp2, task->state.rsp, 1));
     strcat(temp, " RBP=");
-    strcat(temp, sprintub16(temp2, task->state.rbp, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, sprintub16(temp2, task->state.rbp, 1));
+    krnl_write_msg(__FILE__, temp);
 
     //Print R8-R15
     temp[0] = 0;
-    strcat(temp, "  R8 =");
-    strcat(temp, sprintub16(temp2, task->state.r8, 16));
-    strcat(temp, " R9 =");
-    strcat(temp, sprintub16(temp2, task->state.r9, 16));
+    strcat(temp, "R8=");
+    strcat(temp, sprintub16(temp2, task->state.r8, 1));
+    strcat(temp, " R9=");
+    strcat(temp, sprintub16(temp2, task->state.r9, 1));
     strcat(temp, " R10=");
-    strcat(temp, sprintub16(temp2, task->state.r10, 16));
+    strcat(temp, sprintub16(temp2, task->state.r10, 1));
     strcat(temp, " R11=");
-    strcat(temp, sprintub16(temp2, task->state.r11, 16));
+    strcat(temp, sprintub16(temp2, task->state.r11, 1));
     strcat(temp, " R12=");
-    strcat(temp, sprintub16(temp2, task->state.r12, 16));
+    strcat(temp, sprintub16(temp2, task->state.r12, 1));
     strcat(temp, " R13=");
-    strcat(temp, sprintub16(temp2, task->state.r13, 16));
+    strcat(temp, sprintub16(temp2, task->state.r13, 1));
     strcat(temp, " R14=");
-    strcat(temp, sprintub16(temp2, task->state.r14, 16));
+    strcat(temp, sprintub16(temp2, task->state.r14, 1));
     strcat(temp, " R15=");
-    strcat(temp, sprintub16(temp2, task->state.r15, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, sprintub16(temp2, task->state.r15, 1));
+    krnl_write_msg(__FILE__, temp);
 
     //Print CR3, RIP, RFLAGS
     temp[0] = 0;
-    strcat(temp, "  CR3=");
-    strcat(temp, sprintub16(temp2, task->state.cr3, 16));
+    strcat(temp, "CR3=");
+    strcat(temp, sprintub16(temp2, task->state.cr3, 1));
     strcat(temp, " RIP=");
-    strcat(temp, sprintub16(temp2, task->state.rip, 16));
+    strcat(temp, sprintub16(temp2, task->state.rip, 1));
     strcat(temp, " RFL=");
-    strcat(temp, sprintub16(temp2, task->state.rflags, 16));
-    strcat(temp, " CS =");
-    strcat(temp, sprintub16(temp2, task->state.cs, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, sprintub16(temp2, task->state.rflags, 1));
+    strcat(temp, " CS=");
+    strcat(temp, sprintub16(temp2, task->state.cs, 1));
+    krnl_write_msg(__FILE__, temp);
 
-    //Print cycles
+    //Print exception vector
     temp[0] = 0;
-    strcat(temp, "  SW_CNT=");
-    strcat(temp, sprintub16(temp2, task->state.switch_cnt, 16));
-    gfx_verbose_println(temp);
+    strcat(temp, "EXC_VECT=");
+    strcat(temp, sprintub16(temp2, task->state.exc_vector, 2));
+    strcat(temp, " (");
+    strcat(temp, krnl_exc_vect_to_str(task->state.exc_vector));
+    strcat(temp, ")");
+    krnl_write_msg(__FILE__, temp);
+
+    //Print SIMD exception information
+    if(task->state.exc_vector == 0x13){
+        uint32_t mxcsr = 0;
+        asm("stmxcsr %0" : "=m"(mxcsr));
+        temp[0] = 0;
+        strcat(temp, "MXCSR=");
+        strcat(temp, sprintub16(temp2, mxcsr, 8));
+        krnl_write_msg(__FILE__, temp);
+    }
+    //Print PF information
+    if(task->state.exc_vector == 0x0E){
+        uint64_t cr2 = 0;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+        temp[0] = 0;
+        strcat(temp, "CR2=");
+        strcat(temp, sprintub16(temp2, cr2, 1));
+        krnl_write_msg(__FILE__, temp);
+    }
 }
 
 /*
@@ -205,9 +306,9 @@ void krnl_dump(void){
     //Stop the schaeduler
     mtask_stop();
 
-    gfx_verbose_println("---=== NEUTRON KERNEL DUMP ===---");
+    krnl_write_msg(__FILE__, "full kernel dump:");
 
-    gfx_verbose_println("TASKS:");
+    krnl_write_msg(__FILE__, "tasks:");
     //Scan through the task list
     task_t* tasks = mtask_get_task_list();
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++){
@@ -217,24 +318,21 @@ void krnl_dump(void){
             char temp[200];
             temp[0] = 0;
             char temp2[20];
-            strcat(temp, " ");
             strcat(temp, tasks[i].name);
-            strcat(temp, ", UID ");
-            strcat(temp, sprintu(temp2, tasks[i].uid, 1));
-            if(tasks[i].uid == mtask_get_uid())
-                strcat(temp, " [DUMP CAUSE]");
+            strcat(temp, ", PID ");
+            strcat(temp, sprintu(temp2, tasks[i].pid, 1));
+            if(tasks[i].pid == mtask_get_pid())
+                strcat(temp, " [running at dump]");
             if(tasks[i].state_code != TASK_STATE_RUNNING){
-                strcat(temp, " [BLOCKED TILL ");
-                strcat(temp, sprintub16(temp2, tasks[i].blocked_till, 16));
-                strcat(temp, " / CUR ");
-                strcat(temp, sprintub16(temp2, rdtsc(), 16));
+                strcat(temp, " [blocked till cycle ");
+                strcat(temp, sprintub16(temp2, tasks[i].blocked_till, 1));
+                strcat(temp, " / current ");
+                strcat(temp, sprintub16(temp2, rdtsc(), 1));
                 strcat(temp, "]");
-            } else {
-                strcat(temp, " [RUNNING]");
             }
-            gfx_verbose_println(temp);
+            krnl_write_msg(__FILE__, temp);
             krnl_dump_task_state(&tasks[i]);
-            gfx_verbose_println("");
+            krnl_write_msg(__FILE__, "");
         }
     }
 }
@@ -243,14 +341,26 @@ void krnl_dump(void){
  * Exception ISR
  */
 void krnl_exc(void){
-    //Get the exception address from RDX
-    uint64_t ip;
-    __asm__ volatile("mov %%rdx, %0" : "=m" (ip));
-    //Stop the schaeduler
+    //Get the task that caused the exception
+    task_t* task = mtask_get_cur_task();
+    //If that task was running in userspace
+    if(task->state.cs != krnl_cs){
+        //Print the exception info
+        char symbol[256];
+        elf_get_sym(task, task->state.rip, symbol);
+        krnl_write_msgf(__FILE__, "Task %s with PID %i caused %s at RIP=0x%x <%s>",
+            task->name, task->pid, krnl_exc_vect_to_str(task->state.exc_vector), task->state.rip, symbol);
+        krnl_write_msg(__FILE__, "Task state at exception:");
+        krnl_dump_task_state(task);
+        //Stop that task
+        mtask_stop_task(task->pid);
+        while(1);
+    }
+    //Otherwise, the exception happened in kernel-space
+    //Panic! in the Kernel
     mtask_stop();
-    //Print some info
     krnl_dump();
-    gfx_panic(mtask_get_by_uid(mtask_get_uid())->state.rip, KRNL_PANIC_CPUEXC_CODE);
+    gfx_panic(task->state.rip, KRNL_PANIC_CPUEXC_CODE);
 }
 
 /*
@@ -292,6 +402,8 @@ void ___chkstk_ms(void){
  * The entry point for the kernel
  */
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable){
+	//Disable interrupts
+	__asm__ volatile("cli");
     //Set the stack smashing guard
     __asm__ ("rdrand %%eax; mov %%eax, %0" : "=m" (__stack_chk_guard) : : "eax");
     //Save the system table pointer
@@ -300,18 +412,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Disable the watchdog timer
     krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
-    krnl_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron is starting up\r\n");
+    krnl_writec_f("Neutron version %s\r\n", KRNL_VERSION_STR);
 
     //Using the loaded image protocol, find out where we are loaded in the memory
     EFI_LOADED_IMAGE_PROTOCOL* efi_lip = NULL;
     SystemTable->BootServices->HandleProtocol(ImageHandle, &(EFI_GUID)EFI_LOADED_IMAGE_PROTOCOL_GUID, (void**)&efi_lip);
     krnl_pos.offset = (uint64_t)efi_lip->ImageBase;
     krnl_pos.size = efi_lip->ImageSize;
+    krnl_writec_f("Loaded at 0x%x, size 0x%x\r\n", krnl_pos.offset, krnl_pos.size);
 
-	//Disable interrupts
-	__asm__ volatile("cli");
-    //Initialize x87 FPU
-    __asm__ volatile("finit");
     //Do some initialization stuff
     krnl_efi_map_key = dram_init();
     vmem_init();
@@ -348,7 +457,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
         krnl_msg_t* msg = first_msg;
         do
             krnl_print_msg(msg);
-        while(msg = msg->next);
+        while((msg = msg->next));
     }
 
     krnl_write_msgf(__FILE__, "mapped default regions to upper half");
@@ -407,9 +516,12 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     __asm__ volatile("mov %0, %%cr0" : : "r" (sse_temp));
     __asm__ volatile("mov %%cr4, %0" : "=r" (sse_temp));
     sse_temp |=  (1 << 9);
+    sse_temp |=  (1 << 10);
     sse_temp |=  (1 << 18);
-    //sse_temp |=  (1 << 10);
     __asm__ volatile("mov %0, %%cr4" : : "r" (sse_temp));
+    __asm__ volatile("stmxcsr %0" : "=m"(sse_temp));
+    sse_temp |= 0xFC0;
+    __asm__ volatile("ldmxcsr %0" : : "m"(sse_temp));
     //Set extended control register
     uint64_t xcr0 = (1 << 0) | (1 << 1);
     __asm__ volatile("mov %0, %%ecx;"
@@ -445,8 +557,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
 	//Disable interrupts
 	__asm__ volatile("cli");
     //Get the current code and data selectors
-    uint16_t krnl_cs = 0;
-    uint16_t krnl_ds = 0;
+    krnl_cs = 0;
+    krnl_ds = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (krnl_cs));
     __asm__ volatile("movw %%ds, %0" : "=r" (krnl_ds));
     krnl_write_msgf(__FILE__, "current selectors: cs: 0x%x, ds: 0x%x", krnl_cs, krnl_ds);
@@ -477,6 +589,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt[30] = IDT_ENTRY_ISR((uint64_t)(&exc_30 - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Set up gates for interrupts
     idt[32] = IDT_ENTRY_ISR((uint64_t)(&apic_timer_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[33] = IDT_ENTRY_ISR((uint64_t)(&ps21_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[34] = IDT_ENTRY_ISR((uint64_t)(&ps22_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
+    idt[35] = IDT_ENTRY_ISR((uint64_t)(&rtc_isr_wrap - krnl_pos.offset) | 0xFFFF800000000000ULL, krnl_cs);
     //Load IDT
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(idt_entry_t);
@@ -498,7 +613,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Set up the task state segment and its descriptor
     uint16_t tsss = 0x100;
     tss_t* tss = calloc(1, sizeof(tss_t));
-    tss->rsp0 = (uint64_t)malloc(8192) + 8192;
+    tss->rsp0 = (uint64_t)malloc(16384) + 16384;
     uint64_t tss_addr = (uint64_t)tss;
     uint64_t tss_size = sizeof(tss_t);
     uint64_t tss_desc_hi =   tss_addr               >> 32;   //Limit and base
@@ -531,6 +646,11 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status("Initializing APIC", 80);
     apic_init();
 
+    //Initialize... stuff...
+    krnl_boot_status("Initializing some hardware", 85);
+    ps2_init();
+    rtc_init();
+
     //Initialize the multitasking system
     krnl_boot_status("Initializing multitasking", 90);
     mtask_init();
@@ -541,6 +661,8 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Okay. This is jank level 100 here.
     //THIS way of doing things is BAD. Nevermand in an operating system kernel!
     //I really hope this is a temporary fix.
+
+    //RETARDED RETARDED RETARDED     VVVV     RETARDED RETARDED RETARDED
 
     //Scan through the loaded kernel image and find integers values of which belong to this range.
     //Replace them with their upper-half variants.
@@ -558,7 +680,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     }
     krnl_pos.offset = orig_pos;
 
-    krnl_write_msgf(__FILE__, "done \"relocating\"");
+    krnl_write_msgf(__FILE__, "finished \"relocating\"");
 
     //Run the initialization task
     syscall_init();

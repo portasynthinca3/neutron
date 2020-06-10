@@ -16,8 +16,8 @@
 #define MAX_KRNL_MSG_SZ                     256
 
 //Kernel version
-#define KRNL_VERSION_STR "v0.6.0"
-#define KRNL_VERSION_NUM 1
+#define KRNL_VERSION_STR "v0.6.1"
+#define KRNL_VERSION_NUM 2
 
 //Structures
 
@@ -37,12 +37,14 @@ typedef struct _krnl_msg_s {
 
 //Function prototypes
 
-void krnl_write_msg(char* file, char* msg);
-void krnl_write_msgf(char* file, char* msg, ...);
-
+//Kernel message buffer
+void krnl_write_msg  (char* file, char* msg);
+void krnl_write_msgf (char* file, char* msg, ...);
+void krnl_writec_f   (char* msg, ...);
+//Low-level system information
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
-krnl_pos_t krnl_get_pos(void);
-
+krnl_pos_t        krnl_get_pos(void);
+//Entry point
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
 
 #endif
