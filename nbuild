@@ -33,7 +33,7 @@ krnl/app_drv/syscall/syscall_wrap.s
 -name guest=Neutron,debug-threads=on \
 -machine pc-i440fx-4.2,accel=kvm,usb=off,vmport=off,dump-guest-core=off \
 -cpu IvyBridge-IBRS,ss=on,vmx=on,pcid=on,hypervisor=on,arat=on,tsc-adjust=on,umip=on,md-clear=on,stibp=on,arch-capabilities=on,ssbd=on,xsaveopt=on,ibpb=on,amd-ssbd=on,skip-l1dfl-vmentry=on \
--m 1024M \
+-m 512 \
 -overcommit mem-lock=off \
 -smp 1,sockets=1,cores=1,threads=1 \
 -no-user-config \
@@ -41,7 +41,7 @@ krnl/app_drv/syscall/syscall_wrap.s
 -rtc base=utc,driftfix=slew \
 -global kvm-pit.lost_tick_policy=delay \
 -no-hpet \
--cdrom /home/portasynthinca3/proj/neutron/build/neutron.iso \
+-cdrom ./build/neutron.iso \
 -device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,max_outputs=1,bus=pci.0,addr=0x2 \
 -device intel-hda,id=sound0,bus=pci.0,addr=0x3 \
 -sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
