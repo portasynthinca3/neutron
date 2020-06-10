@@ -8,7 +8,7 @@
  */
 uint64_t _syscall(uint32_t func, uint32_t subfunc,
                          uint64_t p0, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4){
-    //Calculate RDI number
+    //Calculate RDI value
     uint64_t rdi = ((uint64_t)func << 32) | subfunc;
     //Complicated stuff: loads registers with function numbers
     //  and syscall arguments, executes syscall, while telling
@@ -34,7 +34,6 @@ uint64_t _syscall(uint32_t func, uint32_t subfunc,
         "m"(p4)
         :
         "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "rdi", "rsi");
-    //Return the return value
     return ret;
 }
 

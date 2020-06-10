@@ -24,6 +24,12 @@ typedef struct {
     uint32_t* bmp;
 } font_t;
 
+//A raw image in memory
+typedef struct {
+    p2d_t size;
+    color32_t* data;
+} raw_img_t;
+
 //Definitions
 
 //Macro for converting R, G and B values to color32_t
@@ -36,25 +42,25 @@ typedef struct {
 //Function prototypes
 
 //Control stuff
-void  gfx_flip    (void);
-void  gfx_get_res (void);
-void  gfx_init    (void);
-p2d_t gfx_res     (void);
+void      gfx_flip    (void);
+void      gfx_get_res (void);
+void      gfx_init    (void);
+raw_img_t gfx_screen  (void);
 //Draw operations
-void gfx_fill             (color32_t color);
-void gfx_draw_hor_line    (p2d_t pos, uint64_t w, color32_t c);
-void gfx_draw_vert_line   (p2d_t pos, uint64_t h, color32_t c);
-void gfx_draw_filled_rect (p2d_t pos, p2d_t size, color32_t c);
-void gfx_draw_round_rect  (p2d_t pos, p2d_t size, int32_t r, color32_t c);
-void gfx_fill_circ_helper (p2d_t pos, int32_t r, uint8_t corners, int32_t d, color32_t c);
-void gfx_draw_rect        (p2d_t pos, p2d_t size, color32_t c);
-void gfx_draw_xbm         (p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
-void gfx_draw_raw         (p2d_t pos, uint8_t* raw_ptr, p2d_t raw_size);
+void gfx_fill             (raw_img_t buf, color32_t color);
+void gfx_draw_hor_line    (raw_img_t buf, p2d_t pos, uint64_t w, color32_t c);
+void gfx_draw_vert_line   (raw_img_t buf, p2d_t pos, uint64_t h, color32_t c);
+void gfx_draw_filled_rect (raw_img_t buf, p2d_t pos, p2d_t size, color32_t c);
+void gfx_draw_round_rect  (raw_img_t buf, p2d_t pos, p2d_t size, int32_t r, color32_t c);
+void gfx_fill_circ_helper (raw_img_t buf, p2d_t pos, int32_t r, uint8_t corners, int32_t d, color32_t c);
+void gfx_draw_rect        (raw_img_t buf, p2d_t pos, p2d_t size, color32_t c);
+void gfx_draw_xbm         (raw_img_t buf, p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
+void gfx_draw_raw         (raw_img_t buf, p2d_t pos, uint8_t* raw_ptr, p2d_t raw_size);
 //Text drawing functions
 font_t* gfx_load_font   (const char* path);
-p2d_t   gfx_glyph       (font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c);
-p2d_t   gfx_draw_str    (font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s);
-p2d_t   gfx_text_bounds (font_t* font, char* s);
+p2d_t   gfx_glyph       (raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c);
+p2d_t   gfx_draw_str    (raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s);
+p2d_t   gfx_text_bounds (raw_img_t buf, font_t* font, char* s);
 //Utility
 uint8_t   gfx_point_in_rect (p2d_t p, p2d_t pos, p2d_t sz);
 color32_t gfx_blend_colors  (color32_t b, color32_t f, uint8_t a);

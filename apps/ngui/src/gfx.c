@@ -6,11 +6,8 @@
 
 #include "gfx.h"
 
-//Display resolution
-uint16_t res_x;
-uint16_t res_y;
-//Second buffer pointer
-color32_t* d_buf;
+//Screen buffer
+raw_img_t screen;
 //Framebuffer file
 FILE* framebuf;
 
@@ -19,7 +16,7 @@ FILE* framebuf;
  */
 void gfx_flip(void){
     fseek(framebuf, 0);
-    fwrite(d_buf, 4, res_x * res_y, framebuf);
+    fwrite(screen.data, 4, screen.size.x * screen.size.y, framebuf);
 }
 
 /*
@@ -34,8 +31,8 @@ void gfx_get_res(void){
     char* delimiter_pos = strchr(buf, 'x');
     *delimiter_pos = 0;
     //Parse X and Y parts
-    res_x = atoi(buf);
-    res_y = atoi(delimiter_pos + 1);
+    screen.size.x = atoi(buf);
+    screen.size.y = atoi(delimiter_pos + 1);
     //Close the file
     fclose(f);
 }
@@ -45,74 +42,74 @@ void gfx_get_res(void){
  */
 void gfx_init(void){
     gfx_get_res();
-    d_buf = (color32_t*)malloc(4 * res_x * res_y);
+    screen.data = (color32_t*)malloc(4 * screen.size.x * screen.size.y);
     framebuf = fopen("/dev/fb", "wb");
 }
 
 /*
- * Returns display resolution
+ * Returns the screen image
  */
-p2d_t gfx_res(void){
-    return (p2d_t){.x = res_x, .y = res_y};
+raw_img_t gfx_screen(void){
+    return screen;
 }
 
 /*
  * Fills the screen with one color
  */
-void gfx_fill(color32_t color){
+void gfx_fill(raw_img_t buf, color32_t color){
     //Set each pixel
-    for(uint32_t i = 0; i < res_x * res_y; i++)
-        d_buf[i] = color;
+    for(uint32_t i = 0; i < buf.size.x * buf.size.y; i++)
+        buf.data[i] = color;
 }
 
 /*
  * Draws a horizontal line
  */
-void gfx_draw_hor_line(p2d_t pos, uint64_t w, color32_t c){
-    if(pos.y >= res_y || pos.y < 0)
+void gfx_draw_hor_line(raw_img_t buf, p2d_t pos, uint64_t w, color32_t c){
+    if(pos.y >= buf.size.y || pos.y < 0)
         return;
     //Calculate the scanline start
-    uint64_t st = pos.y * res_x;
+    uint64_t st = pos.y * buf.size.x;
     //Draw each pixel in the line
     for(uint64_t x = pos.x; x < pos.x + w; x++)
-        if(x < res_x)
-            d_buf[st + x] = gfx_blend_colors(d_buf[st + x], c, c.a);
+        if(x < buf.size.x)
+            buf.data[st + x] = gfx_blend_colors(buf.data[st + x], c, c.a);
 }
 
 /*
  * Draws a vertical line
  */
-void gfx_draw_vert_line(p2d_t pos, uint64_t h, color32_t c){
+void gfx_draw_vert_line(raw_img_t buf, p2d_t pos, uint64_t h, color32_t c){
     //Calculate the scanline start
-    uint32_t st = (pos.y * res_x) + pos.x;
+    uint32_t st = (pos.y * buf.size.x) + pos.x;
     //Draw each pixel in the line
-    for(uint64_t o = 0; o <= h * res_x; o += res_x)
-        if(st + o < res_x * res_y)
-            d_buf[st + o] = gfx_blend_colors(d_buf[st + o], c, c.a);
+    for(uint64_t o = 0; o <= h * buf.size.x; o += buf.size.x)
+        if(st + o < buf.size.x * buf.size.y)
+            buf.data[st + o] = gfx_blend_colors(buf.data[st + o], c, c.a);
 }
 
 /*
  * Draws a filled rectangle
  */
-void gfx_draw_filled_rect(p2d_t pos, p2d_t size, color32_t c){
+void gfx_draw_filled_rect(raw_img_t buf, p2d_t pos, p2d_t size, color32_t c){
     //Draw each horizontal line in the rectangle
     for(int64_t y = pos.y; y < pos.y + size.y; y++)
-        gfx_draw_hor_line((p2d_t){.x = pos.x, .y = y}, size.x, c);
+        gfx_draw_hor_line(buf, P2D(pos.x, y), size.x, c);
 }
 
 /*
  * Draws a round rect
  */
-void gfx_draw_round_rect(p2d_t pos, p2d_t size, int32_t r, color32_t c){
-    gfx_draw_filled_rect(P2D(pos.x, pos.y + r), P2D(size.x, size.y - r - r), c);
-    gfx_fill_circ_helper(P2D(pos.x + r, pos.y + size.y - r - 1), r, 1, size.x - r - r - 1, c);
-    gfx_fill_circ_helper(P2D(pos.x + r, pos.y + r), r, 2, size.x - r - r - 1, c);
+void gfx_draw_round_rect(raw_img_t buf, p2d_t pos, p2d_t size, int32_t r, color32_t c){
+    gfx_draw_filled_rect(buf, P2D(pos.x, pos.y + r), P2D(size.x, size.y - r - r), c);
+    gfx_fill_circ_helper(buf, P2D(pos.x + r, pos.y + size.y - r - 1), r, 1, size.x - r - r - 1, c);
+    gfx_fill_circ_helper(buf, P2D(pos.x + r, pos.y + r), r, 2, size.x - r - r - 1, c);
 }
 
 /*
  * Helper function for gfx_draw_round_rect()
  */
-void gfx_fill_circ_helper(p2d_t pos, int32_t r, uint8_t corners, int32_t d, color32_t c){
+void gfx_fill_circ_helper(raw_img_t buf, p2d_t pos, int32_t r, uint8_t corners, int32_t d, color32_t c){
     int32_t f = 1 - r;
     p2d_t dd_f = P2D(1, -r - r);
     int32_t y = 0;
@@ -122,9 +119,9 @@ void gfx_fill_circ_helper(p2d_t pos, int32_t r, uint8_t corners, int32_t d, colo
     while(y < r){
         if(f >= 0){
             if(corners & 1)
-                gfx_draw_hor_line(P2D(pos.x - y, pos.y + r), y + y + d, c);
+                gfx_draw_hor_line(buf, P2D(pos.x - y, pos.y + r), y + y + d, c);
             if(corners & 2)
-                gfx_draw_hor_line(P2D(pos.x - y, pos.y - r), y + y + d, c);
+                gfx_draw_hor_line(buf, P2D(pos.x - y, pos.y - r), y + y + d, c);
             r--;
             dd_f.y += 2;
             f += dd_f.y;
@@ -135,28 +132,28 @@ void gfx_fill_circ_helper(p2d_t pos, int32_t r, uint8_t corners, int32_t d, colo
         f += dd_f.x;
 
         if(corners & 1)
-            gfx_draw_hor_line(P2D(pos.x - r, pos.y + y), r + r + d, c);
+            gfx_draw_hor_line(buf, P2D(pos.x - r, pos.y + y), r + r + d, c);
         if(corners & 2)
-            gfx_draw_hor_line(P2D(pos.x - r, pos.y - y), r + r + d, c);
+            gfx_draw_hor_line(buf, P2D(pos.x - r, pos.y - y), r + r + d, c);
     }
 }
 
 /*
  * Draws a rectangle
  */
-void gfx_draw_rect(p2d_t pos, p2d_t size, color32_t c){
+void gfx_draw_rect(raw_img_t buf, p2d_t pos, p2d_t size, color32_t c){
     //Draw two horizontal lines
-    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y}, (uint64_t)size.x, c);
-    gfx_draw_hor_line((p2d_t){.x = pos.x, .y = pos.y + size.y}, (uint64_t)size.x, c);
+    gfx_draw_hor_line(buf, pos, (uint64_t)size.x, c);
+    gfx_draw_hor_line(buf, P2D(pos.x, pos.y + size.y), (uint64_t)size.x, c);
     //Draw two vertical lines
-    gfx_draw_vert_line((p2d_t){.x = pos.x, .y = pos.y}, (uint64_t)size.y, c);
-    gfx_draw_vert_line((p2d_t){.x = pos.x + size.x, .y = pos.y}, (uint64_t)size.y, c);
+    gfx_draw_vert_line(buf, pos, (uint64_t)size.y, c);
+    gfx_draw_vert_line(buf, P2D(pos.x + size.x, pos.y), (uint64_t)size.y, c);
 }
 
 /*
  * Draws an XBM image
  */
-void gfx_draw_xbm(p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l){
+void gfx_draw_xbm(raw_img_t buf, p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l){
     //Create some local variables
     uint8_t* ptr = xbm_ptr;
     while(1){
@@ -168,9 +165,9 @@ void gfx_draw_xbm(p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h
             if(pos.x - pos.x < xbm_size.x){
                 //If it is in bounds, draw the pixel
                 if(((data >> x) & 1) && color_h.a != 0)
-                    d_buf[(pos.y * res_x) + pos.x] = color_h;
+                    buf.data[(pos.y * buf.size.x) + pos.x] = color_h;
                 else if(color_l.a != 0)
-                    d_buf[(pos.y * res_x) + pos.x] = color_l;
+                    buf.data[(pos.y * buf.size.x) + pos.x] = color_l;
             }
             //Increment the position
             pos.x++;
@@ -189,7 +186,7 @@ void gfx_draw_xbm(p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h
 /*
  * Draw a raw image
  */
-void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
+void gfx_draw_raw(raw_img_t buf, p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
     uint32_t pos = 0;
     //Go through each pixel
     for(int64_t y = position.y; y < position.y + raw_size.y; y++){
@@ -200,8 +197,8 @@ void gfx_draw_raw(p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
             uint8_t b = raw_ptr[pos++];
             uint8_t a = raw_ptr[pos++];
             //Draw the pixel
-            if(a != 0 && y < res_y && x < res_x && y > 0 && x > 0)
-                d_buf[(y * res_x) + x] = gfx_blend_colors(d_buf[(y * res_x) + x], COLOR32(255, r, g, b), a);
+            if(a != 0 && y < buf.size.y && x < buf.size.x && y > 0 && x > 0)
+                buf.data[(y * buf.size.x) + x] = gfx_blend_colors(buf.data[(y * buf.size.x) + x], COLOR32(255, r, g, b), a);
         }
     }
 }
@@ -247,9 +244,9 @@ font_t* gfx_load_font(const char* path){
 }
 
 /*
- * Put a glyph with backgrund color in video buffer, return the size of the draw character
+ * Put a glyph with backgrund color in video buffer, return the size of the drawn character
  */
-p2d_t gfx_glyph(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c){
+p2d_t gfx_glyph(raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c){
     //Find the glyph
     const uint8_t* glyph_ptr = NULL;
     uint32_t glyph_no = 0;
@@ -267,7 +264,7 @@ p2d_t gfx_glyph(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint
     }
     //If no such codepoint exists, draw a rectangle and return
     if((glyph_ptr == NULL) && (c != ' ')){
-        gfx_draw_rect((p2d_t){pos.x + 1, pos.y - font->ascent}, (p2d_t){font->size / 2, font->ascent + font->descent - 3}, color);
+        gfx_draw_rect(buf, (p2d_t){pos.x + 1, pos.y - font->ascent}, (p2d_t){font->size / 2, font->ascent + font->descent - 3}, color);
         return (p2d_t){font->size / 2 + 2, font->size};
     } else if(c == ' ') //Treat the missing space character specially
         return (p2d_t){font->size / 2, font->size};
@@ -278,7 +275,7 @@ p2d_t gfx_glyph(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint
     int32_t dy = *(int32_t*)(glyph_ptr + 16); bswap_dw((uint32_t*)&dy);
     int32_t dx = *(int32_t*)(glyph_ptr + 20); bswap_dw((uint32_t*)&dx);
     //Calculate the video buffer offset
-    int64_t buf_offset = ((pos.y - dy) * res_x) + pos.x + dx;
+    int64_t buf_offset = ((pos.y - dy) * buf.size.x) + pos.x + dx;
     //Render the bitmap
     uint8_t* bmp_offs = (uint8_t*)font->data + font->bmp[glyph_no];
     for(uint32_t y = 0; y < height; y++){
@@ -286,22 +283,22 @@ p2d_t gfx_glyph(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint
             //Get the alpha value
             uint8_t alpha = *bmp_offs;
             //Check buffer boundary
-            if(buf_offset < res_x * res_y && buf_offset >= 0){
+            if(buf_offset < buf.size.x * buf.size.y && buf_offset >= 0){
                 //Interpolate between the background color and the foreground color
-                color32_t c = d_buf[buf_offset];
+                color32_t c = buf.data[buf_offset];
                 if(color.a > 0){
                     c = gfx_blend_colors(c, bcolor, bcolor.a);
                     color32_t f = gfx_blend_colors(c, color, color.a);
                     c = gfx_blend_colors(c, f, alpha);
                 }
-                d_buf[buf_offset] = c;
+                buf.data[buf_offset] = c;
             }
             //Advance the video buffer pointer
             buf_offset++;
             bmp_offs++;
         }
         //Advance the video buffer pointer by one line
-        buf_offset += res_x - width;
+        buf_offset += buf.size.x - width;
     }
     //Report the character width and height
     return (p2d_t){x_advance, font->size};
@@ -310,7 +307,7 @@ p2d_t gfx_glyph(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint
 /*
  * Put a string in video buffer
  */
-p2d_t gfx_draw_str(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s){
+p2d_t gfx_draw_str(raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s){
     p2d_t sz = (p2d_t){.x = 0, .y = font->size};
     //Data byte, position, state, currently decoded codepoint and counter
     char c = 0;
@@ -374,7 +371,7 @@ p2d_t gfx_draw_str(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, c
                     sz.y += font->size;
                     break;
                 default: { //Print the char and advance its position
-                    p2d_t char_size = gfx_glyph(font, pos_actual, color, bcolor, codepoint);
+                    p2d_t char_size = gfx_glyph(buf, font, pos_actual, color, bcolor, codepoint);
                     pos_actual.x += char_size.x;
                     if(pos_actual.x - pos.x > sz.x)
                         sz.x = pos_actual.x - pos.x;
@@ -390,9 +387,9 @@ p2d_t gfx_draw_str(font_t* font, p2d_t pos, color32_t color, color32_t bcolor, c
 /*
  * Calculate the bounds of a string if it was rendered on screen
  */
-p2d_t gfx_text_bounds(font_t* font, char* s){
+p2d_t gfx_text_bounds(raw_img_t buf, font_t* font, char* s){
     //Print the text transparently to retrieve the size
-    return gfx_draw_str(font, (p2d_t){0, 0}, COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), s);
+    return gfx_draw_str(buf, font, P2D(0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), s);
 }
 
 /*
