@@ -40,6 +40,7 @@ typedef struct _krnl_msg_s {
 //Kernel message buffer
 void krnl_write_msg  (char* file, char* msg);
 void krnl_write_msgf (char* file, char* msg, ...);
+void krnl_writec_f   (char* msg, ...);
 //Low-level system information
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 krnl_pos_t        krnl_get_pos(void);

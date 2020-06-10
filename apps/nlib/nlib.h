@@ -8,39 +8,42 @@
 //Definitions
 #define NLIB_VERSION "1.0.0"
 
-#define NULL            ((void*)0)
-#define true            1
-#define false           0
+#define NULL  ((void*)0)
+#define true  1
+#define false 0
 
-#define CHAR_BIT        8
-#define SCHAR_MIN       -128
-#define SCHAR_MAX       127
-#define UCHAR_MAX       255
-#define CHAR_MIN        SCHAR_MIN
-#define CHAR_MAX        SCHAR_MAX
-#define MB_LEN_MAX      16
-#define SHRT_MIN        -32768
-#define SHRT_MAX        32767
-#define USHRT_MAX       65536
-#define INT_MIN         -2147483648
-#define INT_MAX         2147483648
-#define UINT_MAX        4294967295
-#define LONG_MIN        -9223372036854775808
-#define LONG_MAX        9223372036854775807
-#define ULONG_MAX       18446744073709551615
-#define DBL_EPSILON     1E-9
-#define M_PI            3.14159265358979323846
+#define CHAR_BIT    8
+#define SCHAR_MIN   -128
+#define SCHAR_MAX   127
+#define UCHAR_MAX   255
+#define CHAR_MIN    SCHAR_MIN
+#define CHAR_MAX    SCHAR_MAX
+#define MB_LEN_MAX  16
+#define SHRT_MIN    -32768
+#define SHRT_MAX    32767
+#define USHRT_MAX   65536
+#define INT_MIN     -2147483648
+#define INT_MAX     2147483648
+#define UINT_MAX    4294967295
+#define LONG_MIN    -9223372036854775808
+#define LONG_MAX    9223372036854775807
+#define ULONG_MAX   18446744073709551615
+#define DBL_EPSILON 1E-9
+#define M_PI        3.14159265358979323846
 
-#define EOF             -1
-#define FOPEN_MAX       256
-#define FILENAME_MAX    256
-//#define stderr          (FILE*)3
-//#define stdin           (FILE*)2
-//#define stdout          (FILE*)1
+#define EOF          -1
+#define FOPEN_MAX    256
+#define FILENAME_MAX 256
+//#define stdout       (FILE*)1
+//#define stdin        (FILE*)2
+//#define stderr       (FILE*)3
+
+#define LL_ITER_DIR_UP   0
+#define LL_ITER_DIR_DOWN 1
 
 //Macros
 //Assertion macro
-#define assert(expr) (if(!(expr)) abort();)
+#define assert(expr) do { if(!(expr)) abort(); } while(0);
 
 //Standrard type definitions
 
@@ -55,6 +58,26 @@ typedef long long signed int int64_t;
 typedef uint64_t size_t;
 typedef uint64_t sc_state_t;
 typedef void FILE;
+
+//Structures
+
+//Linked list node
+typedef struct _ll_node_s {
+    void*              item;
+    struct _ll_node_s* prev;
+    struct _ll_node_s* next;
+} ll_node_t;
+
+//Linked list
+typedef struct {
+    ll_node_t* first;
+    ll_node_t* last;
+
+    uint64_t   size;
+
+    ll_node_t* cur_iter;
+    uint8_t    iter_dir;
+} ll_t;
 
 //Function prototypes
 
@@ -147,6 +170,17 @@ void   srand (unsigned int seed);
 //Memory control
 void* malloc (uint64_t num);
 void  free   (void* ptr);
-//Non-standard functions
+//Raw CPU instructions
 uint64_t rdtsc    (void);
 void     bswap_dw (uint32_t* value);
+//Linked list operations
+ll_t*    ll_create  (void);
+void     ll_destroy (ll_t* list);
+void     ll_insert  (ll_t* list, void* item, uint64_t idx);
+void     ll_set     (ll_t* list, void* item, uint64_t idx);
+void     ll_append  (ll_t* list, void* item);
+void     ll_remove  (ll_t* list, uint64_t idx);
+void     ll_swap    (ll_t* list, int64_t idx1, int64_t idx2);
+uint64_t ll_size    (ll_t* list);
+void*    ll_get     (ll_t* list, uint64_t idx);
+void*    ll_iter    (ll_t* list, uint8_t dir);

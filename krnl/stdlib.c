@@ -8,6 +8,7 @@
 #include "./drivers/gfx.h"
 #include "./mtask/mtask.h"
 #include "./vmem/vmem.h"
+#include "./krnl.h"
 
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
 
@@ -121,6 +122,8 @@ uint64_t dram_init(void){
         while(1);
     }
 
+    krnl_writec_f("RAM base: 0x%x, top: 0x%x\r\n", gen_free_base, gen_free_top);
+
     //Return the map key
     return map_key;
 }
@@ -130,13 +133,17 @@ uint64_t dram_init(void){
  */
 void dram_shift(void){
     //Map the range
+    krnl_writec_f("Mapping the dynamic RAM range\r\n");
     vmem_map(vmem_get_cr3(), gen_free_base_initial, gen_free_top, (void*)0xFFFFC00000000000ULL);
     //Shift the ranges
+    krnl_writec_f("Shifting\r\n");
     gen_free_top = (void*)((uint64_t)gen_free_top - (uint64_t)gen_free_base + 0xFFFFC00000000000ULL);
     gen_free_base = (void*)((uint64_t)gen_free_base - (uint64_t)gen_free_base_initial + 0xFFFFC00000000000ULL);
     gen_free_base_initial = (void*)0xFFFFC00000000000ULL;
+    krnl_writec_f("Shifted the allocation region\r\n");
     //Enable address translation
     vmem_enable_trans();
+    krnl_writec_f("Enabled software address translation\r\n");
 }
 
 /*

@@ -38,11 +38,9 @@ void ps2_init(void){
         _km_write(__APP_SHORT_NAME, "failed to open PS/2 mouse port");
         abort();
     }
-    //Set mouse sampling rate to 60
+    //Set mouse sampling rate to 200
     fputc(0xF3, mouse);
-    fputc(60, mouse);
-    //Enable packet streaming
-    fputc(0xF4, mouse);
+    fputc(200, mouse);
     //Flush any data
     while(fgetc(kbd) != -1);
     while(fgetc(mouse) != -1);

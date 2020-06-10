@@ -41,6 +41,8 @@ void timr_measure_cpu_fq(void){
     }
     cpu_fq_hz = sum / 50;
     krnl_write_msgf(__FILE__, "CPU frequency detected: %i MHz", cpu_fq_hz / 1000 / 1000);
+
+    krnl_writec_f("Measured the CPU frequency (%i MHz)\r\n", cpu_fq_hz / 1000 / 1000);
 }
 
 /*

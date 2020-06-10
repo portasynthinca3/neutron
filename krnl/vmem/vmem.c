@@ -8,6 +8,7 @@
 #include "../stdlib.h"
 #include "../cpuid.h"
 #include "../drivers/gfx.h"
+#include "../krnl.h"
 
 //A flag that indicates whether PCIDs are supported or not
 uint8_t pcid_supported = 0;
@@ -173,6 +174,8 @@ void vmem_init(void){
     cr3 &= ~0xFFFULL; //full pls :>
     __asm__ volatile("mov %0, %%cr3" : : "r" (cr3));
 
+    krnl_writec_f("Cleared PCID in CR3\r\n");
+
     //Enable Process Context Identifiers (PCIDs) and 4-level paging, disable SMAP and PKE
     uint64_t cr4;
     __asm__ volatile("mov %%cr4, %0" : "=r" (cr4));
@@ -183,6 +186,7 @@ void vmem_init(void){
     pcid_supported = (ecx & CPUID_FEAT_ECX_PCID) > 0;
     if(pcid_supported)
         cr4 |= (1 << 17); //Then enable it
+    krnl_writec_f("PCIDs are %ssupported\r\n", pcid_supported ? "" : "not ");
     cr4 &= ~((1ULL << 21) | (1ULL << 22)); //Disable SMAP and PKE
     __asm__ volatile("mov %0, %%cr4" : : "r" (cr4));
 
@@ -191,8 +195,10 @@ void vmem_init(void){
     __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
     cr0 &= ~(1 << 16);
     __asm__ volatile("mov %0, %%cr0" : : "r" (cr0));
+    krnl_writec_f("Disabled write protection for ring 0\r\n");
 
     vmem_ident_cr3 = vmem_get_cr3();
+    krnl_writec_f("Boot CR3=0x%x\r\n", vmem_ident_cr3);
 }
 
 /*

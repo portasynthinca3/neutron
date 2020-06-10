@@ -628,6 +628,10 @@ p2d_t gfx_text_bounds(char* s){
  * Draw a panic screen
  */
 __attribute__((noreturn)) void gfx_panic(uint64_t ip, uint64_t code){
+    if(graphics_output == NULL){
+        krnl_writec_f("PANIC at RIP=0x%x code %i\r\n", ip, code);
+        while(1);
+    }
     //Flip the main buffer to the working one
     gfx_set_buf(GFX_BUF_VBE);
     gfx_flip();

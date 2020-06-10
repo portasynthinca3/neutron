@@ -125,6 +125,25 @@ void krnl_write_msgf(char* file, char* msg, ...){
 }
 
 /*
+ * Prints a formatted message to the UEFI ConsoleOut protocol
+ */
+void krnl_writec_f(char* msg, ...){
+    //Print the formatted message
+    char buf[1024];
+    va_list valist;
+    va_start(valist, _sprintf_argcnt(msg));
+    _sprintf(buf, msg, valist);
+    //Expand the buffer, becuase UEFI uses retarded 16-bit characters
+    for(int i = 1023; i >= 1; i -= 2){
+        buf[i] = buf[i / 2];
+        buf[i / 2] = 0;
+    }
+    //Print the buffer
+    krnl_efi_systable->ConOut->OutputString(krnl_efi_systable->ConOut, (CHAR16*)(buf + 1));
+    va_end(valist);
+}
+
+/*
  * Gets the EFI system table pointer
  */
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void){
@@ -383,6 +402,8 @@ void ___chkstk_ms(void){
  * The entry point for the kernel
  */
 EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable){
+	//Disable interrupts
+	__asm__ volatile("cli");
     //Set the stack smashing guard
     __asm__ ("rdrand %%eax; mov %%eax, %0" : "=m" (__stack_chk_guard) : : "eax");
     //Save the system table pointer
@@ -391,18 +412,15 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     //Disable the watchdog timer
     krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
     //Print the boot string
-    krnl_efi_systable->ConOut->OutputString(SystemTable->ConOut, (CHAR16*)L"Neutron is starting up\r\n");
+    krnl_writec_f("Neutron version %s\r\n", KRNL_VERSION_STR);
 
     //Using the loaded image protocol, find out where we are loaded in the memory
     EFI_LOADED_IMAGE_PROTOCOL* efi_lip = NULL;
     SystemTable->BootServices->HandleProtocol(ImageHandle, &(EFI_GUID)EFI_LOADED_IMAGE_PROTOCOL_GUID, (void**)&efi_lip);
     krnl_pos.offset = (uint64_t)efi_lip->ImageBase;
     krnl_pos.size = efi_lip->ImageSize;
+    krnl_writec_f("Loaded at 0x%x, size 0x%x\r\n", krnl_pos.offset, krnl_pos.size);
 
-	//Disable interrupts
-	__asm__ volatile("cli");
-    //Initialize x87 FPU
-    __asm__ volatile("finit");
     //Do some initialization stuff
     krnl_efi_map_key = dram_init();
     vmem_init();

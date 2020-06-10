@@ -881,7 +881,7 @@ void free(void* ptr){
  */
 uint64_t rdtsc(void){
     uint32_t h, l;
-    __asm__ volatile("rdtsc" : "=d" (h), "=a" (l));
+    __asm__ volatile("mfence; lfence; rdtsc;" : "=d" (h), "=a" (l));
     return (uint64_t)((uint64_t)h << 32) | l;
 }
 
@@ -890,4 +890,157 @@ uint64_t rdtsc(void){
  */
 void bswap_dw(uint32_t* value){
     __asm__("bswapl %%eax" : "=a" (*value) : "a" (*value));
+}
+
+/*
+ * Returns the node pointed for that index
+ */
+ll_node_t* _ll_get_node(ll_t* list, uint64_t idx){
+    if(idx == 0){
+        return list->first;
+    } else if(idx == ll_size(list) - 1){
+        return list->last;
+    } else {
+        ll_node_t* cur_node = list->first;
+        uint64_t   cur_idx  = 0;
+        while((cur_node) && (cur_node = cur_node->next) && (++cur_idx <= idx));
+        cur_node = cur_node->prev;
+        return cur_node;
+    }
+}
+
+/*
+ * Creates a linked list
+ */
+ll_t* ll_create(void){
+    //Create and initialize the list
+    ll_t* list = (ll_t*)malloc(sizeof(ll_t));
+    list->first = NULL;
+    list->last = NULL;
+    list->size = 0;
+    list->cur_iter = NULL;
+    list->iter_dir = LL_ITER_DIR_UP;
+    return list;
+}
+
+/*
+ * Destroys the linked lists
+ */
+void ll_destroy(ll_t* list){
+    free(list);
+}
+
+/*
+ * Insert an item into the list
+ */
+void ll_insert(ll_t* list, void* item, uint64_t idx){
+    //Create and initialize the node
+    ll_node_t* node = malloc(sizeof(ll_node_t));
+    node->item = item;
+    node->next = NULL;
+    node->prev = NULL;
+    //Get the node that corresponds to that index
+    ll_node_t* cur_node = _ll_get_node(list, idx);
+    //Link everything together
+    node->prev = cur_node->prev;
+    node->next = cur_node;
+    cur_node->prev = node;
+    if(node->prev != NULL)
+        node->prev->next = node;
+    if(idx == 0)
+        list->first = node;
+    //Increase the size
+    list->size++;
+}
+
+/*
+ * Sets the element at the specified index
+ */
+void ll_set(ll_t* list, void* item, uint64_t idx){
+    _ll_get_node(list, idx)->item = item;
+}
+
+/*
+ * Appends a value to the linked list
+ */
+void ll_append(ll_t* list, void* item){
+    //Create and initialize the node
+    ll_node_t* node = malloc(sizeof(ll_node_t));
+    node->item = item;
+    node->next = NULL;
+    //Place it in the list and update the link to the previous node
+    if(list->first == NULL){
+        list->first = list->last = node;
+        node->prev = NULL;
+    } else {
+        node->prev = list->last;
+        list->last->next = node;
+        list->last = node;
+    }
+    list->size++;
+}
+
+/*
+ * Removes the element at the specified index
+ */
+void ll_remove(ll_t* list, uint64_t idx){
+    ll_node_t* node = _ll_get_node(list, idx);
+    //Link the previous and last elements
+    if(node->prev != NULL)
+        node->prev->next = node->next;
+    if(node->next != NULL)
+        node->next->prev = node->prev;
+    //Free the memory used by the node
+    free(node);
+}
+
+/*
+ * Swaps two items in a list
+ */
+void ll_swap(ll_t* list, int64_t idx1, int64_t idx2){
+    //Get nodes that correspond to these indicies
+    ll_node_t* n1 = _ll_get_node(list, idx1);
+    ll_node_t* n2 = _ll_get_node(list, idx2);
+    //Swap the items
+    void* tmp = n1->item;
+    n1->item = n2->item;
+    n2->item = tmp;
+}
+
+/*
+ * Returns the number of items in the list
+ */
+uint64_t ll_size(ll_t* list){
+    return list->size;
+}
+
+/*
+ * Gets the element at the specified index
+ */
+void* ll_get(ll_t* list, uint64_t idx){
+    return _ll_get_node(list, idx)->item;
+}
+
+/*
+ * Iterate through the list
+ */
+void* ll_iter(ll_t* list, uint8_t dir){
+    list->iter_dir = dir;
+    //Get the next node and item
+    void* item;
+    if(list->cur_iter == NULL)
+        list->cur_iter = (dir == LL_ITER_DIR_UP) ? list->first : list->last;
+    else 
+        list->cur_iter = (dir == LL_ITER_DIR_UP) ? list->cur_iter->next : list->cur_iter->prev;
+    ll_node_t* node = list->cur_iter;
+    if(node == NULL){
+        item = NULL;
+        node = NULL;
+    } else {
+        item = node->item;
+    }
+    //Update the current iteration node
+    list->cur_iter = node;
+    //Return the item pointer
+    return item;
 }
