@@ -927,6 +927,8 @@ ll_t* ll_create(void){
  * Destroys the linked lists
  */
 void ll_destroy(ll_t* list){
+    while(list->size != 0)
+        ll_remove(list, 0);
     free(list);
 }
 
@@ -992,6 +994,8 @@ void ll_remove(ll_t* list, uint64_t idx){
         node->next->prev = node->prev;
     //Free the memory used by the node
     free(node);
+    //Decrease the list size
+    list->size--;
 }
 
 /*
