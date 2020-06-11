@@ -75,6 +75,11 @@ void ps2_check(void){
             //Call the event handler (last byte in the sequence)
             if(mouse_cb != NULL)
                 mouse_cb(mouse_cur_evt);
+
+            mouse_cur_evt.buttons = 0;
+            mouse_cur_evt.rel_x = 0;
+            mouse_cur_evt.rel_y = 0;
+            mouse_cur_evt.rel_z = 0;
         }
 
         mouse_byte = (mouse_byte + 1) % 3;

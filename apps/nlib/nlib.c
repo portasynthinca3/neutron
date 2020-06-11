@@ -311,8 +311,8 @@ int memcmp(const void* lhs, const void* rhs, size_t cnt){
  */
 int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
-    int len1 = strlen(str1);
-    int len2 = strlen(str2);
+    int len1 = strlen(str1) + 1;
+    int len2 = strlen(str2) + 1;
     //Strings are not equal if they have different lengths (duh)
     if(len1 != len2)
         return (str1[0] > str2[0]) ? 1 : -1;
@@ -1046,4 +1046,58 @@ void* ll_iter(ll_t* list, uint8_t dir){
     list->cur_iter = node;
     //Return the item pointer
     return item;
+}
+
+/*
+ * Finds a node with the specified key
+ */
+dict_node_t* _dict_get_node(dict_t* dict, char* key){
+    dict_node_t* node = NULL;
+    //Scan through the dictionary
+    while((node = (dict_node_t*)ll_iter(dict, LL_ITER_DIR_UP)))
+        if(strcmp(node->key, key) == 0)
+            break;
+    dict->cur_iter = NULL;
+    return node;
+}
+
+/*
+ * Creates a dictionary
+ */
+dict_t* dict_create(void){
+    return ll_create();
+}
+
+/*
+ * Destroys a dictionary
+ */
+void dict_destroy(dict_t* dict){
+    ll_destroy(dict);
+}
+
+/*
+ * Sets a value in the dictionary
+ */
+void dict_set(dict_t* dict, char* key, void* val){
+    //Simply set the value if the key already exists
+    dict_node_t* node = _dict_get_node(dict, key);
+    if(node != NULL){
+        node->val = val;
+        return;
+    }
+    //Create a new node else
+    node = (dict_node_t*)malloc(sizeof(dict_node_t));
+    strcpy(node->key, key);
+    node->val = val;
+    ll_append(dict, node);
+}
+
+/*
+ * Gets a value from the dictionary
+ */
+void* dict_get(dict_t* dict, char* key){
+    dict_node_t* node = _dict_get_node(dict, key);
+    if(node == NULL)
+        return NULL;
+    return node->val;
 }

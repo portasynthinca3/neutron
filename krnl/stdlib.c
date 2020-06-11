@@ -163,6 +163,7 @@ void* malloc(size_t size){
     //  need to go and find a non-general free block
     //But if there are no such blocks, we do not
     //  have enough memory and need to crash
+    /*
     if(first_free_block == NULL){
         #ifdef STDLIB_CARSH_ON_ALLOC_ERR
             crash_label_2: gfx_panic((uint64_t)&&crash_label_2, KRNL_PANIC_NOMEM_CODE);
@@ -180,6 +181,7 @@ void* malloc(size_t size){
             return current;
         }
     }
+    */
     //If we still didn't find free space, we defenitely don't have enough RAM
     #ifdef STDLIB_CARSH_ON_ALLOC_ERR
         crash_label_3: gfx_panic((uint64_t)&&crash_label_3, KRNL_PANIC_NOMEM_CODE);
@@ -202,6 +204,7 @@ void* amalloc(size_t size, size_t gran){
         return saved_base + remainder;
     }
     #ifdef STDLIB_CARSH_ON_ALLOC_ERR
+        krnl_write_msgf(__FILE__, "requested 0x%x bytes at gran 0x%x", size, gran);
         crash_label_2: gfx_panic((uint64_t)&&crash_label_2, KRNL_PANIC_NOMEM_CODE);
     #else
         return NULL;

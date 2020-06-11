@@ -7,14 +7,36 @@
 #include "ngui.h"
 #include "gfx.h"
 #include "ps2.h"
-#include "window.h"
+#include "component.h"
 
 //The current theme
 theme_t theme;
-//Current absolute cursor position
+//Current absolute cursor position and flags
 p2d_t cursor_pos;
+uint8_t mouse_flags;
 //CPU frequency (cycles/ms)
 uint64_t cpu_fq;
+
+/*
+ * Returns the cursor position
+ */
+p2d_t gui_cursor_pos(void){
+    return cursor_pos;
+}
+
+/*
+ * Returns the mouse flags
+ */
+uint8_t gui_mouse_flags(void){
+    return mouse_flags;
+}
+
+/*
+ * Returns the GUI theme
+ */
+theme_t* gui_theme(void){
+    return &theme;
+}
 
 /*
  * Parses the ARGB color
@@ -209,6 +231,8 @@ void mouse_evt(mouse_evt_t evt){
         cursor_pos.x = gfx_screen().size.x - 1;
     if(cursor_pos.y >= gfx_screen().size.y)
         cursor_pos.y = gfx_screen().size.y - 1;
+    //Set the flags
+    mouse_flags = evt.buttons;
 }
 
 /*
@@ -234,13 +258,38 @@ void main(void* args){
     ps2_init();
     ps2_set_mouse_cb(mouse_evt);
     get_cpu_fq();
+    comps_init();
     //Load the GUI config file
     load_theme("ngui.cfg");
 
     theme.panel.state = 0;
     theme.panel.last_state_ch = rdtsc();
 
-    win_create("hello", P2D(300, 200));
+    component_t* window = comp_create(CMP_TYPE_WINDOW, 0);
+    prop_set(window, "title",       PROP_STRING("Hello, World!"));
+    prop_set(window, "fullscreen",  PROP_INTEGER(0));
+    prop_set(window, "size",        PROP_POINT(P2D(200, 100)));
+    prop_set(window, "pos",         PROP_POINT(P2D(100, 100)));
+    prop_set(window, "bg",          PROP_COLOR(COLOR32(200, 16, 16, 16)));
+    prop_set(window, "title_color", PROP_COLOR(COLOR32(200, 0, 0, 50)));
+    component_t* label = comp_create(CMP_TYPE_LABEL, window->id);
+    prop_set(label, "text",     PROP_STRING("Hello indeed"));
+    prop_set(label, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label, "bg",       PROP_COLOR(COLOR32(0, 0, 0, 0)));
+    prop_set(label, "color",    PROP_COLOR(COLOR32(255, 255, 255, 255)));
+    prop_set(label, "pos",      PROP_POINT(P2D(0, 0)));
+    component_t* btn = comp_create(CMP_TYPE_BUTTON, window->id);
+    prop_set(btn, "text",     PROP_STRING("Click me"));
+    prop_set(btn, "t_color",  PROP_COLOR(COLOR32(255, 255, 255, 255)));
+    prop_set(btn, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
+    prop_set(btn, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(btn, "radius",   PROP_INTEGER(2));
+    prop_set(btn, "bg",       PROP_COLOR(COLOR32(200, 24, 24, 24)));
+    prop_set(btn, "bg_hover", PROP_COLOR(COLOR32(200, 32, 32, 32)));
+    prop_set(btn, "bg_click", PROP_COLOR(COLOR32(200, 16, 16, 16)));
+    prop_set(btn, "pos",      PROP_POINT(P2D(0, 15)));
+    prop_set(btn, "size",     PROP_POINT(P2D(100, 30)));
 
     //In an endless loop
     while(1){
@@ -248,8 +297,8 @@ void main(void* args){
         ps2_check();
         //Draw everything
         gfx_fill(gfx_screen(), theme.desk.color);
+        comps_draw();
         draw_panel();
-        wins_draw();
         gfx_draw_raw(gfx_screen(), cursor_pos, theme.cur.img_data, P2D(theme.cur.img_width, theme.cur.img_height));
         //Update the framebuffer
         gfx_flip();

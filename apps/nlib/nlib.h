@@ -79,6 +79,15 @@ typedef struct {
     uint8_t    iter_dir;
 } ll_t;
 
+//Dictionary key-value pair
+typedef struct {
+    char  key[128];
+    void* val;
+} dict_node_t;
+
+//Dictionary
+typedef ll_t dict_t;
+
 //Function prototypes
 
 //System calls
@@ -184,3 +193,8 @@ void     ll_swap    (ll_t* list, int64_t idx1, int64_t idx2);
 uint64_t ll_size    (ll_t* list);
 void*    ll_get     (ll_t* list, uint64_t idx);
 void*    ll_iter    (ll_t* list, uint8_t dir);
+//Dictionary operations
+dict_t* dict_create  (void);
+void    dict_destroy (dict_t* dict);
+void    dict_set     (dict_t* dict, char* key, void* val);
+void*   dict_get     (dict_t* dict, char* key);

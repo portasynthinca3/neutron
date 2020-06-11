@@ -79,8 +79,16 @@ uint64_t syscall_handle(void){
                     uint64_t status = diskio_open((char*)p0, handle, p1);
                     //Parse status
                     switch(status){
-                        case DISKIO_STATUS_OK:
-                            return (uint64_t)handle;
+                        case DISKIO_STATUS_OK: {
+                            //Find the handle in the process's handle list
+                            uint64_t i = 0;
+                            task_t* task = mtask_get_by_pid(mtask_get_pid());
+                            for(i = 0; i < MTASK_MAX_OPEN_FILES; i++)
+                                if(task->open_files[i] == handle)
+                                    break;
+                            //Return the number
+                            return i + 0xFF;
+                        }
                         case DISKIO_STATUS_WRITE_PROTECTED:
                             return 2;
                         case DISKIO_STATUS_FILE_NOT_FOUND:
@@ -91,11 +99,8 @@ uint64_t syscall_handle(void){
                     //check buffer pointer (should be in userspace)
                     if(p1 + p2 >= 0x800000000000ULL)
                         return 0xFFFFFFFFFFFFFFFF;
-                    //check handle pointer (should be in kernel dynamic memory space)
-                    if(p0 < 0xFFFFC00000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
                     //try to read the data
-                    uint64_t status = diskio_read((file_handle_t*)p0, (void*)p1, p2);
+                    uint64_t status = diskio_read(mtask_get_by_pid(mtask_get_pid())->open_files[p0 - 0xFF], (void*)p1, p2);
                     //Parse status
                     switch(status & 0xFF){
                         case DISKIO_STATUS_NOT_ALLOWED:
@@ -111,11 +116,8 @@ uint64_t syscall_handle(void){
                     //check buffer pointer (should be in userspace)
                     if(p1 + p2 >= 0x800000000000ULL)
                         return 0xFFFFFFFFFFFFFFFF;
-                    //check handle pointer (should be in kernel dynamic memory space)
-                    if(p0 < 0xFFFFC00000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
                     //try to write the data
-                    uint64_t status = diskio_write((file_handle_t*)p0, (void*)p1, p2);
+                    uint64_t status = diskio_write(mtask_get_by_pid(mtask_get_pid())->open_files[p0 - 0xFF], (void*)p1, p2);
                     //Parse status
                     switch(status & 0xFF){
                         case DISKIO_STATUS_NOT_ALLOWED:
@@ -128,18 +130,11 @@ uint64_t syscall_handle(void){
                     }
                 }
                 case 3: { //seek
-                    //check handle pointer (should be in kernel dynamic memory space)
-                    if(p0 < 0xFFFFC00000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //seek
-                    return diskio_seek((file_handle_t*)p0, p1);
+                    return diskio_seek(mtask_get_by_pid(mtask_get_pid())->open_files[p0 - 0xFF], p1);
+                    return DISKIO_STATUS_OK;
                 }
                 case 4: { //close file
-                    //check handle pointer (should be in kernel dynamic memory space)
-                    if(p0 < 0xFFFFC00000000000ULL)
-                        return 0xFFFFFFFFFFFFFFFF;
-                    //close the file
-                    diskio_close((file_handle_t*)p0);
+                    diskio_close(mtask_get_by_pid(mtask_get_pid())->open_files[p0 - 0xFF]);
                     return DISKIO_STATUS_OK;
                 }
                 default: //invalid subfunction number

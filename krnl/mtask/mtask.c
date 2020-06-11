@@ -252,7 +252,7 @@ void mtask_add_open_file(file_handle_t* ptr){
     if(task != NULL){
         for(int i = 0; i < MTASK_MAX_OPEN_FILES; i++){
             //Find an unused entry
-            if(task->open_files[i] != 0){
+            if(task->open_files[i] == NULL){
                 task->open_files[i] = ptr;
                 break;
             }

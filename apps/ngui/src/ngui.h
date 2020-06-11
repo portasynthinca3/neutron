@@ -48,10 +48,12 @@ typedef struct {
 
 //Function prototypes
 
-void      time_read   (char* buf);
-color32_t parse_color (char* str);
-void      load_theme  (char* path);
-void      draw_panel  (void);
-void      mouse_evt   (mouse_evt_t evt);
-void      get_cpu_fq  (void);
-void      main        (void* args);
+p2d_t     gui_cursor_pos  (void);
+uint8_t   gui_mouse_flags (void);
+theme_t*  gui_theme       (void);
+color32_t parse_color     (char* str);
+void      load_theme      (char* path);
+void      draw_panel      (void);
+void      mouse_evt       (mouse_evt_t evt);
+void      get_cpu_fq      (void);
+void      main            (void* args);

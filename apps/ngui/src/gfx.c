@@ -274,7 +274,7 @@ p2d_t gfx_glyph(raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32
     int32_t x_advance = *(int32_t*)(glyph_ptr + 12); bswap_dw((uint32_t*)&x_advance);
     int32_t dy = *(int32_t*)(glyph_ptr + 16); bswap_dw((uint32_t*)&dy);
     int32_t dx = *(int32_t*)(glyph_ptr + 20); bswap_dw((uint32_t*)&dx);
-    //Calculate the video buffer offset
+    //Calculate the buffer offset
     int64_t buf_offset = ((pos.y - dy) * buf.size.x) + pos.x + dx;
     //Render the bitmap
     uint8_t* bmp_offs = (uint8_t*)font->data + font->bmp[glyph_no];
@@ -293,11 +293,11 @@ p2d_t gfx_glyph(raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32
                 }
                 buf.data[buf_offset] = c;
             }
-            //Advance the video buffer pointer
+            //Advance the pointers
             buf_offset++;
             bmp_offs++;
         }
-        //Advance the video buffer pointer by one line
+        //Advance the buffer pointer by one line
         buf_offset += buf.size.x - width;
     }
     //Report the character width and height
@@ -387,9 +387,9 @@ p2d_t gfx_draw_str(raw_img_t buf, font_t* font, p2d_t pos, color32_t color, colo
 /*
  * Calculate the bounds of a string if it was rendered on screen
  */
-p2d_t gfx_text_bounds(raw_img_t buf, font_t* font, char* s){
+p2d_t gfx_text_bounds(font_t* font, char* s){
     //Print the text transparently to retrieve the size
-    return gfx_draw_str(buf, font, P2D(0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), s);
+    return gfx_draw_str(screen, font, P2D(0, 0), COLOR32(0, 0, 0, 0), COLOR32(0, 0, 0, 0), s);
 }
 
 /*

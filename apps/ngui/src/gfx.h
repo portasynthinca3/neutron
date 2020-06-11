@@ -2,18 +2,24 @@
 
 //Structure definitions
 
-//Structure defining a 2D point
+//2D floating-point point
+typedef struct {
+    double x;
+    double y;
+} p2df_t;
+
+//2D point
 typedef struct {
     int64_t x;
     int64_t y;
 } p2d_t;
 
-//Structure defining a 32bpp color
+//32bpp color
 typedef struct {
     uint8_t b, g, r, a;
 } __attribute__((packed)) color32_t;
 
-//Structure defining a font
+//Font
 typedef struct {
     uint8_t* data;
     uint32_t g_count;
@@ -24,7 +30,7 @@ typedef struct {
     uint32_t* bmp;
 } font_t;
 
-//A raw image in memory
+//Raw image in memory
 typedef struct {
     p2d_t size;
     color32_t* data;
@@ -36,8 +42,10 @@ typedef struct {
 #define COLOR32(A, R, G, B) ((color32_t){.a = (A), .r = (R), .g = (G), .b = (B)})
 //Macro for changing the alpha value of a color
 #define COLOR32A(A, C) ((color32_t){.a = (A), .r = (C).r, .g = (C).g, .b = (C).b})
-//Macro for converting X and values to p2d_t
+//Macro for converting X and Y values to p2d_t
 #define P2D(X, Y) ((p2d_t){.x = (X), .y = (Y)})
+//Macro for converting X and Y values to p2df_t
+#define P2DF(X, Y) ((p2df_t){.x = (X), .y = (Y)})
 
 //Function prototypes
 
@@ -60,7 +68,7 @@ void gfx_draw_raw         (raw_img_t buf, p2d_t pos, uint8_t* raw_ptr, p2d_t raw
 font_t* gfx_load_font   (const char* path);
 p2d_t   gfx_glyph       (raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c);
 p2d_t   gfx_draw_str    (raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, char* s);
-p2d_t   gfx_text_bounds (raw_img_t buf, font_t* font, char* s);
+p2d_t   gfx_text_bounds (font_t* font, char* s);
 //Utility
 uint8_t   gfx_point_in_rect (p2d_t p, p2d_t pos, p2d_t sz);
 color32_t gfx_blend_colors  (color32_t b, color32_t f, uint8_t a);

@@ -162,6 +162,7 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             else
                 return DISKIO_STATUS_WRITE_PROTECTED;
         }
+        mtask_add_open_file(handle);
         return DISKIO_STATUS_OK;
     }
     //Check if it's a device file
@@ -193,6 +194,7 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             else
                 return DISKIO_STATUS_READ_PROTECTED;
         }
+        mtask_add_open_file(handle);
         return DISKIO_STATUS_OK;
     }
     //Go through mappings
