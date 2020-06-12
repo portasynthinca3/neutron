@@ -13,7 +13,7 @@ FILE* mouse = NULL;
 void(*mouse_cb)(mouse_evt_t) = NULL;
 //Mouse stream parsing state
 uint8_t mouse_byte = 0;
-uint8_t mouse_flags = 0;
+uint8_t ps2_flags = 0;
 mouse_evt_t mouse_cur_evt = {0, 0, 0, 0};
 
 /*
@@ -56,21 +56,21 @@ void ps2_check(void){
     while((mouse_data = fgetc(mouse)) != -1){
         //First byte - flags
         if(mouse_byte == 0){
-            mouse_flags = mouse_data;
-            if(mouse_flags & 1)
+            ps2_flags = mouse_data;
+            if(ps2_flags & 1)
                 mouse_cur_evt.buttons |= MOUSE_BTN_LEFT;
-            if(mouse_flags & 2)
+            if(ps2_flags & 2)
                 mouse_cur_evt.buttons |= MOUSE_BTN_RIGHT;
-            if(mouse_flags & 4)
+            if(ps2_flags & 4)
                 mouse_cur_evt.buttons |= MOUSE_BTN_MIDDLE;
         }
         //Second byte - delta x
         else if(mouse_byte == 1) {
-            mouse_cur_evt.rel_x = (uint32_t)mouse_data - (((uint64_t)mouse_flags << 4) & 0x100);
+            mouse_cur_evt.rel_x = (uint32_t)mouse_data - (((uint64_t)ps2_flags << 4) & 0x100);
         }
         //Second byte - delta y
         else if(mouse_byte == 2){
-            mouse_cur_evt.rel_y = (uint32_t)mouse_data - (((uint64_t)mouse_flags << 3) & 0x100);
+            mouse_cur_evt.rel_y = (uint32_t)mouse_data - (((uint64_t)ps2_flags << 3) & 0x100);
             mouse_cur_evt.rel_y = -mouse_cur_evt.rel_y;
             //Call the event handler (last byte in the sequence)
             if(mouse_cb != NULL)

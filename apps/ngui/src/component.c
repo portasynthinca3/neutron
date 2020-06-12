@@ -293,12 +293,16 @@ uint8_t comp_render(component_t* c, uint8_t process){
             case CMP_TYPE_WINDOW: {
                 //Get the properties
                 char* title = prop_get(c, "title")->string;
-                color32_t bg = prop_get(c, "bg")->color;
-                color32_t title_c = prop_get(c, "title_color")->color;
+                color32_t bg = gui_theme()->global.win_bg;
+                if(prop_get(c, "bg") != NULL)
+                    bg = prop_get(c, "bg")->color;
+                color32_t title_bg = gui_theme()->global.win_title;
+                if(prop_get(c, "title_bg") != NULL)
+                    title_bg = prop_get(c, "title_bg")->color;
                 //Draw the window
                 gfx_fill(c->buf, COLOR32(0, 0, 0, 0));
                 gfx_draw_round_rect(c->buf, P2D(0, 0), size, 1, bg);
-                gfx_draw_round_rect(c->buf, P2D(0, 0), P2D(size.x, 16), 1, title_c);
+                gfx_draw_round_rect(c->buf, P2D(0, 0), P2D(size.x, 16), 1, title_bg);
                 p2d_t text_size = gfx_text_bounds(gui_theme()->global.main_font, title);
                 int64_t spacing = (16 - text_size.y) / 2;
                 gfx_draw_str(c->buf, gui_theme()->global.main_font, P2D(spacing, spacing + gui_theme()->global.main_font->ascent),
@@ -308,8 +312,12 @@ uint8_t comp_render(component_t* c, uint8_t process){
             case CMP_TYPE_LABEL: {
                 //Get the properties
                 char* text = prop_get(c, "text")->string;
-                color32_t bg = prop_get(c, "bg")->color;
-                color32_t fg = prop_get(c, "color")->color;
+                color32_t bg = COLOR32(0, 0, 0, 0);
+                if(prop_get(c, "bg") != NULL)
+                    bg = prop_get(c, "bg")->color;
+                color32_t fg = gui_theme()->global.text;
+                if(prop_get(c, "color") != NULL)
+                    fg = prop_get(c, "color")->color;
                 //Draw the background color
                 gfx_fill(c->buf, bg);
                 //Draw the text
@@ -322,10 +330,26 @@ uint8_t comp_render(component_t* c, uint8_t process){
                 uint8_t hovering = gfx_point_in_rect(gui_cursor_pos(), comp_pos_abs(c), size);
                 uint8_t clicked = gui_mouse_flags() & MOUSE_BTN_LEFT;
                 char* text = prop_get(c, "text")->string;
-                color32_t bg = hovering ? (clicked ? prop_get(c, "bg_click")->color : prop_get(c, "bg_hover")->color) :
-                                          prop_get(c, "bg")->color;
-                color32_t t_color = prop_get(c, "t_color")->color;
-                uint64_t rad = prop_get(c, "radius")->integer;
+                color32_t t_color = gui_theme()->global.text;
+                if(prop_get(c, "t_color") != NULL)
+                    t_color = prop_get(c, "t_color")->color;
+                int rad = gui_theme()->global.rad;
+                if(prop_get(c, "rad") != NULL)
+                    rad = prop_get(c, "rad")->integer;
+                color32_t bg;
+                if(hovering && !clicked){
+                    bg = gui_theme()->global.btn_hover;
+                    if(prop_get(c, "bg_hover") != NULL)
+                        bg = prop_get(c, "bg_hover")->color;
+                } else if(hovering && clicked){
+                    bg = gui_theme()->global.btn_press;
+                    if(prop_get(c, "bg_click") != NULL)
+                        bg = prop_get(c, "bg_click")->color;
+                } else {
+                    bg = gui_theme()->global.btn_bg;
+                    if(prop_get(c, "bg") != NULL)
+                        bg = prop_get(c, "bg")->color;
+                }
                 //Clear the buffer
                 gfx_fill(c->buf, COLOR32(0, 0, 0, 0));
                 //Draw the rectangle

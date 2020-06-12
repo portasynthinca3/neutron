@@ -39,7 +39,15 @@ typedef struct {
 
 //Global properties
 typedef struct {
-    font_t* main_font;
+    font_t*   main_font;
+    color32_t accent;
+    color32_t win_bg;
+    color32_t win_title;
+    color32_t btn_bg;
+    color32_t btn_hover;
+    color32_t btn_press;
+    color32_t text;
+    int       rad;
 } global_prop_t;
 
 //Theme structure
