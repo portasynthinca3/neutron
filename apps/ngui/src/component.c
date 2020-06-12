@@ -61,6 +61,8 @@ component_t* get_comp_by_id(uint64_t id){
  */
 prop_val_t* prop_get(component_t* comp, char* name){
     prop_val_t* val = (prop_val_t*)dict_get(comp->properties, name);
+    if(val == NULL)
+        return NULL;
     if(!val->linked)
         return val;
     else
@@ -195,27 +197,89 @@ p2d_t comp_pos(component_t* c){
  * Renders a component
  */
 void comp_render(component_t* c){
-    //(Re-)initialize the buffer
     p2d_t size = comp_size(c);
-    if(c->buf.size.x != size.x || c->buf.size.y != size.y){
-        c->buf.size = size;
-        free(c->buf.data);
-        c->buf.data = (color32_t*)malloc(size.x * size.y * sizeof(color32_t));
-    }
-    //Determine if the component needs re-rendering
+    //Process interaction with the mouse
     switch(c->type){
+        case CMP_TYPE_WINDOW: {
+            //If the cursor is in the titlebar zone and is clicking, move the window
+            uint8_t hovering = gfx_point_in_rect(gui_cursor_pos(), comp_pos_abs(c), P2D(size.x, 16));
+            uint8_t clicking = gui_mouse_flags() & MOUSE_BTN_LEFT;
+            uint8_t dragging = hovering && clicking;
+            //Record the mouse offset if we started dragging
+            if(dragging && !c->state){
+                p2d_t offs = P2D(gui_cursor_pos().x - comp_pos(c).x, gui_cursor_pos().y - comp_pos(c).y);
+                if(prop_get(c, "drag_offs") == NULL){
+                    prop_val_t* val = (prop_val_t*)malloc(sizeof(prop_val_t));
+                    val->linked = 0;
+                    val->type = CMP_PV_TYPE_POINT;
+                    val->point = offs;
+                    prop_set(c, "drag_offs", val);
+                }
+                prop_get(c, "drag_offs")->point = offs;
+                c->state = 1;
+                //Set the cursor
+                gui_set_cur_type(&gui_theme()->cur.drag);
+            }
+            //Move the window
+            if(c->state){
+                p2d_t new_pos = P2D(gui_cursor_pos().x - prop_get(c, "drag_offs")->point.x,
+                                    gui_cursor_pos().y - prop_get(c, "drag_offs")->point.y);
+                //If the window was pushed more than half into the top bar, maximize it
+                if(new_pos.y <= gui_theme()->panel.bar_height / 2){
+                    if(!prop_get(c, "fullscreen")->integer){
+                        prop_get(c, "fullscreen")->integer = 1;
+                        c->rendered = 0;
+                    }
+                } else {
+                    //Else, de-maximize it
+                    if(prop_get(c, "fullscreen")->integer){
+                        prop_get(c, "fullscreen")->integer = 0;
+                        p2d_t size_new = comp_size(c);
+                        prop_get(c, "pos")->point = P2D(gui_cursor_pos().x - (size_new.x / 2), gui_theme()->panel.bar_height);
+                        c->rendered = 0;
+                    }
+                }
+                //Limit the position to the top bar size
+                if(new_pos.y < gui_theme()->panel.bar_height)
+                    new_pos.y = gui_theme()->panel.bar_height;
+                //Stick to the screen borders
+                if(abs(new_pos.x) < 10)
+                    new_pos.x = 0;
+                else if(abs(new_pos.x - comp_size(c->parent).x + size.x) < 10)
+                    new_pos.x = comp_size(c->parent).x - size.x;
+                if(abs(new_pos.y - gui_theme()->panel.bar_height) < 10)
+                    new_pos.y = gui_theme()->panel.bar_height;
+                else if(abs(new_pos.y - comp_size(c->parent).y + size.y) < 10)
+                    new_pos.y = comp_size(c->parent).y - size.y;
+                //Set the position
+                prop_get(c, "pos")->point = new_pos;
+            }
+            if(c->state)
+                c->state = clicking;
+            //Return the cursor back to normal if needed
+            if(!c->state)
+                gui_set_cur_type(&gui_theme()->cur.normal);
+            break;
+        }
         case CMP_TYPE_BUTTON: {
             //Check if the we're hovering or clicking
             uint8_t hovering = gfx_point_in_rect(gui_cursor_pos(), comp_pos_abs(c), size);
             uint8_t clicked = gui_mouse_flags() & MOUSE_BTN_LEFT;
             uint8_t state = hovering + clicked;
-            //If the state was changed, we need to re-render
+            //If the state has changed, we need to re-render
             if(state != c->state){
                 c->state = state;
                 c->rendered = 0;
             }
             break;
         }
+    }
+    //(Re-)initialize the buffer
+    size = comp_size(c);
+    if(c->buf.size.x != size.x || c->buf.size.y != size.y){
+        c->buf.size = size;
+        free(c->buf.data);
+        c->buf.data = (color32_t*)malloc(size.x * size.y * sizeof(color32_t));
     }
     //Render the component
     if(!c->rendered){
@@ -227,8 +291,8 @@ void comp_render(component_t* c){
                 color32_t title_c = prop_get(c, "title_color")->color;
                 //Draw the window
                 gfx_fill(c->buf, COLOR32(0, 0, 0, 0));
-                gfx_draw_round_rect(c->buf, P2D(0, 0), size, 2, bg);
-                gfx_draw_round_rect(c->buf, P2D(0, 0), P2D(size.x, 16), 2, title_c);
+                gfx_draw_round_rect(c->buf, P2D(0, 0), size, 1, bg);
+                gfx_draw_round_rect(c->buf, P2D(0, 0), P2D(size.x, 16), 1, title_c);
                 p2d_t text_size = gfx_text_bounds(gui_theme()->global.main_font, title);
                 int64_t spacing = (16 - text_size.y) / 2;
                 gfx_draw_str(c->buf, gui_theme()->global.main_font, P2D(spacing, spacing + gui_theme()->global.main_font->ascent),
@@ -274,7 +338,7 @@ void comp_render(component_t* c){
         comp_render(child);
     //Render the component onto the the parent component's buffer
     p2d_t pos = comp_pos(c);
-    gfx_draw_raw(c->parent->buf, pos, (uint8_t*)c->buf.data, c->buf.size);
+    gfx_draw_raw(c->parent->buf, pos, c->buf);
 }
 
 /*

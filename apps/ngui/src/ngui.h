@@ -6,12 +6,16 @@
 
 //Structure definitions
 
+//Cursor
+typedef struct {
+    raw_img_t image;
+    p2d_t     hotspot;
+} cur_t;
+
 //Cursor properties
 typedef struct {
-    char image[128];
-    uint64_t img_width,
-             img_height;
-    uint8_t* img_data;
+    cur_t normal;
+    cur_t drag;
 } cur_prop_t;
 
 //Desktop properties
@@ -48,12 +52,13 @@ typedef struct {
 
 //Function prototypes
 
-p2d_t     gui_cursor_pos  (void);
-uint8_t   gui_mouse_flags (void);
-theme_t*  gui_theme       (void);
-color32_t parse_color     (char* str);
-void      load_theme      (char* path);
-void      draw_panel      (void);
-void      mouse_evt       (mouse_evt_t evt);
-void      get_cpu_fq      (void);
-void      main            (void* args);
+void      gui_set_cur_type (cur_t* cur);
+p2d_t     gui_cursor_pos   (void);
+uint8_t   gui_mouse_flags  (void);
+theme_t*  gui_theme        (void);
+color32_t parse_color      (char* str);
+void      load_theme       (char* path);
+void      draw_panel       (void);
+void      mouse_evt        (mouse_evt_t evt);
+void      get_cpu_fq       (void);
+void      main             (void* args);

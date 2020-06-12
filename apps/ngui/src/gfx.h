@@ -63,7 +63,8 @@ void gfx_draw_round_rect  (raw_img_t buf, p2d_t pos, p2d_t size, int32_t r, colo
 void gfx_fill_circ_helper (raw_img_t buf, p2d_t pos, int32_t r, uint8_t corners, int32_t d, color32_t c);
 void gfx_draw_rect        (raw_img_t buf, p2d_t pos, p2d_t size, color32_t c);
 void gfx_draw_xbm         (raw_img_t buf, p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, color32_t color_h, color32_t color_l);
-void gfx_draw_raw         (raw_img_t buf, p2d_t pos, uint8_t* raw_ptr, p2d_t raw_size);
+void gfx_draw_raw         (raw_img_t buf, p2d_t pos, raw_img_t raw);
+void gfx_draw_raw_rgba    (raw_img_t buf, p2d_t position, uint8_t* raw_ptr, p2d_t raw_size);
 //Text drawing functions
 font_t* gfx_load_font   (const char* path);
 p2d_t   gfx_glyph       (raw_img_t buf, font_t* font, p2d_t pos, color32_t color, color32_t bcolor, uint32_t c);

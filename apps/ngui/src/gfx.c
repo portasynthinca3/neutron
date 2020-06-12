@@ -186,7 +186,24 @@ void gfx_draw_xbm(raw_img_t buf, p2d_t pos, uint8_t* xbm_ptr, p2d_t xbm_size, co
 /*
  * Draw a raw image
  */
-void gfx_draw_raw(raw_img_t buf, p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
+void gfx_draw_raw(raw_img_t buf, p2d_t position, raw_img_t img){
+    uint32_t pos = 0;
+    //Go through each pixel
+    for(int64_t y = position.y; y < position.y + img.size.y; y++){
+        for(int64_t x = position.x; x < position.x + img.size.x; x++){
+            //Fetch the data
+            color32_t c = img.data[pos++];
+            //Draw the pixel
+            if(c.a != 0 && y < buf.size.y && x < buf.size.x && y >= 0 && x >= 0)
+                buf.data[(y * buf.size.x) + x] = gfx_blend_colors(buf.data[(y * buf.size.x) + x], c, c.a);
+        }
+    }
+}
+
+/*
+ * Draw a raw image
+ */
+void gfx_draw_raw_rgba(raw_img_t buf, p2d_t position, uint8_t* raw_ptr, p2d_t raw_size){
     uint32_t pos = 0;
     //Go through each pixel
     for(int64_t y = position.y; y < position.y + raw_size.y; y++){

@@ -11,11 +11,19 @@
 
 //The current theme
 theme_t theme;
-//Current absolute cursor position and flags
+//Current cursor properties
 p2d_t cursor_pos;
 uint8_t mouse_flags;
+cur_t* cur_cur;
 //CPU frequency (cycles/ms)
 uint64_t cpu_fq;
+
+/*
+ * Sets the cursor type
+ */
+void gui_set_cur_type(cur_t* cur){
+    cur_cur = cur;
+}
 
 /*
  * Returns the cursor position
@@ -36,6 +44,27 @@ uint8_t gui_mouse_flags(void){
  */
 theme_t* gui_theme(void){
     return &theme;
+}
+
+/*
+ * Loads a HSRAW image
+ */
+cur_t load_hsraw(char* path){
+    cur_t cursor;
+    //Open the file
+    FILE* img = fopen(path, "rb");
+    if(img != NULL){
+        //Read the data
+        cursor.image.size.x = fgetc(img);
+        cursor.image.size.y = fgetc(img);
+        cursor.hotspot.x    = fgetc(img);
+        cursor.hotspot.y    = fgetc(img);
+        uint64_t img_data_sz = cursor.image.size.x * cursor.image.size.y * 4;
+        cursor.image.data = (color32_t*)malloc(img_data_sz);
+        fread(cursor.image.data, 1, img_data_sz, img);
+        fclose(img);
+    }
+    return cursor;
 }
 
 /*
@@ -98,19 +127,10 @@ void load_theme(char* path){
         //Parse the config line
         if(memcmp(key, "cur.", 4) == 0){ //Cursor settings
             char* cur = key + 4;
-            if(strcmp(cur, "image") == 0){
-                strcpy(theme.cur.image, val);
-                //Load the image file
-                FILE* img = fopen(val, "rb");
-                if(img != NULL){
-                    theme.cur.img_width = fgetc(img);
-                    theme.cur.img_height = fgetc(img);
-                    uint64_t img_data_sz = theme.cur.img_width * theme.cur.img_height * 4;
-                    theme.cur.img_data = (uint8_t*)malloc(img_data_sz);
-                    fread(theme.cur.img_data, 1, img_data_sz, img);
-                    fclose(img);
-                }
-            }
+            if(strcmp(cur, "normal") == 0)
+                theme.cur.normal = load_hsraw(val);
+            else if(strcmp(cur, "drag") == 0)
+                theme.cur.drag = load_hsraw(val);
         } else if(memcmp(key, "desktop.", 8) == 0){ //Desktop settings
             char* desk = key + 8;
             if(strcmp(desk, "color") == 0)
@@ -161,7 +181,7 @@ void draw_panel(void){
             theme.panel.state = 1;
             theme.panel.last_state_ch = rdtsc();
         } else {
-            return;
+            panel_offs = theme.panel.height + theme.panel.margins - 4;
         }
     } else if(theme.panel.state == 0){
         if(cursor_pos.y >= gfx_screen().size.y - (theme.panel.height + theme.panel.margins)){
@@ -181,7 +201,7 @@ void draw_panel(void){
             theme.panel.last_state_ch = rdtsc();
         }
     } else if(theme.panel.state == 2){
-        panel_offs = (uint64_t)(theme.panel.height + theme.panel.margins) *
+        panel_offs = (uint64_t)(theme.panel.height + theme.panel.margins - 4) *
             (rdtsc() - theme.panel.last_state_ch) / theme.panel.movement_time;
         if(panel_offs > theme.panel.height + theme.panel.margins){
             theme.panel.state = 3;
@@ -195,8 +215,8 @@ void draw_panel(void){
     if(gfx_point_in_rect(cursor_pos, P2D(pos.x, pos.y), P2D(theme.panel.height, theme.panel.height)))
         left_sqr_color = gfx_blend_colors(left_sqr_color, COLOR32(255, 255, 255, 255), 5);
     gfx_draw_round_rect(gfx_screen(), pos, P2D(size.y, size.y), 4, left_sqr_color);
-    gfx_draw_raw(gfx_screen(), P2D(pos.x + (theme.panel.height - 24) / 2, pos.y + (theme.panel.height - 24) / 2),
-                 theme.panel.icon_data, P2D(24, 24));
+    gfx_draw_raw_rgba(gfx_screen(), P2D(pos.x + (theme.panel.height - 24) / 2, pos.y + (theme.panel.height - 24) / 2),
+                      theme.panel.icon_data, P2D(24, 24));
     //Draw the main panel
     gfx_draw_round_rect(gfx_screen(), P2D(pos.x + size.y + theme.panel.margins, pos.y),
                                 P2D(size.x - (size.y + theme.panel.margins), size.y), 4, theme.panel.color);
@@ -261,6 +281,7 @@ void main(void* args){
     comps_init();
     //Load the GUI config file
     load_theme("ngui.cfg");
+    cur_cur = &theme.cur.normal;
 
     theme.panel.state = 0;
     theme.panel.last_state_ch = rdtsc();
@@ -270,8 +291,8 @@ void main(void* args){
     prop_set(window, "fullscreen",  PROP_INTEGER(0));
     prop_set(window, "size",        PROP_POINT(P2D(200, 100)));
     prop_set(window, "pos",         PROP_POINT(P2D(100, 100)));
-    prop_set(window, "bg",          PROP_COLOR(COLOR32(200, 16, 16, 16)));
-    prop_set(window, "title_color", PROP_COLOR(COLOR32(200, 0, 0, 50)));
+    prop_set(window, "bg",          PROP_COLOR(COLOR32(220, 16, 16, 16)));
+    prop_set(window, "title_color", PROP_COLOR(COLOR32(255, 100, 0, 0)));
     component_t* label = comp_create(CMP_TYPE_LABEL, window->id);
     prop_set(label, "text",     PROP_STRING("Hello indeed"));
     prop_set(label, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
@@ -285,9 +306,9 @@ void main(void* args){
     prop_set(btn, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
     prop_set(btn, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
     prop_set(btn, "radius",   PROP_INTEGER(2));
-    prop_set(btn, "bg",       PROP_COLOR(COLOR32(200, 24, 24, 24)));
-    prop_set(btn, "bg_hover", PROP_COLOR(COLOR32(200, 32, 32, 32)));
-    prop_set(btn, "bg_click", PROP_COLOR(COLOR32(200, 16, 16, 16)));
+    prop_set(btn, "bg",       PROP_COLOR(COLOR32(255, 24, 24, 24)));
+    prop_set(btn, "bg_hover", PROP_COLOR(COLOR32(255, 32, 32, 32)));
+    prop_set(btn, "bg_click", PROP_COLOR(COLOR32(255, 16, 16, 16)));
     prop_set(btn, "pos",      PROP_POINT(P2D(0, 15)));
     prop_set(btn, "size",     PROP_POINT(P2D(100, 30)));
 
@@ -299,7 +320,8 @@ void main(void* args){
         gfx_fill(gfx_screen(), theme.desk.color);
         comps_draw();
         draw_panel();
-        gfx_draw_raw(gfx_screen(), cursor_pos, theme.cur.img_data, P2D(theme.cur.img_width, theme.cur.img_height));
+        gfx_draw_raw_rgba(gfx_screen(), P2D(cursor_pos.x - cur_cur->hotspot.x, cursor_pos.y - cur_cur->hotspot.y),
+            (uint8_t*)cur_cur->image.data, cur_cur->image.size);
         //Update the framebuffer
         gfx_flip();
     }
