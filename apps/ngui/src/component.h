@@ -77,5 +77,5 @@ component_t* comp_create    (uint64_t type, uint64_t parent);
 p2d_t        comp_size      (component_t* c);
 p2d_t        comp_pos_abs   (component_t* c);
 p2d_t        comp_pos       (component_t* c);
-void         comp_render    (component_t* c);
+uint8_t      comp_render    (component_t* c, uint8_t process);
 void         comps_draw     (void);

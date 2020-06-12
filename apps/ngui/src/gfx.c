@@ -195,7 +195,7 @@ void gfx_draw_raw(raw_img_t buf, p2d_t position, raw_img_t img){
             color32_t c = img.data[pos++];
             //Draw the pixel
             if(c.a != 0 && y < buf.size.y && x < buf.size.x && y >= 0 && x >= 0)
-                buf.data[(y * buf.size.x) + x] = gfx_blend_colors(buf.data[(y * buf.size.x) + x], c, c.a);
+                buf.data[(y * buf.size.x) + x] = gfx_blend_colors(buf.data[(y * buf.size.x) + x], COLOR32A(255, c), c.a);
         }
     }
 }
@@ -427,7 +427,7 @@ color32_t gfx_blend_colors(color32_t b, color32_t f, uint8_t a){
         return b;
     if(a == 255)
         return f;
-    return COLOR32(255, (((uint32_t)f.r * (uint32_t)a) + ((uint32_t)b.r * (uint32_t)(255 - a))) / 255,
+    return COLOR32(f.a, (((uint32_t)f.r * (uint32_t)a) + ((uint32_t)b.r * (uint32_t)(255 - a))) / 255,
                         (((uint32_t)f.g * (uint32_t)a) + ((uint32_t)b.g * (uint32_t)(255 - a))) / 255,
                         (((uint32_t)f.b * (uint32_t)a) + ((uint32_t)b.b * (uint32_t)(255 - a))) / 255);
 }

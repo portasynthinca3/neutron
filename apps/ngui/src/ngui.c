@@ -291,7 +291,7 @@ void main(void* args){
     prop_set(window, "fullscreen",  PROP_INTEGER(0));
     prop_set(window, "size",        PROP_POINT(P2D(200, 100)));
     prop_set(window, "pos",         PROP_POINT(P2D(100, 100)));
-    prop_set(window, "bg",          PROP_COLOR(COLOR32(220, 16, 16, 16)));
+    prop_set(window, "bg",          PROP_COLOR(COLOR32(200, 16, 16, 16)));
     prop_set(window, "title_color", PROP_COLOR(COLOR32(255, 100, 0, 0)));
     component_t* label = comp_create(CMP_TYPE_LABEL, window->id);
     prop_set(label, "text",     PROP_STRING("Hello indeed"));
@@ -312,7 +312,32 @@ void main(void* args){
     prop_set(btn, "pos",      PROP_POINT(P2D(0, 15)));
     prop_set(btn, "size",     PROP_POINT(P2D(100, 30)));
 
-    //In an endless loop
+    component_t* window2 = comp_create(CMP_TYPE_WINDOW, 0);
+    prop_set(window2, "title",       PROP_STRING("Hello, World! 2"));
+    prop_set(window2, "fullscreen",  PROP_INTEGER(0));
+    prop_set(window2, "size",        PROP_POINT(P2D(200, 100)));
+    prop_set(window2, "pos",         PROP_POINT(P2D(200, 200)));
+    prop_set(window2, "bg",          PROP_COLOR(COLOR32(200, 16, 16, 16)));
+    prop_set(window2, "title_color", PROP_COLOR(COLOR32(255, 100, 0, 0)));
+    component_t* label2 = comp_create(CMP_TYPE_LABEL, window2->id);
+    prop_set(label2, "text",     PROP_STRING("Hello indeed 2"));
+    prop_set(label2, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label2, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label2, "bg",       PROP_COLOR(COLOR32(0, 0, 0, 0)));
+    prop_set(label2, "color",    PROP_COLOR(COLOR32(255, 255, 255, 255)));
+    prop_set(label2, "pos",      PROP_POINT(P2D(0, 0)));
+    component_t* btn2 = comp_create(CMP_TYPE_BUTTON, window2->id);
+    prop_set(btn2, "text",     PROP_STRING("Click me 2"));
+    prop_set(btn2, "t_color",  PROP_COLOR(COLOR32(255, 255, 255, 255)));
+    prop_set(btn2, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
+    prop_set(btn2, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(btn2, "radius",   PROP_INTEGER(2));
+    prop_set(btn2, "bg",       PROP_COLOR(COLOR32(255, 24, 24, 24)));
+    prop_set(btn2, "bg_hover", PROP_COLOR(COLOR32(255, 32, 32, 32)));
+    prop_set(btn2, "bg_click", PROP_COLOR(COLOR32(255, 16, 16, 16)));
+    prop_set(btn2, "pos",      PROP_POINT(P2D(0, 15)));
+    prop_set(btn2, "size",     PROP_POINT(P2D(100, 30)));
+
     while(1){
         //Update the PS/2 state
         ps2_check();
