@@ -169,8 +169,9 @@ void dram_shift(void){
             ab->prev = UPPER_AB(ab->prev);
         ab = prev_next;
     }
+    ab->next = NULL;
     first_alloc_block = UPPER_AB(first_alloc_block);
-    last_alloc_block  = UPPER_AB(last_alloc_block);
+    last_alloc_block  = UPPER_AB(ab);
     krnl_writec_f("Done shifting\r\n");
 }
 
@@ -234,7 +235,28 @@ void* amalloc(size_t size, size_t gran){
  * Free a memory block allocated by malloc(), calloc() and others
  */
 void free(void* ptr){
-
+    //Move the pointer to the left, so that it points to the block control structure
+    ptr = (uint8_t*)ptr - sizeof(alloc_block_t);
+    //Find a used block that is pointed to by the pointer
+    alloc_block_t* block = first_alloc_block;
+    do {
+        if(block->used && block == ptr){
+            //Mark it as unused
+            block->used = 0;
+            //Merge it with the previous block if possible
+            if(block->prev != NULL && !block->prev->used){
+                block->prev->size += block->size;
+                block->prev->next = block->next;
+                block = block->prev;
+            }
+            //Merge it with the next block if possible
+            if(block->next != NULL && !block->next->used){
+                block->size += block->next->size;
+                block->next = block->next->next;
+            }
+            break;
+        }
+    } while(block->used < 2 && (block = block->next));
 }
 
 /*
