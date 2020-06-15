@@ -10,36 +10,28 @@
 #include "./vmem/vmem.h"
 #include "./krnl.h"
 
-EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
+alloc_block_t* first_alloc_block = NULL;
+alloc_block_t* last_alloc_block  = NULL;
 
-free_block_t* first_free_block;
-void* gen_free_base_initial;
-void* gen_free_base;
-void* gen_free_top;
-void* gen_free_phys_base;
-uint64_t bad_ram_size = 0;
-uint64_t total_ram_size = 0;
-uint64_t used_ram_size = 0;
+uint64_t bad_ram_bytes = 0;
+uint64_t total_ram_bytes = 0;
+uint64_t used_ram_bytes = 0;
 
-/*
- * Returns the physical base address of the dynamic RAM range
- */
-void* stdlib_physbase(void){
-    return gen_free_phys_base;
-}
+uint32_t region_count;
+memory_region_t ram_regions[128];
 
 /*
- * Returns the amount of RAM usable by Neutron
+ * Returns the amount of usable RAM
  */
 uint64_t stdlib_usable_ram(void){
-    return total_ram_size;
+    return total_ram_bytes;
 }
 
 /*
  * Returns the amount of RAM currently being used by Neutron
  */
 uint64_t stdlib_used_ram(void){
-    return used_ram_size;
+    return used_ram_bytes;
 }
 
 /*
@@ -60,7 +52,7 @@ uint64_t dram_init(void){
     EFI_MEMORY_DESCRIPTOR* buf;
     uint64_t desc_size;
     uint32_t desc_ver;
-    uint64_t size, map_key, mapping_size;
+    uint64_t size, map_key, region_sz;
     EFI_MEMORY_DESCRIPTOR* desc;
     EFI_STATUS status;
     uint32_t i = 0;
@@ -89,123 +81,150 @@ uint64_t dram_init(void){
     }
 
     desc = buf;
-    void* best_block_start = NULL;
-    uint64_t best_block_size = 0;
     //Fetch the next descriptor
     while((uint8_t*)desc < ((uint8_t*)buf + size)){
-        mapping_size = desc->NumberOfPages * EFI_PAGE_SIZE;
+        region_sz = desc->NumberOfPages * EFI_PAGE_SIZE;
 
         //If a new free memory block was found, record it
-        if(desc->Type == EfiConventionalMemory && mapping_size > best_block_size){
-            best_block_size = mapping_size;
-            best_block_start = (uint8_t*)(desc->PhysicalStart);
+        if(desc->Type == EfiConventionalMemory && region_sz > 0){
+            krnl_writec_f("Found 0x%x bytes of RAM at physical 0x%x\r\n", region_sz, desc->PhysicalStart);
+            total_ram_bytes += region_sz;
+            //Add the region to the list of regions
+            ram_regions[region_count].phys_start      = (phys_addr_t)desc->PhysicalStart;
+            ram_regions[region_count].virt_start      = (virt_addr_t)desc->PhysicalStart;
+            ram_regions[region_count].virt_start_orig = (virt_addr_t)desc->PhysicalStart;
+            ram_regions[region_count].size            = region_sz;
+            region_count++;
+            //Add the region to the list of allocation blocks
+            alloc_block_t* fb_ptr = (alloc_block_t*)desc->PhysicalStart;
+            fb_ptr->size      = region_sz;
+            fb_ptr->prev      = last_alloc_block;
+            fb_ptr->next      = NULL;
+            fb_ptr->used      = 0;
+            fb_ptr->region    = region_count - 1;
+            if(first_alloc_block != NULL)
+                last_alloc_block->next = fb_ptr;
+            else
+                first_alloc_block = fb_ptr;
+            last_alloc_block = fb_ptr;
         }
         //Record bad RAM
-        else if(desc->Type == EfiUnusableMemory){
-            bad_ram_size += mapping_size;
-        }
+        else if(desc->Type == EfiUnusableMemory)
+            bad_ram_bytes += region_sz;
 
-        desc = (EFI_MEMORY_DESCRIPTOR*)((uint8_t*)desc + desc_size);
+        desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)desc + desc_size);
         i++;
     }
 
-    //Set up general free heap
-    gen_free_base = best_block_start;
-    gen_free_phys_base = gen_free_base;
-    gen_free_base_initial = gen_free_base;
-    gen_free_top = (uint8_t*)best_block_start + best_block_size;
-    total_ram_size += best_block_size;
-
-    if(gen_free_top == NULL){
-        krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
-            (CHAR16*)L"No usable memory was found\r\n");
+    if(first_alloc_block == NULL){
+        krnl_writec_f("No usable memory was found");
         while(1);
+    } else {
+        krnl_writec_f("%d KiB of RAM found\r\n", total_ram_bytes / 1024);
     }
 
-    krnl_writec_f("RAM base: 0x%x, top: 0x%x\r\n", gen_free_base, gen_free_top);
-
-    //Return the map key
     return map_key;
+}
+
+/*
+ * Maps all dynamic memory regions for the specified memory space
+ */
+void dram_map(uint64_t cr3){
+    for(int i = 0; i < region_count; i++){
+        vmem_map(cr3, ram_regions[i].phys_start,
+                      (uint8_t*)ram_regions[i].phys_start + ram_regions[i].size,
+                      ram_regions[i].virt_start);
+    }
 }
 
 /*
  * Shifts the dynamic memory region in the current address space to the higher quarter
  */
 void dram_shift(void){
-    //Map the range
-    krnl_writec_f("Mapping the dynamic RAM range\r\n");
-    vmem_map(vmem_get_cr3(), gen_free_base_initial, gen_free_top, (void*)0xFFFFC00000000000ULL);
     //Shift the ranges
-    krnl_writec_f("Shifting\r\n");
-    gen_free_top = (void*)((uint64_t)gen_free_top - (uint64_t)gen_free_base + 0xFFFFC00000000000ULL);
-    gen_free_base = (void*)((uint64_t)gen_free_base - (uint64_t)gen_free_base_initial + 0xFFFFC00000000000ULL);
-    gen_free_base_initial = (void*)0xFFFFC00000000000ULL;
-    krnl_writec_f("Shifted the allocation region\r\n");
+    krnl_writec_f("Shifting the dynamic RAM ranges\r\n");
+    uint64_t next_region = 0xFFFFC00000000000ULL;
+    for(int i = 0; i < region_count; i++){
+        ram_regions[i].virt_start = (virt_addr_t)next_region;
+        next_region += ram_regions[i].size;
+    }
+    //Map the ranges
+    krnl_writec_f("Mapping the dynamic RAM ranges\r\n");
+    dram_map(vmem_get_cr3());
     //Enable address translation
+    krnl_writec_f("Enabling software address translation\r\n");
     vmem_enable_trans();
-    krnl_writec_f("Enabled software address translation\r\n");
+    //Shift the allocation blocks
+    krnl_writec_f("Shifting the allocation blocks\r\n");
+    alloc_block_t* ab = first_alloc_block;
+    while(1){
+        if(ab->next == NULL)
+            break;
+        if(ab->next->used > 2)
+            break;
+        alloc_block_t* prev_next = ab->next;
+        if(ab->next != NULL)
+            ab->next = UPPER_AB(ab->next);
+        if(ab->prev != NULL)
+            ab->prev = UPPER_AB(ab->prev);
+        ab = prev_next;
+    }
+    first_alloc_block = UPPER_AB(first_alloc_block);
+    last_alloc_block  = UPPER_AB(last_alloc_block);
+    krnl_writec_f("Done shifting\r\n");
 }
 
 /*
  * Allocate a block of memory
  */
 void* malloc(size_t size){
-    used_ram_size += size;
-    //If we have enough memory in the general
-    //  free memory "heap", allocate it there
-    if(gen_free_top - gen_free_base >= size){
-        void* saved_base = gen_free_base;
-        gen_free_base = (uint8_t*)gen_free_base + size;
-        return saved_base;
-    }
-    
-    //If we didn't return by this point, we
-    //  need to go and find a non-general free block
-    //But if there are no such blocks, we do not
-    //  have enough memory and need to crash
-    /*
-    if(first_free_block == NULL){
-        #ifdef STDLIB_CARSH_ON_ALLOC_ERR
-            crash_label_2: gfx_panic((uint64_t)&&crash_label_2, KRNL_PANIC_NOMEM_CODE);
-        #else
-            return NULL;
-        #endif
-    }
-    free_block_t* current = &(free_block_t){.next = first_free_block};
-    while((current = current->next)){
-        if(current->size + 16 >= size){
-            //Link the previous block to the next one
-            //  as the current one will not be free soon
-            current->prev = current->next;
-            //Return the pointer to the block
-            return current;
-        }
-    }
-    */
-    //If we still didn't find free space, we defenitely don't have enough RAM
-    #ifdef STDLIB_CARSH_ON_ALLOC_ERR
-        crash_label_3: gfx_panic((uint64_t)&&crash_label_3, KRNL_PANIC_NOMEM_CODE);
-    #else
-        return NULL;
-    #endif
+    return amalloc(size, 1);
 }
 
 /*
  * Aligned malloc()
  */
 void* amalloc(size_t size, size_t gran){
-    if(gen_free_top - gen_free_base >= size){
-        void* saved_base = gen_free_base;
-        uint64_t remainder = gran - ((uint64_t)saved_base % gran);
-        if(remainder == gran)
-            remainder = 0;
-        gen_free_base = (uint8_t*)gen_free_base + remainder + size;
-        used_ram_size += remainder + size;
-        return saved_base + remainder;
-    }
-    #ifdef STDLIB_CARSH_ON_ALLOC_ERR
-        krnl_write_msgf(__FILE__, "requested 0x%x bytes at gran 0x%x", size, gran);
-        crash_label_2: gfx_panic((uint64_t)&&crash_label_2, KRNL_PANIC_NOMEM_CODE);
+    if(size == 0 || gran == 0)
+        return NULL;
+    //Find a free allocation block that satisfies the size requirement
+    size_t total_size = size + sizeof(alloc_block_t);
+    alloc_block_t* block = first_alloc_block;
+    do {
+        if(block->size >= total_size && block->used == 0){
+            //Recalculate the size requirement based on the alignment of the block
+            size_t actual_size = total_size;
+            size_t scrapped = 0;
+            if(((uint64_t)block + sizeof(alloc_block_t)) % gran != 0){
+                scrapped = gran - (((uint64_t)block + sizeof(alloc_block_t)) % gran);
+                actual_size += scrapped;
+            }
+            if(block->size < actual_size)
+                continue;
+            //Decrease the size
+            block->size -= actual_size;
+            //Move it
+            alloc_block_t* new = block;
+            block->prev->next = (alloc_block_t*)((uint64_t)block + actual_size);
+            *block->prev->next = *block;
+            block = block->prev->next;
+            //Create a new block and mark it as used
+            new->used       = 1;
+            new->prev       = block->prev;
+            new->prev->next = new;
+            new->next       = block;
+            new->size       = actual_size;
+            new->region     = block->region;
+            block = first_alloc_block;
+            //Add the to total bytes of memory
+            used_ram_bytes += actual_size;
+            //Return the address
+            return (void*)((uint64_t)new + scrapped + sizeof(alloc_block_t));
+        }
+    } while(block->used < 2 && (block = block->next));
+    //We have't found such block
+    #ifdef STDLIB_CRASH_ON_ALLOC_ERR
+        gfx_panic(0, KRNL_PANIC_NOMEM_CODE);
     #else
         return NULL;
     #endif
@@ -215,6 +234,7 @@ void* amalloc(size_t size, size_t gran){
  * Free a memory block allocated by malloc(), calloc() and others
  */
 void free(void* ptr){
+
 }
 
 /*
@@ -391,74 +411,11 @@ void wrmsr(uint32_t msr, uint64_t val){
 }
 
 /*
- * Manages pushing bytes into the FIFO buffer
- */
-void fifo_pushb(uint8_t* buffer, uint16_t* head, uint8_t value){
-    buffer[(*head)++] = value;
-}
-
-/*
- * Manages popping bytes from the FIFO buffer
- */
-uint8_t fifo_popb(uint8_t* buffer, uint16_t* head, uint16_t* tail){
-    uint8_t value = buffer[(*tail)++];
-    if(*tail >= *head)
-        *tail = *head = 0;
-    return value;
-}
-
-/*
- * Returns the amount of bytes available for reading in the FIFO buffer
- */
-uint8_t fifo_av(uint16_t* head, uint16_t* tail){
-    return *head - *tail;
-}
-
-/*
- * Append an element at the end of the list
- */
-list_node_t* list_append(list_node_t* first, void* element){
-    //Allocate a block of memory for the node
-    list_node_t* node = (list_node_t*)malloc(sizeof(list_node_t));
-    //Assign the element pointer to it
-    node->data = element;
-    node->next = NULL;
-    node->prev = NULL;
-    if(first == NULL){
-        //If the first element is NULL, we're creating a new list
-        return node;
-    } else {
-        //Else, walk through the list to find its last element
-        //  and assign the new one to that one
-        //Also, assign that one to the new one as a previous element
-        list_node_t* last = first;
-        while((last = last->next)->next);
-        last->next = node;
-        node->prev = last;
-        return first;
-    }
-}
-
-/*
- * Get an element at a specific index from the list
- */
-void* list_get_at_idx(list_node_t* first, uint32_t idx){
-    uint32_t cnt = 0;
-    //Scan through the list
-    //    WARNING: TRYING TO UNDERSTAND THE TWO LINES OF CODE LISTED BELOW
-    //    MIGHT LEAD TO SERIOUS BRAIN INJURIES.
-    list_node_t* last = first;
-    while((cnt++ != idx) && (last = last->next));
-    //Return the element
-    return last->data;
-}
-
-/*
  * Read the amount of cycles executed by the CPU
  */
 uint64_t rdtsc(void){
     uint32_t h, l;
-    __asm__ volatile("rdtsc" : "=d" (h), "=a" (l));
+    __asm__ volatile("mfence; lfence; rdtsc" : "=d" (h), "=a" (l));
     return (uint64_t)((uint64_t)h << 32) | l;
 }
 
@@ -499,7 +456,7 @@ char* sprintu(char* str, uint64_t i, uint8_t min){
     return str;
 }
 
-char hex_const[16] = "0123456789ABCDEF";
+const char hex_const[16] = "0123456789ABCDEF";
 
 /*
  * Print an uint64_t with base 16 to the string

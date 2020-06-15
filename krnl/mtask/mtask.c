@@ -88,9 +88,12 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
 
     //Find the first empty task descriptor
     task_t* task = NULL;
-    for(int i = 0; i < MTASK_TASK_COUNT; i++)
-        if(!mtask_task_list[i].valid)
+    for(int i = 0; i < MTASK_TASK_COUNT; i++){
+        if(!mtask_task_list[i].valid){
             task = &mtask_task_list[i];
+            break;
+        }
+    }
     //Clear the task registers (except for RCX, set it to the argument pointer)
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255};
     //Use the current address space or assign the suggested CR3

@@ -659,10 +659,8 @@ void vmem_map_defaults(uint64_t cr3){
     vmem_map(cr3, (phys_addr_t)krnl_get_pos().offset,
                   (phys_addr_t)(krnl_get_pos().offset + krnl_get_pos().size),
                   (virt_addr_t)(0xFFFF800000000000ULL));
-    //Map DRAM at the fourth quarter
-    vmem_map(cr3, (phys_addr_t)stdlib_physbase(),
-                  (phys_addr_t)((uint64_t)stdlib_physbase() + (uint64_t)stdlib_usable_ram()),
-                  (virt_addr_t)(0xFFFFC00000000000ULL));
+    //Map the dynamic RAM range
+    dram_map(cr3);
     //Map the APIC window at the very end of the address space
     vmem_map(cr3, (phys_addr_t)0xFEE00000,
                   (phys_addr_t)0xFEE01000,

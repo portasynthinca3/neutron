@@ -411,14 +411,13 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_efi_img_handle = ImageHandle;
     //Disable the watchdog timer
     krnl_efi_systable->BootServices->SetWatchdogTimer(0, 0, 0, NULL);
-    //Print the boot string
-    krnl_writec_f("Neutron version %s\r\n", KRNL_VERSION_STR);
 
     //Using the loaded image protocol, find out where we are loaded in the memory
     EFI_LOADED_IMAGE_PROTOCOL* efi_lip = NULL;
     SystemTable->BootServices->HandleProtocol(ImageHandle, &(EFI_GUID)EFI_LOADED_IMAGE_PROTOCOL_GUID, (void**)&efi_lip);
     krnl_pos.offset = (uint64_t)efi_lip->ImageBase;
     krnl_pos.size = efi_lip->ImageSize;
+    krnl_writec_f("Neutron version %s\r\n", KRNL_VERSION_STR);
     krnl_writec_f("Loaded at 0x%x, size 0x%x\r\n", krnl_pos.offset, krnl_pos.size);
 
     //Do some initialization stuff
@@ -429,7 +428,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_write_msgf(__FILE__, "Neutron kernel version %s (%i), compiled on %s %s",
                               KRNL_VERSION_STR, KRNL_VERSION_NUM, __DATE__, __TIME__);
     krnl_write_msgf(__FILE__, "load address/size: 0x%x/0x%x", krnl_pos.offset, krnl_pos.size);
-    krnl_write_msgf(__FILE__, "dynamic memory physical base: 0x%x", stdlib_physbase());
 
     //Measure CPU frequency
     timr_measure_cpu_fq();

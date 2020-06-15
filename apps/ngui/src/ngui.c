@@ -311,6 +311,7 @@ void main(void* args){
     prop_set(label, "text",     PROP_STRING("Hello indeed"));
     prop_set(label, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
     prop_set(label, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label, "pos",      PROP_POINT(P2D(0, 0)));
     component_t* btn = comp_create(CMP_TYPE_BUTTON, window->id);
     prop_set(btn, "text",     PROP_STRING("Click me"));
     prop_set(btn, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
@@ -327,6 +328,7 @@ void main(void* args){
     prop_set(label2, "text",     PROP_STRING("Hello indeed 2"));
     prop_set(label2, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
     prop_set(label2, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label2, "pos",      PROP_POINT(P2D(0, 0)));
     component_t* btn2 = comp_create(CMP_TYPE_BUTTON, window2->id);
     prop_set(btn2, "text",     PROP_STRING("Click me 2"));
     prop_set(btn2, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));

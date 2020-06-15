@@ -1,3 +1,6 @@
+#ifndef CPUID_H
+#define CPUID_H
+
 #include "./stdlib.h"
 
 //CPUID vendor strings
@@ -75,3 +78,5 @@ void cpuid_get_leaf   (uint32_t leaf, uint32_t subleaf, uint32_t* eax, uint32_t*
 void cpuid_get_vendor (char str[13], uint32_t* max);
 void cpuid_get_feat   (uint32_t* edx, uint32_t* ecx);
 void cpuid_get_brand  (char* str);
+
+#endif

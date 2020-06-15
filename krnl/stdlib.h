@@ -7,8 +7,11 @@
 #define NULL ((void*)0)
 #endif
 
-//Use WC for memcpy() transfers?
-//#define STDLIB_MEMCPY_WC
+//Converts an allocation block address to its upper-half variant
+#define UPPER_AB(B) (alloc_block_t*)(((uint64_t)B - (uint64_t)ram_regions[(B)->region].virt_start_orig) + ram_regions[(B)->region].virt_start)
+
+//Don't forget to comment this on a release version :)
+#define STDLIB_CRASH_ON_ALLOC_ERR
 
 //Standard type definitions
 typedef unsigned char          uint8_t;
@@ -23,34 +26,32 @@ typedef uint64_t               size_t;
 typedef int64_t                time_t;
 
 /*
- * Structure defining a linked list node
+ * Structure defining an allocable memory block
  */
-struct list_node {
-    void* data;
-    struct list_node* prev;
-    struct list_node* next;
-};
-typedef struct list_node list_node_t;
+typedef struct _alloc_block_s {
+    uint8_t                used;
+    struct _alloc_block_s* prev;
+    struct _alloc_block_s* next;
+    size_t                 size;
+    uint64_t               region;
+} alloc_block_t;
 
 /*
- * Structure defining a free memory block
+ * Structure defining a usable memory region
  */
-typedef struct _free_block_s {
-    char signature[4];
-    struct _free_block_s* next;
-    struct _free_block_s* prev;
-    size_t size;
-} free_block_t;
-
-//Don't forget to comment this on a release version :)
-#define STDLIB_CARSH_ON_ALLOC_ERR
+typedef struct {
+    void*    phys_start;
+    void*    virt_start;
+    void*    virt_start_orig;
+    uint64_t size;
+} memory_region_t;
 
 /*
  * Structure describing the Interrupt Descripotor Table Descriptor
  */
 typedef struct {
     uint16_t limit;
-    void* base;
+    void*    base;
 } __attribute__((packed)) idt_desc_t;
 
 typedef idt_desc_t gdt_desc_t;
@@ -107,25 +108,18 @@ typedef struct {
 #define IDT_ENTRY_ISR(OFFS, CS) (IDT_ENTRY((OFFS), (CS), 0b10001110))
 
 //Panic codes
-
 #define KRNL_PANIC_NOMEM_CODE              1
 #define KRNL_PANIC_NOMEM_MSG               "malloc() failed due to lack of free memory"
 #define KRNL_PANIC_PANTEST_CODE            2
-#define KRNL_PANIC_PANTEST_MSG             "not an error: called gfx_panic() for testing purposes"
+#define KRNL_PANIC_PANTEST_MSG             "not an error: called panic() for testing purposes"
 #define KRNL_PANIC_CPUEXC_CODE             3
-#define KRNL_PANIC_CPUEXC_MSG              "CPU-generated exception"
+#define KRNL_PANIC_CPUEXC_MSG              "CPU exception in kernel mode"
 #define KRNL_PANIC_STACK_SMASH_CODE        4
 #define KRNL_PANIC_STACK_SMASH_MSG         "Stack smashing detected"
-#define KRNL_PANIC_INVL_SYSCALL_CODE       5
-#define KRNL_PANIC_INVL_SYSCALL_MSG        "Invalid syscall number"
 #define KRNL_PANIC_UNKNOWN_MSG             "<unknown code>"
 
 //Debug functions
-
-volatile void breakpoint();
-void abort();
-void puts_e9(char* str);
-
+void abort(void);
 //Low-level functions
 void     load_idt (idt_desc_t* idt);
 void     bswap_dw (uint32_t* value);
@@ -136,10 +130,10 @@ void     wrmsr    (uint32_t msr, uint64_t val);
 uint32_t rand     (void);
 uint64_t popcnt   (uint64_t n);
 //Dynamic memory functions
-void*    stdlib_physbase   (void);
 uint64_t stdlib_usable_ram (void);
 uint64_t stdlib_used_ram   (void);
 uint64_t dram_init         (void);
+void     dram_map          (uint64_t cr3);
 void     dram_shift        (void);
 void*    malloc            (size_t size);
 void*    amalloc           (size_t size, size_t gran);
@@ -157,13 +151,6 @@ uint16_t inw      (uint16_t port);
 void     outb     (uint16_t port, uint8_t value);
 uint8_t  inb      (uint16_t port);
 void     rep_insw (uint16_t port, uint32_t count, uint16_t* buf);
-//FIFO buffer operations
-void    fifo_pushb (uint8_t* buffer, uint16_t* head, uint8_t value);
-uint8_t fifo_popb  (uint8_t* buffer, uint16_t* head, uint16_t* tail);
-uint8_t fifo_av    (uint16_t* head, uint16_t* tail);
-//Linked list operations
-list_node_t* list_append     (list_node_t* first, void* element);
-void*        list_get_at_idx (list_node_t* first, uint32_t idx);
 //String functions
 size_t strlen          (const char* str);
 char*  sprintu         (char* str, uint64_t i, uint8_t min);

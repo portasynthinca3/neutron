@@ -393,6 +393,7 @@ uint8_t comp_render(component_t* c, uint8_t process){
         }
     }
     //Render the children onto this component's buffer
+    c->children->cur_iter = NULL;
     while((child = (component_t*)ll_iter(c->children, LL_ITER_DIR_DOWN)))
         gfx_draw_raw(c->buf, comp_pos(child), child->buf);
     return process_further;
