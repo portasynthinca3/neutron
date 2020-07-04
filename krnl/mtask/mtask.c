@@ -300,6 +300,8 @@ virt_addr_t mtask_palloc(uint64_t pid, uint64_t num){
             break;
         }
     }
+    //Clear pages
+    memset(krnl_addr, 0, 4096 * num);
     //Map the actual range
     vmem_map_user(task->state.cr3, phys_addr, (phys_addr_t)((uint8_t*)phys_addr + (4096 * num)), task->next_alloc);
     //Advance the next allocation address

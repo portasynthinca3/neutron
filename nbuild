@@ -47,6 +47,5 @@ krnl/app_drv/syscall/syscall_wrap.s
 -sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
 -msg timestamp=on \
 -bios /usr/share/ovmf/x64/OVMF_CODE.fd \
--d int \
 -monitor stdio \
 -s

@@ -5,12 +5,16 @@
 
 #include <stdarg.h>
 
+//Settings
+#define ALLOC_STEP  (1024 * 1024)
+#define ALLOC_ALIGN 4096
+
 //Definitions
 #define NLIB_VERSION "1.0.0"
 
-#define NULL  ((void*)0)
-#define true  1
-#define false 0
+#define NULL        ((void*)0)
+#define true        1
+#define false       0
 
 #define CHAR_BIT    8
 #define SCHAR_MIN   -128
@@ -60,6 +64,14 @@ typedef uint64_t sc_state_t;
 typedef void FILE;
 
 //Structures
+
+//An allocable or allocated block of memory
+typedef struct _alloc_block_s {
+    uint8_t                used;
+    struct _alloc_block_s* prev;
+    struct _alloc_block_s* next;
+    size_t                 size;
+} alloc_block_t;
 
 //Linked list node
 typedef struct _ll_node_s {
@@ -177,7 +189,7 @@ double fmod  (double x, double y);
 int    rand  (void);
 void   srand (unsigned int seed);
 //Memory control
-void* malloc (uint64_t num);
+void* malloc (size_t sz);
 void  free   (void* ptr);
 //Raw CPU instructions
 uint64_t rdtsc    (void);

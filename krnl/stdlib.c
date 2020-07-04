@@ -192,7 +192,7 @@ void* amalloc(size_t size, size_t gran){
     size_t total_size = size + sizeof(alloc_block_t);
     alloc_block_t* block = first_alloc_block;
     do {
-        if(block->size >= total_size && block->used == 0){
+        if(block->size >= total_size && !block->used){
             //Recalculate the size requirement based on the alignment of the block
             size_t actual_size = total_size;
             size_t scrapped = 0;
@@ -216,7 +216,6 @@ void* amalloc(size_t size, size_t gran){
             new->next       = block;
             new->size       = actual_size;
             new->region     = block->region;
-            block = first_alloc_block;
             //Add the to total bytes of memory
             used_ram_bytes += actual_size;
             //Return the address

@@ -1,19 +1,20 @@
 ![logo](https://github.com/portasynthinca3/neutron/blob/master/gfx/logo.png "logo")\
-![GitHub search hit counter](https://img.shields.io/github/search/portasynthinca3/neutron/goto)
-![GitHub All Releases](https://img.shields.io/github/downloads/portasynthinca3/neutron/total)
-![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/portasynthinca3/neutron?include_prereleases)
-![batteries](https://img.shields.io/badge/batteries-included-brightgreen)
-[![Discord](https://img.shields.io/discord/683727891976290321?label=Our%20Discord%20server%21)](https://discord.gg/djFDPYS)
+![GitHub search hit counter](https://img.shields.io/github/search/portasynthinca3/neutron/goto?style=flat)
+![GitHub All Releases](https://img.shields.io/github/downloads/portasynthinca3/neutron/total?style=flat)
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/portasynthinca3/neutron?include_prereleases&style=flat)
+![batteries](https://img.shields.io/badge/batteries-included-brightgreen?style=flat)
+[![Discord](https://img.shields.io/discord/683727891976290321?label=Discord&logo=discord&color=7289DA&style=flat)](https://discord.gg/djFDPYS)
 ## Credits
-Thanks to the [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI) Arduino library for containing the VLW font file format documentation!
-Also thanks to Sasha Kulichkov for testing this software.
+*   **[TFT_eSPI](https://github.com/Bodmer/TFT_eSPI) Arduino library** for containing the VLW font file format documentation
+*   **Meme Man** for testing and helping with dynamic memory
+*   **Sasha Kulichkov** for testing
 ## The purpose of the project
-Neutron is the result of me trying to get into the low-level stuff.
-This project is **not** intended to do some crazy stuff like replacing the giants like Windows, Linux and macOS. That's just not possible. However, it doesn't mean i don't have an end goal. **The end goal is to write a simple 64-bit UEFI-powered OS that can run 3rd party applications and its GUI system, while requiring as little disk space, RAM and processor resources as possible.** Oh, and also, I just want to have fun :)
+I just want to have fun, and nothing more
 ## Requirements
-In theory, it should work on any modern system. Here they are:
 *   CPU: x86-64 architecture
-*   System: UEFI class 2 or 3
+*   System: should support UEFI, the CSM (legacy BIOS) module is not required
 *   RAM: 64 MB
-## Building and documentation
+## Building, running and documentation
 [Wiki-wiki-wiki!](https://github.com/portasynthinca3/neutron/wiki)
+## It's not working
+Don't worry, it's most probably not your fault. As this is my personal project that I can test in my virtual machines and on a real laptop only, it has some compattibility issues, both ones I am aware and not aware of. Please join our Discord server (link is at the top of this document), contact me through Discord directly (`portasynthinca3#1746`), or e-mail me (`portasynthinca3@gmail.com`) and describe the problem you're experiencing, so I can try to solve it.

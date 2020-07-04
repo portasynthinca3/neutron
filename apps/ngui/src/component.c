@@ -27,8 +27,8 @@ void comps_init(void){
  * Create screens
  */
 void create_screens(void){
-    //Neutron currently only supports one screen but
-    //Future-proofing ya' know
+    //Neutron currently only supports one screen, but...
+    //Future-proofing, 'ya know
     component_t* comp = (component_t*)malloc(sizeof(component_t));
     comp->id = next_id++;
     comp->type = CMP_TYPE_SCREEN;

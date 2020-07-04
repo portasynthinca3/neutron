@@ -3,6 +3,10 @@
 
 #include "nlib.h"
 
+//The first allocation block
+alloc_block_t* first_block = NULL;
+alloc_block_t* last_block = NULL;
+
 /*
  * Issues a system call
  */
@@ -862,17 +866,92 @@ void srand(unsigned int seed){
 void* malloc(uint64_t num){
     if(num == 0)
         return NULL;
-    //Round to the page size
-    num += 4096 - (num % 4096);
-    //Allocate pages
-    return _task_palloc(num / 4096);
+    //Allocate an initial block if not done yet
+    if(first_block == NULL){
+        first_block = (alloc_block_t*)_task_palloc(ALLOC_STEP / 4096);
+        first_block->used = 0;
+        first_block->size = ALLOC_STEP;
+        first_block->next = first_block->prev = NULL;
+        last_block = first_block;
+    }
+    //Find a free block that is large enough
+    alloc_block_t* block = first_block;
+    do {
+        if(block->size >= num && !block->used){
+            //Move and resize it
+            alloc_block_t* new = block;
+            if(block->size < num){
+                block->size -= num;
+                block->prev->next = (alloc_block_t*)((uint64_t)block + num);
+                *block->prev->next = *block;
+                block = block->prev->next;
+            }
+            //Create a new block and mark it as used
+            new->used = 1;
+            if(new->size < num){
+                new->prev       = block->prev;
+                new->prev->next = new;
+                new->next       = block;
+                new->size       = num;
+            }
+            //Return the address
+            return (void*)((uint64_t)new + sizeof(alloc_block_t));
+        }
+    } while((block = block->next));
+    //If there are no blocks with this size, we need to ask the kernel to allocate one
+    uint64_t alloc_sz = num + sizeof(alloc_block_t);
+    if(alloc_sz < ALLOC_STEP)
+        alloc_sz = ALLOC_STEP;
+    if(alloc_sz % ALLOC_ALIGN != 0)
+        alloc_sz += ALLOC_ALIGN - (alloc_sz % ALLOC_ALIGN);
+    alloc_block_t* new_block = _task_palloc(alloc_sz / 4096);
+    new_block->used       = 0;
+    new_block->prev       = last_block;
+    new_block->prev->next = new_block;
+    new_block->next       = NULL;
+    new_block->size       = alloc_sz;
+    last_block = new_block;
+    //Since we surely have a free block of an appropriate size, this will never infinite-loop
+    return malloc(num);
 }
 
 /*
  * Frees a chunk of memory
  */
 void free(void* ptr){
-    _task_pfree(ptr);
+    if(ptr == NULL)
+        return;
+    //Move the pointer to the left, so that it points to the block control structure
+    ptr = (uint8_t*)ptr - sizeof(alloc_block_t);
+    //Find a used block that is pointed to by the pointer
+    alloc_block_t* block = first_block;
+    do {
+        if(block->used && block == ptr){
+            //Mark it as unused
+            block->used = 0;
+            //Merge it with the previous block if possible
+            if(block->prev != NULL && !block->prev->used){
+                block->prev->size += block->size;
+                block->prev->next = block->next;
+                block = block->prev;
+            }
+            //Merge it with the next block if possible
+            if(block->next != NULL && !block->next->used){
+                block->size += block->next->size;
+                block->next = block->next->next;
+            }
+            break;
+        }
+    } while((block = block->next));
+}
+
+/*
+ * Reallocates a chunk of memory
+ */
+void* realloc(void* ptr, uint64_t num){
+    //Yes, a very efficient and sane way :^)
+    free(ptr);
+    return malloc(num);
 }
 
 /*
