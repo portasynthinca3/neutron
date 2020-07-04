@@ -2,68 +2,73 @@
 //PCI driver
 
 #include "./pci.h"
-#include "./usb.h"
 #include "../stdlib.h"
-#include "./gfx.h"
+#include "../krnl.h"
+#include "./acpi.h"
+
+#include "./ahci.h"
+
+//All PCI address allocation descriptors
+uint16_t pci_cfg_sect_cnt;
+pci_cfg_desc_t* cfg_descs;
 
 /*
- * Read config word from a PCI device
+ * Initializes and enumerates the PCI bus
  */
-uint16_t pci_read_config_16(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offs){
-    //Construct the total address
-    uint32_t addr = (uint32_t)((uint32_t)0x80000000 | (offs & 0xFC) | ((uint32_t)func << 8)
-        | ((uint32_t)slot << 11) | ((uint32_t)bus << 16));
-    //Write address to I/O port
-    outl(0xCF8, addr);
-    //Read the response
-    uint32_t data = inl(0xCFC);
-    //Format it
-    uint16_t val = (short)((data >> ((offs & 2) * 8)) & 0xffff);
-    return val;
+void pci_init(void){
+    //Find the MCFG table
+    acpi_mcfg_t* mcfg = rsdt_find("MCFG");
+    if(mcfg == NULL){
+        krnl_write_msg(__FILE__, "MCFG not found");
+        return;
+    }
+    krnl_write_msgf(__FILE__, "Found MCFG at 0x%x", mcfg);
+    pci_cfg_sect_cnt = (mcfg->sdt_hdr.len - sizeof(acpi_sdt_hdr_t)) / sizeof(pci_cfg_desc_t);
+    cfg_descs = mcfg->descs;
+    //Enumerate PCI devices
+    pci_enumerate();
+    while(1);
 }
 
 /*
- * Read config doubleword from a PCI device
- */
-uint16_t pci_read_config_32(unsigned char bus, unsigned char slot, unsigned char func, unsigned char offs){
-    //Construct the total address
-    uint32_t addr = (uint32_t)((uint32_t)0x80000000 | (offs & 0xFC) | ((uint32_t)func << 8)
-        | ((uint32_t)slot << 11) | ((uint32_t)bus << 16));
-    //Write address to I/O port
-    outl(0xCF8, addr);
-    //Read the response
-    return inl(0xCFC);
-}
-
-/*
- * Enumerates and initializes all known PCI devices
+ * Enumerates PCI devices
  */
 void pci_enumerate(void){
-    gfx_verbose_println("Enumerating PCI devices");
-    for(int b = 0; b < 256; b++){
-        for(int d = 0; d < 256; d++){
-            //Read device VID
-            short vendor = pci_read_config_16(b, d, 0, 0);
-            if(vendor != 0xFFFFFFFF){ //VID=FFFF means there is no device
-                uint16_t product = pci_read_config_16(b, d, 0, 2); //Read PID
-                uint16_t class_sub = pci_read_config_16(b, d, 0, 10); //Read class and subclass
-                uint16_t if_rev = pci_read_config_16(b, d, 0, 8); //Read interface and revision
-                char temp[100] = "Found PCI device VID=";
-                char temp2[15];
-                strcat(temp, sprintub16(temp2, (uint16_t)vendor, 4));
-                strcat(temp, " PID=");
-                strcat(temp, sprintub16(temp2, (uint16_t)product, 4));
-                gfx_verbose_println(temp);
-                //Try to detect a known device
-                //Firstly, USB controllers (C=0C, S=03)
-                if(class_sub == 0x00000C03){
-                    //EHCI, IF=0x20
-                    if((if_rev & 0xFF00) == 0x2000){
-                        gfx_verbose_println("  (EHCI controller)");
-                        ehci_add_cont(b, d);
-                    }
-                }
+    for(uint16_t bus = 0; bus < 256; bus++){
+        //Check if this bus exists
+        if(pci_cfg_space(bus, 0, 0) == NULL)
+            continue;
+        //Go through devices on this bus
+        for(uint16_t dev = 0; dev < 256; dev++){
+            //Get the config space pointer
+            uint32_t* cfg_space = pci_cfg_space(bus, dev, 0);
+            //Get VID and PID
+            uint32_t vid_pid = cfg_space[0];
+            if(vid_pid == 0xFFFFFFFF)
+                continue;
+            uint16_t vid   = vid_pid & 0xFFFF;
+            uint16_t pid   = vid_pid >> 16;
+            uint16_t c_sub = cfg_space[2] >> 16;
+            krnl_write_msgf(__FILE__, "found dev VID=0x%x PID=0x%x C_SUB=0x%x", vid, pid, c_sub);
+
+            //Initialize devices based on their type
+            switch(c_sub){
+                case 0x0106:
+                    ahci_init((ahci_hba_mem_t*)(uint64_t)cfg_space[9]);
+                    break;
             }
         }
     }
+}
+
+/*
+ * Returns the pointer to PCI device configration space
+ */
+uint32_t* pci_cfg_space(uint16_t bus, uint16_t dev, uint16_t func){
+    for(int i = 0; i < pci_cfg_sect_cnt; i++){
+        pci_cfg_desc_t* cfg = &cfg_descs[i];
+        if(bus >= cfg->start_bus && bus < cfg->end_bus)
+            return (uint32_t*)(cfg->base + ((bus - cfg->start_bus) << 20 | dev << 15 | func << 12));
+    }
+    return NULL;
 }

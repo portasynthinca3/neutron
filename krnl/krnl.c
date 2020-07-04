@@ -18,6 +18,7 @@
 #include "./drivers/initrd.h"
 #include "./drivers/ps2.h"
 #include "./drivers/cmos.h"
+#include "./drivers/pci.h"
 
 #include "./fonts/jb-mono-10.h"
 
@@ -648,6 +649,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status("Initializing some hardware", 85);
     ps2_init();
     rtc_init();
+    pci_init();
 
     //Initialize the multitasking system
     krnl_boot_status("Initializing multitasking", 90);
