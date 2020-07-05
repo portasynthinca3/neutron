@@ -68,8 +68,19 @@ void ahci_init(ahci_hba_mem_t* base){
                         .port = i,
                         .ptr = port,
                         .cmd_hdr = cmd_hdr,
-                        .cmd_tbl = ctb
+                        .cmd_tbl = ctb,
+                        .info = (uint8_t*)amalloc(512, 2)
                     };
+
+                    //Read drive info
+                    sata_dev_t* dev = &sata_devs[sata_cnt - 1];
+                    ahci_identify(sata_cnt - 1, dev->info);
+                    //Calculate max LBA
+                    if(dev->info[138] & 8)
+                        dev->max_lba = *(uint64_t*)&dev->info[460];
+                    else
+                        dev->max_lba = (uint32_t)*(uint16_t*)&dev->info[120];
+                    krnl_write_msgf(__FILE__, "max LBA: %x", dev->max_lba);
                 }
                 break;
             case AHCI_SATAPI:
@@ -249,5 +260,54 @@ void ahci_write(uint32_t dev, void* buf, size_t cnt, uint64_t lba){
             break;
         if(port->is & (1 << 30))
             krnl_write_msgf(__FILE__, "drive write error");
+    }
+}
+
+/*
+ * Reads drive information
+ */
+void ahci_identify(uint32_t dev, uint8_t info[512]){
+    //Get port pointer
+    ahci_hba_port_t* port = sata_devs[dev].ptr;
+
+    //Clear interrupt flags
+    port->is = 0xFFFF;
+
+    //Setup the command header
+    ahci_cmd_hdr_t* cmd_hdr = sata_devs[dev].cmd_hdr;
+    cmd_hdr->cfl   = sizeof(ahci_fis_reg_h2d_t) / sizeof(uint32_t);
+    cmd_hdr->w     = 0;
+    cmd_hdr->c     = 1;
+    cmd_hdr->p     = 0;
+    cmd_hdr->prdtl = 1; //only one PRDT entry
+
+    //Setup the command table
+    ahci_cmd_tbl_t* cmd_tbl = sata_devs[dev].cmd_tbl;
+    memset((void*)cmd_tbl, 0, sizeof(*cmd_tbl));
+
+    //Setup the PRDT
+    memset((void*)&cmd_tbl->prdt_entries[0], 0, sizeof(cmd_tbl->prdt_entries[0]));
+    cmd_tbl->prdt_entries[0].dba = (uint64_t)vmem_virt_to_phys(vmem_get_cr3(), info);
+    cmd_tbl->prdt_entries[0].dbc = 512;
+    cmd_tbl->prdt_entries[0].i   = 0;
+
+    //Setup the command FIS
+    ahci_fis_reg_h2d_t* cmd_fis = (ahci_fis_reg_h2d_t*)&cmd_tbl->cfis;
+    memset((void*)cmd_fis, 0, sizeof(*cmd_fis));
+    cmd_fis->fis_type = AHCI_FIS_TYPE_REG_H2D;
+    cmd_fis->c        = 1;
+    cmd_fis->dev      = 0;
+    cmd_fis->cmd      = 0xEC; //Identify
+
+    //Wait for the drive to perform previous commands
+    while((port->tfd & 0x88));
+    //Issue the command
+    port->ci = 1;
+    //Wait for the command to complete
+    while(1){
+        if((port->ci & 1) == 0)
+            break;
+        if(port->is & (1 << 30))
+            krnl_write_msgf(__FILE__, "drive identification error");
     }
 }

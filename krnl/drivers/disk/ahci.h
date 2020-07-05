@@ -88,15 +88,6 @@ typedef volatile struct {
     ahci_prdt_entry_t prdt_entries[1];
 } __attribute__((packed)) ahci_cmd_tbl_t;
 
-typedef struct {
-    uint8_t host;
-    uint8_t port;
-
-    ahci_hba_port_t* ptr;
-    ahci_cmd_hdr_t*  cmd_hdr;
-    ahci_cmd_tbl_t*  cmd_tbl;
-} sata_dev_t;
-
 typedef volatile struct {
     uint8_t fis_type; //type (FIS_TYPE_REG_H2D)
 
@@ -123,6 +114,18 @@ typedef volatile struct {
 
     uint8_t rsvd1[4];
 } __attribute__((packed)) ahci_fis_reg_h2d_t;
+
+typedef struct {
+    uint8_t host;
+    uint8_t port;
+
+    ahci_hba_port_t* ptr;
+    ahci_cmd_hdr_t*  cmd_hdr;
+    ahci_cmd_tbl_t*  cmd_tbl;
+    uint8_t*         info;
+
+    uint64_t max_lba;
+} sata_dev_t;
 
 //Enumerator definitions
 
@@ -151,5 +154,6 @@ void ahci_stop_cmd(ahci_hba_port_t* port);
 
 void ahci_read(uint32_t dev, void* buf, size_t cnt, uint64_t lba);
 void ahci_write(uint32_t dev, void* buf, size_t cnt, uint64_t lba);
+void ahci_identify(uint32_t dev, uint8_t info[512]);
 
 #endif

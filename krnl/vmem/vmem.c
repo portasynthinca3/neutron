@@ -155,9 +155,8 @@ void vmem_physwin_write64(phys_addr_t addr, uint64_t val){
  */
 uint64_t vmem_physwin_read64(phys_addr_t addr){
     //Assume the virtual space is identity mapped if this function is disabled
-    if(physwin_disbl){
+    if(physwin_disbl)
         return *(uint64_t*)addr;
-    }
     //Set the window
     uint64_t offs = vmem_physwin_set(addr);
     //Read the value
@@ -455,13 +454,24 @@ uint8_t vmem_present_page(uint64_t cr3, virt_addr_t at){
 phys_addr_t vmem_virt_to_phys(uint64_t cr3, virt_addr_t at){
     if(trans_disbl)
         return (phys_addr_t)at;
+        
+    uint64_t p_cr3 = vmem_get_cr3();
+    vmem_set_cr3(vmem_ident_cr3);
+    uint8_t p_disbl = physwin_disbl;
+    physwin_disbl = 1;
+    
     //Extract PT address
     phys_addr_t pt = vmem_addr_pt(cr3, at);
     //Calculate the entry index
     uint64_t pte_idx = ((uint64_t)at >> 12) & 0x1FF;
     //Extract its base address and add the offset
-    return (phys_addr_t*)((uint64_t)(vmem_physwin_read64((uint8_t*)pt + (pte_idx * 8)) & 0x7FFFFFFFFFFFF000)
-                        + (uint64_t)((uint64_t)at & 0xFFF));
+    phys_addr_t res = (phys_addr_t*)((uint64_t)(vmem_physwin_read64((uint64_t*)pt + pte_idx) & 0x7FFFFFFFFFFFF000)
+                                   + (uint64_t)((uint64_t)at & 0xFFF));
+    
+    physwin_disbl = p_disbl;
+    vmem_set_cr3(p_cr3);
+
+    return res;
 }
 
 
