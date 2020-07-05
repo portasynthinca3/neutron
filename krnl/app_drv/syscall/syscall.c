@@ -7,7 +7,7 @@
 #include "../../vmem/vmem.h"
 #include "../../mtask/mtask.h"
 #include "../../drivers/gfx.h"
-#include "../../drivers/diskio.h"
+#include "../../drivers/disk/diskio.h"
 #include "../../krnl.h"
 #include "../elf/elf.h"
 

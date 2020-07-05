@@ -6,7 +6,7 @@
 #include "../krnl.h"
 #include "./acpi.h"
 
-#include "./ahci.h"
+#include "./disk/ahci.h"
 
 //All PCI address allocation descriptors
 uint16_t pci_cfg_sect_cnt;

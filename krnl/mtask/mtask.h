@@ -2,7 +2,7 @@
 #define MTASK_H
 
 #include "../stdlib.h"
-#include "../drivers/diskio.h"
+#include "../drivers/disk/diskio.h"
 #include "../vmem/vmem.h"
 
 //Settings

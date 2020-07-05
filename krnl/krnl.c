@@ -10,12 +10,12 @@
 #include <efilib.h>
 
 #include "./drivers/gfx.h"
-#include "./drivers/diskio.h"
+#include "./drivers/disk/diskio.h"
 #include "./drivers/pci.h"
 #include "./drivers/apic.h"
 #include "./drivers/timr.h"
 #include "./drivers/acpi.h"
-#include "./drivers/initrd.h"
+#include "./drivers/disk/initrd.h"
 #include "./drivers/ps2.h"
 #include "./drivers/cmos.h"
 #include "./drivers/pci.h"

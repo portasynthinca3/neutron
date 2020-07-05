@@ -12,16 +12,21 @@ krnl/vmem/vmem.c
 
 # Drivers
 
-krnl/drivers/diskio.c
 krnl/drivers/gfx.c
 krnl/drivers/apic.c
 krnl/drivers/timr.c
 krnl/drivers/acpi.c
-krnl/drivers/initrd.c
 krnl/drivers/ps2.c
 krnl/drivers/cmos.c
 krnl/drivers/pci.c
-krnl/drivers/ahci.c
+
+# Disks and filesystems
+
+krnl/drivers/disk/diskio.c
+krnl/drivers/disk/initrd.c
+krnl/drivers/disk/ahci.c
+krnl/drivers/disk/part.c
+krnl/drivers/disk/fs/fat.c
 
 # Application support stuff
 
