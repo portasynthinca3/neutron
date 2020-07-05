@@ -38,12 +38,6 @@ void ahci_init(ahci_hba_mem_t* base){
             case AHCI_SATA:
                 t_str = "SATA drive";
                 {
-                    //Mount the drive
-                    char mount_path[32];
-                    sprintf(mount_path, "/disk/sata%i", sata_cnt);
-                    diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_SATA,
-                                                .device_no = sata_cnt},
-                                 mount_path);
                     //Stop command engine
                     ahci_stop_cmd(port);
 
@@ -77,14 +71,12 @@ void ahci_init(ahci_hba_mem_t* base){
                         .cmd_tbl = ctb
                     };
 
+                    file_handle_t handle;
                     uint8_t sect[512];
-                    sect[0] = 0xDE;
-                    sect[1] = 0xAD;
-                    ahci_write(0, sect, 1, 1024);
-                    memset(sect, 0, 512);
-                    ahci_read(0, sect, 1, 1024);
-                    krnl_write_msgf(__FILE__, "sect[0]=0x%x", sect[0]);
-                    krnl_write_msgf(__FILE__, "sect[1]=0x%x", sect[1]);
+                    diskio_open("/disk/sata0", &handle, DISKIO_FILE_ACCESS_READ);
+                    diskio_seek(&handle, 0);
+                    diskio_read(&handle, sect, 512);
+                    krnl_write_msgf(__FILE__, "0x%x, 0x%x", sect[510], sect[511]);
                 }
                 break;
             case AHCI_SATAPI:

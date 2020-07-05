@@ -9,6 +9,7 @@
 #include "./gfx.h"
 #include "./ps2.h"
 #include "./cmos.h"
+#include "./ahci.h"
 
 #include "./initrd.h"
 
@@ -194,6 +195,23 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             else
                 return DISKIO_STATUS_READ_PROTECTED;
         }
+        mtask_add_open_file(handle);
+        return DISKIO_STATUS_OK;
+    }
+    //Check if it's a SATA drive
+    if(memcmp(path, "/disk/sata", 10) == 0){
+        //Setup the handle
+        handle->signature = DISKIO_HANDLE_SIGNATURE;
+        handle->pid = cur_task->pid;
+        handle->mode = mode;
+        handle->position = 0;
+        strcpy(handle->info.name, path);
+        handle->info.size = 64;
+        handle->info.device.bus_type = DISKIO_BUS_SATA;
+        handle->info.device.bridge.is_bridge = 0;
+        //Determine the drive number
+        uint32_t drive_no = atoi(path + 10);
+        handle->info.device.device_no = drive_no;
         mtask_add_open_file(handle);
         return DISKIO_STATUS_OK;
     }
@@ -390,6 +408,9 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
                 } break;
             }
         } break;
+        case DISKIO_BUS_SATA:
+            ahci_read(handle->info.device.device_no, buf, len / 512, handle->position / 512);
+            break;
     }
     return DISKIO_STATUS_INVL_SIGNATURE;
 }
@@ -454,6 +475,9 @@ uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
                 } break;
             }
         } break;
+        case DISKIO_BUS_SATA:
+            ahci_write(handle->info.device.device_no, buf, len / 512, handle->position / 512);
+            break;
     }
     return DISKIO_STATUS_INVL_SIGNATURE;
 }
