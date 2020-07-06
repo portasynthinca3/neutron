@@ -206,12 +206,12 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
         handle->mode = mode;
         handle->position = 0;
         strcpy(handle->info.name, path);
-        handle->info.size = 64;
         handle->info.device.bus_type = DISKIO_BUS_SATA;
         handle->info.device.bridge.is_bridge = 0;
         //Determine the drive number
         uint32_t drive_no = atoi(path + 10);
         handle->info.device.device_no = drive_no;
+        handle->info.size = ahci_get_drive(drive_no)->max_lba * 512;
         mtask_add_open_file(handle);
         return DISKIO_STATUS_OK;
     }

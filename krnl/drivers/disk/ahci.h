@@ -156,4 +156,6 @@ void ahci_read(uint32_t dev, void* buf, size_t cnt, uint64_t lba);
 void ahci_write(uint32_t dev, void* buf, size_t cnt, uint64_t lba);
 void ahci_identify(uint32_t dev, uint8_t info[512]);
 
+sata_dev_t* ahci_get_drive(uint32_t dev);
+
 #endif

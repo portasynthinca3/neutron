@@ -5,6 +5,7 @@
 #include "../../stdlib.h"
 #include "../../krnl.h"
 #include "./diskio.h"
+#include "./part.h"
 #include "../../vmem/vmem.h"
 
 //The list of AHCI MMIO bases
@@ -81,6 +82,11 @@ void ahci_init(ahci_hba_mem_t* base){
                     else
                         dev->max_lba = (uint32_t)*(uint16_t*)&dev->info[120];
                     krnl_write_msgf(__FILE__, "max LBA: %x", dev->max_lba);
+
+                    //Load partitions on this drive
+                    char disk_path[32];
+                    sprintf(disk_path, "/disk/sata%i", sata_cnt - 1);
+                    parts_load(disk_path);
                 }
                 break;
             case AHCI_SATAPI:
@@ -310,4 +316,11 @@ void ahci_identify(uint32_t dev, uint8_t info[512]){
         if(port->is & (1 << 30))
             krnl_write_msgf(__FILE__, "drive identification error");
     }
+}
+
+/*
+ * Returns the pointer to the drive descriptor structure
+ */
+sata_dev_t* ahci_get_drive(uint32_t dev){
+    return &sata_devs[dev];
 }
