@@ -25,13 +25,14 @@ typedef enum {
 typedef struct {
     uint64_t lba_start;
     uint64_t lba_end;
-    char     name[256];
+    char     name[128];
 
-    char     drive[128];
-    uint32_t part_no;
-    uint8_t  is_gpt;
+    char           drive[128];
+    uint32_t       part_no;
+    uint8_t        is_gpt;
+    file_handle_t* drive_file;
 
-    part_type_t type;
+    part_type_t    type;
 } part_t;
 
 typedef struct {
@@ -42,5 +43,7 @@ typedef struct {
 
 void parts_load(char* path);
 void parts_load_gpt(file_handle_t* disk);
+
+part_t* part_get(uint32_t num);
 
 #endif

@@ -10,17 +10,17 @@ part_t parts[MAX_PARTS];
 uint32_t part_cnt;
 
 /*
- * Load, register and mount recognizable partitions from the disk virtual file
+ * Load recognizable partitions from the disk virtual file
  */
 void parts_load(char* path){
     krnl_write_msgf(__FILE__, "loading partitions on %s", path);
     //Open the disk file
-    file_handle_t disk;
-    diskio_open(path, &disk, DISKIO_FILE_ACCESS_READ);
+    file_handle_t* disk = (file_handle_t*)malloc(sizeof(file_handle_t));
+    diskio_open(path, disk, DISKIO_FILE_ACCESS_READ);
     //Read the boot sector
     uint8_t bootsect[512];
-    diskio_seek(&disk, 0);
-    diskio_read(&disk, bootsect, 512);
+    diskio_seek(disk, 0);
+    diskio_read(disk, bootsect, 512);
     //Check the signature
     if(bootsect[510] != 0x55 || bootsect[511] != 0xAA){
         krnl_write_msgf(__FILE__, "bootsect signature is invalid (0x%x, 0x%x)", bootsect[510], bootsect[511]);
@@ -37,23 +37,23 @@ void parts_load(char* path){
 
         //Parse GPT if it's a EFI partition
         if(type == 0xEE || type == 0xEF){
-            parts_load_gpt(&disk);
+            parts_load_gpt(disk);
             continue;
         }
         //Else, it's a typical MBR partition
         krnl_write_msgf(__FILE__, "found MBR partition type 0x%x at 0x%x of size 0x%x", type, start, size);
         if(type == 0x0C)
             parts[part_cnt++] = (part_t){.is_gpt = 0, .lba_start = start, .lba_end = start + size,
-                                         .type = PART_TYPE_FAT32, .part_no = p};
+                                         .type = PART_TYPE_FAT32, .part_no = p, .drive_file = disk};
         else
             parts[part_cnt++] = (part_t){.is_gpt = 0, .lba_start = start, .lba_end = start + size,
-                                         .type = PART_TYPE_UNKNOWN, .part_no = p};
+                                         .type = PART_TYPE_UNKNOWN, .part_no = p, .drive_file = disk};
         strcpy(parts[part_cnt - 1].drive, path);
     }
 }
 
 /*
- * Load, register and mount recognizable partitions from the disk virtual file assuming it is using GPT
+ * Load recognizable partitions from the disk virtual file assuming it is using GPT
  */
 void parts_load_gpt(file_handle_t* disk){
     //Read the primary and secondary GPT headers
@@ -103,13 +103,20 @@ void parts_load_gpt(file_handle_t* disk){
             if(memcmp(type_guid, PART_GUID_MBDP, sizeof(guid_t)) == 0){
                 krnl_write_msgf(__FILE__, "found Microsoft Basic Data partition between 0x%x and %x", lba_start, lba_end);
                 parts[part_cnt++] = (part_t){.is_gpt = 1, .lba_start = lba_start, .lba_end = lba_end,
-                                             .type = PART_TYPE_FAT32, .part_no = p + (s * (512 / pe_sz))};
+                                             .type = PART_TYPE_FAT32, .part_no = p + (s * (512 / pe_sz)), .drive_file = disk};
             } else {
                 krnl_write_msgf(__FILE__, "partition of unknown type between 0x%x and 0x%x", lba_start, lba_end);
                 parts[part_cnt++] = (part_t){.is_gpt = 1, .lba_start = lba_start, .lba_end = lba_end,
-                                             .type = PART_TYPE_UNKNOWN, .part_no = p + (s * (512 / pe_sz))};
+                                             .type = PART_TYPE_UNKNOWN, .part_no = p + (s * (512 / pe_sz)), .drive_file = disk};
             }
             strcpy(parts[part_cnt - 1].drive, disk->info.name);
         }
     }
+}
+
+/*
+ * Returns the partition by its number
+ */
+part_t* part_get(uint32_t num){
+    return &parts[num];
 }

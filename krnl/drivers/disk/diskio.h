@@ -28,6 +28,7 @@
 #define DISKIO_BUS_SYSTEM                           3
 #define DISKIO_BUS_DEVICE                           4
 #define DISKIO_BUS_SATA                             5
+#define DISKIO_BUS_PART                             6
 
 //Virtual files in the /sys/ directory
 #define SYS_FILE_CPUFQ                              0

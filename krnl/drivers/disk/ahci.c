@@ -77,10 +77,10 @@ void ahci_init(ahci_hba_mem_t* base){
                     sata_dev_t* dev = &sata_devs[sata_cnt - 1];
                     ahci_identify(sata_cnt - 1, dev->info);
                     //Calculate max LBA
-                    if(dev->info[138] & 8)
+                    if(dev->info[138] & 4)
                         dev->max_lba = *(uint64_t*)&dev->info[460];
                     else
-                        dev->max_lba = (uint32_t)*(uint16_t*)&dev->info[120];
+                        dev->max_lba = *(uint32_t*)&dev->info[120];
                     krnl_write_msgf(__FILE__, "max LBA: %x", dev->max_lba);
 
                     //Load partitions on this drive

@@ -9,9 +9,10 @@
 #include "./../gfx.h"
 #include "./../ps2.h"
 #include "./../cmos.h"
-#include "./ahci.h"
+#include "./part.h"
 
 #include "./initrd.h"
+#include "./ahci.h"
 
 diskio_map_t* mappings;
 
@@ -215,6 +216,24 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
         mtask_add_open_file(handle);
         return DISKIO_STATUS_OK;
     }
+    //Check if it's a partition
+    if(memcmp(path, "/part/", 6) == 0){
+        //Setup the handle
+        handle->signature = DISKIO_HANDLE_SIGNATURE;
+        handle->pid = cur_task->pid;
+        handle->mode = mode;
+        handle->position = 0;
+        strcpy(handle->info.name, path);
+        handle->info.device.bus_type = DISKIO_BUS_PART;
+        handle->info.device.bridge.is_bridge = 0;
+        //Determine the partition number
+        uint32_t part_no = atoi(path + 6);
+        handle->info.device.device_no = part_no;
+        part_t* part = part_get(part_no);
+        handle->info.size = (part->lba_end - part->lba_start) * 512;
+        mtask_add_open_file(handle);
+        return DISKIO_STATUS_OK;
+    }
     //Go through mappings
     for(uint32_t i = 0; i < DISKIO_MAX_MAPPINGS; i++){
         //Find a mapping that the path is relative to
@@ -410,7 +429,13 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
         } break;
         case DISKIO_BUS_SATA:
             ahci_read(handle->info.device.device_no, buf, len / 512, handle->position / 512);
-            break;
+            return DISKIO_STATUS_OK;
+        case DISKIO_BUS_PART:{
+            part_t* part = part_get(handle->info.device.device_no);
+            file_handle_t* drive = part->drive_file;
+            diskio_seek(drive, (part->lba_start + (handle->position / 512)) * 512);
+            return diskio_read(drive, buf, len);
+        } break;
     }
     return DISKIO_STATUS_INVL_SIGNATURE;
 }
@@ -478,6 +503,12 @@ uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
         case DISKIO_BUS_SATA:
             ahci_write(handle->info.device.device_no, buf, len / 512, handle->position / 512);
             break;
+        case DISKIO_BUS_PART:{
+            part_t* part = part_get(handle->info.device.device_no);
+            file_handle_t* drive = part->drive_file;
+            diskio_seek(drive, (part->lba_start + (handle->position / 512)) * 512);
+            return diskio_write(drive, buf, len);
+        } break;
     }
     return DISKIO_STATUS_INVL_SIGNATURE;
 }
