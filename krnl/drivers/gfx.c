@@ -95,18 +95,18 @@ void gfx_init(void){
     gfx_find_gop();
     //If it hadn't been found, print an error
     if(graphics_output == NULL){
-        krnl_write_msgf(__FILE__, "GOP not found", gfx_res_x(), gfx_res_y());
+        krnl_write_msgf(__FILE__, __LINE__, "GOP not found", gfx_res_x(), gfx_res_y());
         krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"Unable to find the graphics output protocol\r\n");
         while(1);
     } else {
-        krnl_write_msgf(__FILE__, "GOP found", gfx_res_x(), gfx_res_y());
+        krnl_write_msgf(__FILE__, __LINE__, "GOP found", gfx_res_x(), gfx_res_y());
         krnl_get_efi_systable()->ConOut->OutputString(krnl_get_efi_systable()->ConOut,
             (CHAR16*)L"GOP found\r\n");
     }
     //Choose the best video mode
     gfx_choose_best();
-    krnl_write_msgf(__FILE__, "found best display mode: %ix%i", gfx_res_x(), gfx_res_y());
+    krnl_write_msgf(__FILE__, __LINE__, "found best display mode: %ix%i", gfx_res_x(), gfx_res_y());
     //Allocate the second buffer based on the screen size
     sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
 }
@@ -177,11 +177,11 @@ void gfx_choose_best(void){
         }
     }
     if(mon_best_res_x == 0 || mon_best_res_y == 0){
-        krnl_write_msgf(__FILE__, "error retrieving display resolution, forcing to 1280x720");
+        krnl_write_msgf(__FILE__, __LINE__, "error retrieving display resolution, forcing to 1280x720");
         mon_best_res_x = 1280;
         mon_best_res_y = 720;
     }
-    krnl_write_msgf(__FILE__, "display resolution: %ix%i", mon_best_res_x, mon_best_res_x);
+    krnl_write_msgf(__FILE__, __LINE__, "display resolution: %ix%i", mon_best_res_x, mon_best_res_x);
 
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info;
     uint64_t mode_info_size;

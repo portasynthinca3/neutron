@@ -17,9 +17,9 @@ uint64_t krnl_rsp = 0;
 void syscall_init(void){
     //Create a kernel mode stack
     krnl_rsp = (uint64_t)malloc(8192) + 8192;
-    krnl_write_msgf(__FILE__, "system call RSP: 0x%x", krnl_rsp);
+    krnl_write_msgf(__FILE__, __LINE__, "system call RSP: 0x%x", krnl_rsp);
     //Self-modify the syscall wrapper offset
-    krnl_write_msgf(__FILE__, "mov rsp modify address: 0x%x", &syscall_wrapper + 5);
+    krnl_write_msgf(__FILE__, __LINE__, "mov rsp modify address: 0x%x", &syscall_wrapper + 5);
     *(uint64_t volatile*)(&syscall_wrapper + 5) = krnl_rsp;
 }
 
@@ -152,7 +152,7 @@ uint64_t syscall_handle(void){
                     if(p1 + strlen((char*)p1) >= 0x800000000000ULL)
                         return 0xFFFFFFFFFFFFFFFF;
                     //write the message
-                    krnl_write_msg((char*)p0, (char*)p1);
+                    krnl_write_msg((char*)p0, 0, (char*)p1);
                     return 0;
                 default: //invalid subfunction number
                     return 0xFFFFFFFFFFFFFFFF;

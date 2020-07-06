@@ -19,10 +19,10 @@ void pci_init(void){
     //Find the MCFG table
     acpi_mcfg_t* mcfg = rsdt_find("MCFG");
     if(mcfg == NULL){
-        krnl_write_msg(__FILE__, "MCFG not found");
+        krnl_write_msg(__FILE__, __LINE__, "MCFG not found");
         return;
     }
-    krnl_write_msgf(__FILE__, "Found MCFG at 0x%x", mcfg);
+    krnl_write_msgf(__FILE__, __LINE__, "Found MCFG at 0x%x", mcfg);
     pci_cfg_sect_cnt = (mcfg->sdt_hdr.len - sizeof(acpi_sdt_hdr_t)) / sizeof(pci_cfg_desc_t);
     cfg_descs = mcfg->descs;
     //Enumerate PCI devices
@@ -49,7 +49,7 @@ void pci_enumerate(void){
             uint16_t vid   = vid_pid & 0xFFFF;
             uint16_t pid   = vid_pid >> 16;
             uint16_t c_sub = cfg_space[2] >> 16;
-            krnl_write_msgf(__FILE__, "found dev VID=0x%x PID=0x%x C_SUB=0x%x", vid, pid, c_sub);
+            krnl_write_msgf(__FILE__, __LINE__, "found dev VID=0x%x PID=0x%x C_SUB=0x%x", vid, pid, c_sub);
 
             //Initialize devices based on their type
             switch(c_sub){

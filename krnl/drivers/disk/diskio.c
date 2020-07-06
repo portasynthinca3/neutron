@@ -35,8 +35,8 @@ void diskio_mount(diskio_dev_t device, char* path){
             //Copy the device ID
             mappings[i].device = device;
             //Mark the entry as used
-            mappings[i].used = 0;
-            krnl_write_msgf(__FILE__, "mounted dev 0x%i.0x%i to %s", device.bus_type, device.device_no, path);
+            mappings[i].used = 1;
+            krnl_write_msgf(__FILE__, __LINE__, "mounted dev 0x%x.0x%x to %s", device.bus_type, device.device_no, path);
             //Return
             return;
         }
@@ -237,12 +237,12 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
     //Go through mappings
     for(uint32_t i = 0; i < DISKIO_MAX_MAPPINGS; i++){
         //Find a mapping that the path is relative to
-        if(memcmp(path, mappings[i].mapped_at, strlen(mappings[i].mapped_at)) == 0){
+        if(strcmp(path, mappings[i].mapped_at) == 0 && mappings[i].used){
             //Get the filename
             char* name = path + strlen(mappings[i].mapped_at);
             //Different device types require different access schemes
             switch(mappings[i].device.bus_type){
-                case DISKIO_BUS_INITRD:{
+                case DISKIO_BUS_INITRD: {
                     //Fetch INITRD file info
                     initrd_file_t file = initrd_read(name);
                     //If there are no files with this name, return an error
@@ -264,6 +264,9 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
                     mtask_add_open_file(handle);
                     return DISKIO_STATUS_OK;
                 } break;
+                case DISKIO_BUS_PART: {
+                    //
+                }
             }
         }
     }

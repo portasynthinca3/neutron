@@ -83,20 +83,21 @@ uint64_t krnl_efi_map_key;
 void krnl_print_msg(krnl_msg_t* m){
     char buf[MAX_KRNL_MSG_SZ + 256];
     memset(buf, 0, sizeof(buf));
-    sprintf(buf, "[%i ms] %s: %s", 1000 * (m->tsc - first_msg->tsc) / timr_get_cpu_fq(), m->file, m->msg);
+    sprintf(buf, "[%i ms] %s:%i: %s", 1000 * (m->tsc - first_msg->tsc) / timr_get_cpu_fq(), m->file, m->line, m->msg);
     gfx_verbose_println(buf);
 }
 
 /*
  * Writes a message to the kernel message buffer
  */
-void krnl_write_msg(char* file, char* msg){
+void krnl_write_msg(char* file, uint32_t line, char* msg){
     //Print the message
     //Allocate memory for the message
     krnl_msg_t* m = (krnl_msg_t*)calloc(1, sizeof(krnl_msg_t));
     //Copy filename and message
     strcpy(m->msg, msg);
     strcpy(m->file, file);
+    m->line = line;
     //Read timestamp counter
     m->tsc = rdtsc();
     //Assign the pointer to the previous message
@@ -115,13 +116,13 @@ void krnl_write_msg(char* file, char* msg){
 /*
  * Writes a formatted message to the kernel message buffer
  */
-void krnl_write_msgf(char* file, char* msg, ...){
+void krnl_write_msgf(char* file, uint32_t line, char* msg, ...){
     //Formatted print to a string
     char buf[MAX_KRNL_MSG_SZ];
     va_list valist;
     va_start(valist, _sprintf_argcnt(msg));
     _sprintf(buf, msg, valist);
-    krnl_write_msg(file, buf);
+    krnl_write_msg(file, line, buf);
     va_end(valist);
 }
 
@@ -237,7 +238,7 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, sprintub16(temp2, task->state.rsp, 1));
     strcat(temp, " RBP=");
     strcat(temp, sprintub16(temp2, task->state.rbp, 1));
-    krnl_write_msg(__FILE__, temp);
+    krnl_write_msg(__FILE__, __LINE__, temp);
 
     //Print R8-R15
     temp[0] = 0;
@@ -257,7 +258,7 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, sprintub16(temp2, task->state.r14, 1));
     strcat(temp, " R15=");
     strcat(temp, sprintub16(temp2, task->state.r15, 1));
-    krnl_write_msg(__FILE__, temp);
+    krnl_write_msg(__FILE__, __LINE__, temp);
 
     //Print CR3, RIP, RFLAGS
     temp[0] = 0;
@@ -269,7 +270,7 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, sprintub16(temp2, task->state.rflags, 1));
     strcat(temp, " CS=");
     strcat(temp, sprintub16(temp2, task->state.cs, 1));
-    krnl_write_msg(__FILE__, temp);
+    krnl_write_msg(__FILE__, __LINE__, temp);
 
     //Print exception vector
     temp[0] = 0;
@@ -278,7 +279,7 @@ void krnl_dump_task_state(task_t* task){
     strcat(temp, " (");
     strcat(temp, krnl_exc_vect_to_str(task->state.exc_vector));
     strcat(temp, ")");
-    krnl_write_msg(__FILE__, temp);
+    krnl_write_msg(__FILE__, __LINE__, temp);
 
     //Print SIMD exception information
     if(task->state.exc_vector == 0x13){
@@ -287,7 +288,7 @@ void krnl_dump_task_state(task_t* task){
         temp[0] = 0;
         strcat(temp, "MXCSR=");
         strcat(temp, sprintub16(temp2, mxcsr, 8));
-        krnl_write_msg(__FILE__, temp);
+        krnl_write_msg(__FILE__, __LINE__, temp);
     }
     //Print PF information
     if(task->state.exc_vector == 0x0E){
@@ -296,7 +297,7 @@ void krnl_dump_task_state(task_t* task){
         temp[0] = 0;
         strcat(temp, "CR2=");
         strcat(temp, sprintub16(temp2, cr2, 1));
-        krnl_write_msg(__FILE__, temp);
+        krnl_write_msg(__FILE__, __LINE__, temp);
     }
 }
 
@@ -307,9 +308,9 @@ void krnl_dump(void){
     //Stop the schaeduler
     mtask_stop();
 
-    krnl_write_msg(__FILE__, "full kernel dump:");
+    krnl_write_msg(__FILE__, __LINE__, "full kernel dump:");
 
-    krnl_write_msg(__FILE__, "tasks:");
+    krnl_write_msg(__FILE__, __LINE__, "tasks:");
     //Scan through the task list
     task_t* tasks = mtask_get_task_list();
     for(uint32_t i = 0; i < MTASK_TASK_COUNT; i++){
@@ -331,9 +332,9 @@ void krnl_dump(void){
                 strcat(temp, sprintub16(temp2, rdtsc(), 1));
                 strcat(temp, "]");
             }
-            krnl_write_msg(__FILE__, temp);
+            krnl_write_msg(__FILE__, __LINE__, temp);
             krnl_dump_task_state(&tasks[i]);
-            krnl_write_msg(__FILE__, "");
+            krnl_write_msg(__FILE__, __LINE__, "");
         }
     }
 }
@@ -349,9 +350,9 @@ void krnl_exc(void){
         //Print the exception info
         char symbol[256];
         elf_get_sym(task, task->state.rip, symbol);
-        krnl_write_msgf(__FILE__, "Task %s with PID %i caused %s at RIP=0x%x <%s>",
+        krnl_write_msgf(__FILE__, __LINE__, "Task %s with PID %i caused %s at RIP=0x%x <%s>",
             task->name, task->pid, krnl_exc_vect_to_str(task->state.exc_vector), task->state.rip, symbol);
-        krnl_write_msg(__FILE__, "Task state at exception:");
+        krnl_write_msg(__FILE__, __LINE__, "Task state at exception:");
         krnl_dump_task_state(task);
         //Stop that task
         mtask_stop_task(task->pid);
@@ -426,9 +427,9 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     vmem_init();
     dram_shift();
 
-    krnl_write_msgf(__FILE__, "Neutron kernel version %s (%i), compiled on %s %s",
+    krnl_write_msgf(__FILE__, __LINE__, "Neutron kernel version %s (%i), compiled on %s %s",
                               KRNL_VERSION_STR, KRNL_VERSION_NUM, __DATE__, __TIME__);
-    krnl_write_msgf(__FILE__, "load address/size: 0x%x/0x%x", krnl_pos.offset, krnl_pos.size);
+    krnl_write_msgf(__FILE__, __LINE__, "load address/size: 0x%x/0x%x", krnl_pos.offset, krnl_pos.size);
 
     //Measure CPU frequency
     timr_measure_cpu_fq();
@@ -459,21 +460,21 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
         while((msg = msg->next));
     }
 
-    krnl_write_msgf(__FILE__, "mapped default regions to upper half");
+    krnl_write_msgf(__FILE__, __LINE__, "mapped default regions to upper half");
 
     //Print CPU info
     char cpuid_buf[64];
     //Print vendor
     cpuid_get_vendor(cpuid_buf, NULL);
-    krnl_write_msgf(__FILE__, "cpu vendor: %s", cpuid_buf);
+    krnl_write_msgf(__FILE__, __LINE__, "cpu vendor: %s", cpuid_buf);
     //Print brand string
     cpuid_get_brand(cpuid_buf);
-    krnl_write_msgf(__FILE__, "cpu name: %s", cpuid_buf);
+    krnl_write_msgf(__FILE__, __LINE__, "cpu name: %s", cpuid_buf);
 
     //Check required CPU features
     uint32_t edx_feat, ecx_feat;
     cpuid_get_feat(&edx_feat, &ecx_feat);
-    krnl_write_msgf(__FILE__, "cpu features: edx: 0x%x, ecx: 0x%x", edx_feat, ecx_feat);
+    krnl_write_msgf(__FILE__, __LINE__, "cpu features: edx: 0x%x, ecx: 0x%x", edx_feat, ecx_feat);
     uint32_t cant_boot = 0;
     if(!(edx_feat & CPUID_FEAT_EDX_PAT))
         cant_boot |= 1;
@@ -533,16 +534,6 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     initrd_init();
     diskio_init();
     diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_INITRD, .device_no = 0}, "/initrd/");
-    /*
-    //Try to load the font
-    file_handle_t font_file;
-    if(diskio_open("/initrd/bitstream-mono-10.vlw", &font_file, DISKIO_FILE_ACCESS_READ) == DISKIO_STATUS_OK){
-        uint8_t* font_buf = (uint8_t*)malloc(font_file.info.size);
-        diskio_read(&font_file, font_buf, font_file.info.size);
-        diskio_close(&font_file);
-        gfx_set_font(font_buf);
-    }
-    */
 
     //Initialize ACPI
     krnl_boot_status("Initializing ACPI", 45);
@@ -552,7 +543,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_boot_status("Setting up interrupts", 75);
     //Exit UEFI boot services
     krnl_get_efi_systable()->BootServices->ExitBootServices(krnl_efi_img_handle, krnl_efi_map_key);
-    krnl_write_msgf(__FILE__, "exited UEFI boot services");
+    krnl_write_msg(__FILE__, __LINE__, "exited UEFI boot services");
 	//Disable interrupts
 	__asm__ volatile("cli");
     //Get the current code and data selectors
@@ -560,7 +551,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     krnl_ds = 0;
     __asm__ volatile("movw %%cs, %0" : "=r" (krnl_cs));
     __asm__ volatile("movw %%ds, %0" : "=r" (krnl_ds));
-    krnl_write_msgf(__FILE__, "current selectors: cs: 0x%x, ds: 0x%x", krnl_cs, krnl_ds);
+    krnl_write_msgf(__FILE__, __LINE__, "current selectors: cs: 0x%x, ds: 0x%x", krnl_cs, krnl_ds);
     //Set up IDT
     idt_entry_t* idt = (idt_entry_t*)calloc(256, sizeof(idt_entry_t));
     idt_desc_t idt_d;
@@ -595,7 +586,7 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     idt_d.base = (void*)idt;
     idt_d.limit = 256 * sizeof(idt_entry_t);
     load_idt(&idt_d);
-    krnl_write_msgf(__FILE__, "loaded IDT");
+    krnl_write_msgf(__FILE__, __LINE__, "loaded IDT");
 
     //Move the GDT, adding userspace descriptors
     gdt_desc_t gdt_d;
@@ -629,17 +620,17 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     gdt_d.base = new_gdt;
     gdt_d.limit = 65535;
     __asm__ volatile("lgdt %0" : : "m"(gdt_d));
-    krnl_write_msgf(__FILE__, "loaded GDT");
+    krnl_write_msgf(__FILE__, __LINE__, "loaded GDT");
     //Load TR
     __asm__ volatile("ltr %0" : : "r"(tsss));
-    krnl_write_msgf(__FILE__, "loaded TR");
+    krnl_write_msgf(__FILE__, __LINE__, "loaded TR");
 
     //Set the system call stuff
     wrmsr(MSR_IA32_EFER, (rdmsr(MSR_IA32_EFER) & ~(0xFFFFFULL << 45)) | 1);
     wrmsr(MSR_IA32_LSTAR, (uint64_t)(&syscall_wrapper - krnl_pos.offset) | 0xFFFF800000000000ULL);
     wrmsr(MSR_IA32_SFMASK, 1 << 9); //Disable interrupts on syscalls
     wrmsr(MSR_IA32_STAR, ((uint64_t)krnl_cs << 32) | ((uint64_t)(user_cs - 16) << 48));
-    krnl_write_msgf(__FILE__, "initialized SYSCALL instr");
+    krnl_write_msgf(__FILE__, __LINE__, "initialized SYSCALL instr");
 
     //Initialize the APIC
     krnl_boot_status("Initializing APIC", 80);
@@ -680,13 +671,13 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable
     }
     krnl_pos.offset = orig_pos;
 
-    krnl_write_msgf(__FILE__, "finished \"relocating\"");
+    krnl_write_msgf(__FILE__, __LINE__, "finished \"relocating\"");
 
     //Run the initialization task
     syscall_init();
-    krnl_write_msgf(__FILE__, "running init");
+    krnl_write_msgf(__FILE__, __LINE__, "running init");
     uint64_t status = elf_load("/initrd/init.elf", TASK_PRIVL_EVERYTHING, 2);
     if(status != ELF_STATUS_OK)
-        krnl_write_msgf(__FILE__, "running init failed: error code %i", status);
+        krnl_write_msgf(__FILE__, __LINE__, "running init failed: error code %i", status);
     while(1);
 }

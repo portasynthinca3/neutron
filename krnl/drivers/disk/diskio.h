@@ -29,6 +29,7 @@
 #define DISKIO_BUS_DEVICE                           4
 #define DISKIO_BUS_SATA                             5
 #define DISKIO_BUS_PART                             6
+#define DISKIO_BUS_FAT32                            7
 
 //Virtual files in the /sys/ directory
 #define SYS_FILE_CPUFQ                              0
@@ -67,6 +68,8 @@ typedef struct _bridge_s{
 typedef struct {
     uint16_t bus_type;
     uint64_t device_no;
+    char     device_path[128];
+    void*    device_file;
 
     //only applicable if the file is a bridge
     bridge_t bridge;

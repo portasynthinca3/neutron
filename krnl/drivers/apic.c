@@ -26,7 +26,7 @@ void apic_init(void){
     __asm__ volatile("cli");
     //Set LAPIC base
     lapic_base = 0xFFFFFFFFFFFFE000ULL;
-    krnl_write_msgf(__FILE__, "LAPIC base: 0x%x", lapic_base);
+    krnl_write_msgf(__FILE__, __LINE__, "LAPIC base: 0x%x", lapic_base);
     //Set task and processor priority to 0
     lapic_reg_wr(LAPIC_REG_TPR, 0);
     lapic_reg_wr(LAPIC_REG_PPR, 0);
@@ -47,7 +47,7 @@ void apic_init(void){
     lapic_eoi();
     //Clear error
     lapic_reg_wr(LAPIC_REG_ERR_ST, 0);
-    krnl_write_msgf(__FILE__, "initialized LAPIC");
+    krnl_write_msgf(__FILE__, __LINE__, "initialized LAPIC");
 
     //I/O APIC
 
@@ -57,10 +57,10 @@ void apic_init(void){
     //Find the MADT table
     madt_ptr = (uint8_t*)rsdt_find("APIC");
     if(madt_ptr == NULL){
-        krnl_write_msgf(__FILE__, "MADT not found");
+        krnl_write_msgf(__FILE__, __LINE__, "MADT not found");
         return;
     }
-    krnl_write_msgf(__FILE__, "MADT is at 0x%x", madt_ptr);
+    krnl_write_msgf(__FILE__, __LINE__, "MADT is at 0x%x", madt_ptr);
     //Go through the records
     uint32_t cur_offs = 0x2C;
     while(cur_offs < *(uint32_t*)(madt_ptr + 4) - 32){
@@ -73,19 +73,19 @@ void apic_init(void){
             ioapic->id        = record->data[0];
             ioapic->mmio_base = *(uint32_t*)&record->data[2];
             ioapic->gsi_base  = *(uint32_t*)&record->data[6];
-            krnl_write_msgf(__FILE__, "found I/O APIC %i at 0x%x with gsi_base=%i",
+            krnl_write_msgf(__FILE__, __LINE__, "found I/O APIC %i at 0x%x with gsi_base=%i",
                 ioapic->id, ioapic->mmio_base, ioapic->gsi_base);
         } else if(record->type == 2){
             uint8_t  irq   = record->data[1];
             uint32_t gsi   = *(uint32_t*)&record->data[2];
             uint16_t flags = *(uint32_t*)&record->data[6];
             gsi_map[irq] = gsi | (flags << 8);
-            krnl_write_msgf(__FILE__, "override: IRQ%i -> GSI%i",
+            krnl_write_msgf(__FILE__, __LINE__, "override: IRQ%i -> GSI%i",
                 irq, gsi);
         }
     }
 
-    krnl_write_msg(__FILE__, "I/O APIC initialized");
+    krnl_write_msg(__FILE__, __LINE__, "I/O APIC initialized");
 }
 
 /*
@@ -173,6 +173,6 @@ void ioapic_map_irq(uint32_t id, uint8_t irq, uint8_t vect){
     ioapic_reg_wr(id, redir_entry_reg, redir);
     ioapic_reg_wr(id, redir_entry_reg + 1, redir >> 32);
 
-    krnl_write_msgf(__FILE__, "mapped GSI %i triggered at %s %s to intr vector %i",
+    krnl_write_msgf(__FILE__, __LINE__, "mapped GSI %i triggered at %s %s to intr vector %i",
         irq, low_trig ? "low" : "high", lev_trig ? "level" : "edge", vect);
 }

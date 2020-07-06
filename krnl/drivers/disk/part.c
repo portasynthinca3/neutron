@@ -13,7 +13,7 @@ uint32_t part_cnt;
  * Load recognizable partitions from the disk virtual file
  */
 void parts_load(char* path){
-    krnl_write_msgf(__FILE__, "loading partitions on %s", path);
+    krnl_write_msgf(__FILE__, __LINE__, "loading partitions on %s", path);
     //Open the disk file
     file_handle_t* disk = (file_handle_t*)malloc(sizeof(file_handle_t));
     diskio_open(path, disk, DISKIO_FILE_ACCESS_READ);
@@ -23,7 +23,7 @@ void parts_load(char* path){
     diskio_read(disk, bootsect, 512);
     //Check the signature
     if(bootsect[510] != 0x55 || bootsect[511] != 0xAA){
-        krnl_write_msgf(__FILE__, "bootsect signature is invalid (0x%x, 0x%x)", bootsect[510], bootsect[511]);
+        krnl_write_msgf(__FILE__, __LINE__, "bootsect signature is invalid (0x%x, 0x%x)", bootsect[510], bootsect[511]);
         return;
     }
     //Go through the partition descriptors
@@ -41,7 +41,7 @@ void parts_load(char* path){
             continue;
         }
         //Else, it's a typical MBR partition
-        krnl_write_msgf(__FILE__, "found MBR partition type 0x%x at 0x%x of size 0x%x", type, start, size);
+        krnl_write_msgf(__FILE__, __LINE__, "found MBR partition type 0x%x at 0x%x of size 0x%x", type, start, size);
         if(type == 0x0C)
             parts[part_cnt++] = (part_t){.is_gpt = 0, .lba_start = start, .lba_end = start + size,
                                          .type = PART_TYPE_FAT32, .part_no = p, .drive_file = disk};
@@ -71,12 +71,12 @@ void parts_load_gpt(file_handle_t* disk){
         char* actual[9];
         memcpy(actual, hdr, 8);
         actual[8] = 0;
-        krnl_write_msgf(__FILE__, "GPT signature is invalid (expected \"EFI PART\", got \"%s\")", actual);
+        krnl_write_msgf(__FILE__, __LINE__, "GPT signature is invalid (expected \"EFI PART\", got \"%s\")", actual);
         return;
     }
     //Check revision
     uint32_t rev = *(uint32_t*)&hdr[8];
-    krnl_write_msgf(__FILE__, "GPT revision %i %s", rev, (rev == 65536) ? "" : "(unsupported)");
+    krnl_write_msgf(__FILE__, __LINE__, "GPT revision %i %s", rev, (rev == 65536) ? "" : "(unsupported)");
     if(rev != 65536)
         return;
     //Get some parameters
@@ -101,11 +101,11 @@ void parts_load_gpt(file_handle_t* disk){
             if(memcmp(type_guid, PART_GUID_NONE, sizeof(guid_t)) == 0)
                 continue;
             if(memcmp(type_guid, PART_GUID_MBDP, sizeof(guid_t)) == 0){
-                krnl_write_msgf(__FILE__, "found Microsoft Basic Data partition between 0x%x and %x", lba_start, lba_end);
+                krnl_write_msgf(__FILE__, __LINE__, "found Microsoft Basic Data partition between 0x%x and %x", lba_start, lba_end);
                 parts[part_cnt++] = (part_t){.is_gpt = 1, .lba_start = lba_start, .lba_end = lba_end,
                                              .type = PART_TYPE_FAT32, .part_no = p + (s * (512 / pe_sz)), .drive_file = disk};
             } else {
-                krnl_write_msgf(__FILE__, "partition of unknown type between 0x%x and 0x%x", lba_start, lba_end);
+                krnl_write_msgf(__FILE__, __LINE__, "partition of unknown type between 0x%x and 0x%x", lba_start, lba_end);
                 parts[part_cnt++] = (part_t){.is_gpt = 1, .lba_start = lba_start, .lba_end = lba_end,
                                              .type = PART_TYPE_UNKNOWN, .part_no = p + (s * (512 / pe_sz)), .drive_file = disk};
             }

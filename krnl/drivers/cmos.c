@@ -44,7 +44,7 @@ void rtc_init(void){
     //Just to be sure, read SR_C
     cmos_read(CMOS_STATUS_REG_C);
 
-    krnl_write_msg(__FILE__, "initialized");
+    krnl_write_msg(__FILE__, __LINE__, "initialized");
 }
 
 /*

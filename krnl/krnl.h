@@ -31,6 +31,7 @@ typedef struct {
 typedef struct _krnl_msg_s {
     uint64_t tsc;
     char file[64];
+    uint32_t line;
     char msg[MAX_KRNL_MSG_SZ];
     struct _krnl_msg_s* next;
 } krnl_msg_t;
@@ -38,8 +39,8 @@ typedef struct _krnl_msg_s {
 //Function prototypes
 
 //Kernel message buffer
-void krnl_write_msg  (char* file, char* msg);
-void krnl_write_msgf (char* file, char* msg, ...);
+void krnl_write_msg  (char* file, uint32_t line, char* msg);
+void krnl_write_msgf (char* file, uint32_t line, char* msg, ...);
 void krnl_writec_f   (char* msg, ...);
 //Low-level system information
 EFI_SYSTEM_TABLE* krnl_get_efi_systable(void);
