@@ -146,16 +146,16 @@ typedef enum {
 
 //Function prototypes
 
-void ahci_init(ahci_hba_mem_t* base);
-ahci_dev_type_t ahci_dev_type(ahci_hba_port_t* port);
+void ahci_init                (ahci_hba_mem_t* base);
+ahci_dev_type_t ahci_dev_type (ahci_hba_port_t* port);
 
-void ahci_start_cmd(ahci_hba_port_t* port);
-void ahci_stop_cmd(ahci_hba_port_t* port);
+void ahci_start_cmd (ahci_hba_port_t* port);
+void ahci_stop_cmd  (ahci_hba_port_t* port);
 
-void ahci_read(uint32_t dev, void* buf, size_t cnt, uint64_t lba);
-void ahci_write(uint32_t dev, void* buf, size_t cnt, uint64_t lba);
-void ahci_identify(uint32_t dev, uint8_t info[512]);
+void ahci_read     (uint32_t dev, void* buf, size_t cnt, uint64_t lba);
+void ahci_write    (uint32_t dev, void* buf, size_t cnt, uint64_t lba);
+void ahci_identify (uint32_t dev, uint8_t info[512]);
 
-sata_dev_t* ahci_get_drive(uint32_t dev);
+sata_dev_t* ahci_get_drive (uint32_t dev);
 
 #endif

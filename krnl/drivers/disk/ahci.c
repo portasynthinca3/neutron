@@ -86,7 +86,7 @@ void ahci_init(ahci_hba_mem_t* base){
                 sprintf(disk_path, "/disk/sata%i", sata_cnt - 1);
                 parts_load(disk_path);
 
-                diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_PART, .device_path = "/part/0"}, "/");
+                diskio_mount((diskio_dev_t){.bus_type = DISKIO_BUS_PART, .device_no = 0}, "/");
             } break;
             case AHCI_PM:
                 krnl_write_msgf(__FILE__, __LINE__, "device in port %i: port multiplier (unsupported)", i);

@@ -23,14 +23,17 @@ typedef enum {
 //Structure definitions
 
 typedef struct {
-    uint64_t lba_start;
-    uint64_t lba_end;
-    char     name[128];
+    uint64_t       lba_start;
+    uint64_t       lba_end;
+    char           name[128];
 
     char           drive[128];
     uint32_t       part_no;
     uint8_t        is_gpt;
     file_handle_t* drive_file;
+
+    file_handle_t* fs_file; //the partition file handle used by the FS driver
+    void*          fs_handle; //the FS handle
 
     part_type_t    type;
 } part_t;
@@ -41,9 +44,10 @@ typedef struct {
 
 //Function prototypes
 
-void parts_load(char* path);
-void parts_load_gpt(file_handle_t* disk);
+void parts_load     (char* path);
+void parts_load_gpt (file_handle_t* disk);
 
-part_t* part_get(uint32_t num);
+part_t* part_get  (uint32_t num);
+void    part_load (uint32_t no);
 
 #endif

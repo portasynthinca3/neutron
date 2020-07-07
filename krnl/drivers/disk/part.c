@@ -6,6 +6,8 @@
 #include "../../krnl.h"
 #include "./diskio.h"
 
+#include "./fs/fat32.h"
+
 part_t parts[MAX_PARTS];
 uint32_t part_cnt;
 
@@ -42,12 +44,15 @@ void parts_load(char* path){
         }
         //Else, it's a typical MBR partition
         krnl_write_msgf(__FILE__, __LINE__, "found MBR partition type 0x%x at 0x%x of size 0x%x", type, start, size);
-        if(type == 0x0C)
+        if(type == 0x0C){
             parts[part_cnt++] = (part_t){.is_gpt = 0, .lba_start = start, .lba_end = start + size,
                                          .type = PART_TYPE_FAT32, .part_no = p, .drive_file = disk};
-        else
+            part_load(part_cnt - 1);
+        } else {
             parts[part_cnt++] = (part_t){.is_gpt = 0, .lba_start = start, .lba_end = start + size,
                                          .type = PART_TYPE_UNKNOWN, .part_no = p, .drive_file = disk};
+            part_load(part_cnt - 1);
+        }
         strcpy(parts[part_cnt - 1].drive, path);
     }
 }
@@ -104,10 +109,12 @@ void parts_load_gpt(file_handle_t* disk){
                 krnl_write_msgf(__FILE__, __LINE__, "found Microsoft Basic Data partition between 0x%x and %x", lba_start, lba_end);
                 parts[part_cnt++] = (part_t){.is_gpt = 1, .lba_start = lba_start, .lba_end = lba_end,
                                              .type = PART_TYPE_FAT32, .part_no = p + (s * (512 / pe_sz)), .drive_file = disk};
+                part_load(part_cnt - 1);
             } else {
                 krnl_write_msgf(__FILE__, __LINE__, "partition of unknown type between 0x%x and 0x%x", lba_start, lba_end);
                 parts[part_cnt++] = (part_t){.is_gpt = 1, .lba_start = lba_start, .lba_end = lba_end,
                                              .type = PART_TYPE_UNKNOWN, .part_no = p + (s * (512 / pe_sz)), .drive_file = disk};
+                part_load(part_cnt - 1);
             }
             strcpy(parts[part_cnt - 1].drive, disk->info.name);
         }
@@ -119,4 +126,22 @@ void parts_load_gpt(file_handle_t* disk){
  */
 part_t* part_get(uint32_t num){
     return &parts[num];
+}
+
+/*
+ * Parses the filesystem on a partition
+ */
+void part_load(uint32_t no){
+    //Open the partition file
+    free(parts[no].fs_file);
+    parts[no].fs_file = (file_handle_t*)malloc(sizeof(file_handle_t));
+    char part_path[32];
+    sprintf(part_path, "/part/%i", no);
+    diskio_open(part_path, parts[no].fs_file, DISKIO_FILE_ACCESS_READ_WRITE);
+    //Call the specific FS initializer
+    switch(parts[no].type){
+        case PART_TYPE_FAT32:
+            fat32_init(no);
+            break;
+    }
 }

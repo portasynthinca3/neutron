@@ -36,7 +36,7 @@ void diskio_mount(diskio_dev_t device, char* path){
             mappings[i].device = device;
             //Mark the entry as used
             mappings[i].used = 1;
-            krnl_write_msgf(__FILE__, __LINE__, "mounted dev 0x%x.0x%x to %s", device.bus_type, device.device_no, path);
+            krnl_write_msgf(__FILE__, __LINE__, "mounted dev %i.%i to %s", device.bus_type, device.device_no, path);
             //Return
             return;
         }
@@ -265,7 +265,7 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
                     return DISKIO_STATUS_OK;
                 } break;
                 case DISKIO_BUS_PART: {
-                    //
+                    
                 }
             }
         }
