@@ -88,9 +88,12 @@ uint64_t mtask_create_task(uint64_t stack_size, char* name, uint8_t priority, ui
 
     //Find the first empty task descriptor
     task_t* task = NULL;
-    for(int i = 0; i < MTASK_TASK_COUNT; i++)
-        if(!mtask_task_list[i].valid)
+    for(int i = 0; i < MTASK_TASK_COUNT; i++){
+        if(!mtask_task_list[i].valid){
             task = &mtask_task_list[i];
+            break;
+        }
+    }
     //Clear the task registers (except for RCX, set it to the argument pointer)
     task->state = (task_state_t){0, 0, (uint64_t)args, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255};
     //Use the current address space or assign the suggested CR3
@@ -252,7 +255,7 @@ void mtask_add_open_file(file_handle_t* ptr){
     if(task != NULL){
         for(int i = 0; i < MTASK_MAX_OPEN_FILES; i++){
             //Find an unused entry
-            if(task->open_files[i] != 0){
+            if(task->open_files[i] == NULL){
                 task->open_files[i] = ptr;
                 break;
             }
@@ -297,6 +300,8 @@ virt_addr_t mtask_palloc(uint64_t pid, uint64_t num){
             break;
         }
     }
+    //Clear pages
+    memset(krnl_addr, 0, 4096 * num);
     //Map the actual range
     vmem_map_user(task->state.cr3, phys_addr, (phys_addr_t)((uint8_t*)phys_addr + (4096 * num)), task->next_alloc);
     //Advance the next allocation address

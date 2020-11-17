@@ -1,7 +1,7 @@
 #ifndef INITRD_H
 #define INITRD_H
 
-#include "../stdlib.h"
+#include "../../stdlib.h"
 
 typedef struct {
     uint32_t location;

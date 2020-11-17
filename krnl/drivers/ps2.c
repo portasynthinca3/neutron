@@ -36,7 +36,7 @@ void ps2_init(void){
     outb(PS2_COMMAND_REG, 0xAA);
     uint8_t test_res = ps2_read_byte();
     if(test_res != 0x55){
-        krnl_write_msg(__FILE__, "cotroller self-test failed");
+        krnl_write_msg(__FILE__, __LINE__, "cotroller self-test failed");
         return;
     }
     //Restore the configuration byte in case it was reset by the self-test
@@ -46,11 +46,11 @@ void ps2_init(void){
     outb(PS2_COMMAND_REG, 0xAB);
     test_res = ps2_read_byte();
     if(test_res != 0)
-        krnl_write_msgf(__FILE__, "interface 1 test failed (code %i)", test_res);
+        krnl_write_msgf(__FILE__, __LINE__, "interface 1 test failed (code %i)", test_res);
     outb(PS2_COMMAND_REG, 0xA9);
     test_res = ps2_read_byte();
     if(test_res != 0)
-        krnl_write_msgf(__FILE__, "interface 2 test failed (code %i)", test_res);
+        krnl_write_msgf(__FILE__, __LINE__, "interface 2 test failed (code %i)", test_res);
     //Enable device interfaces
     outb(PS2_COMMAND_REG, 0xAE);
     outb(PS2_COMMAND_REG, 0xA8);
@@ -72,7 +72,7 @@ void ps2_init(void){
     outb(PS2_COMMAND_REG, 0x60);
     ps2_write_byte(cfg);
 
-    krnl_write_msgf(__FILE__, "initialized", test_res);
+    krnl_write_msgf(__FILE__, __LINE__, "initialized", test_res);
 }
 
 /*
@@ -106,7 +106,7 @@ void ps21_intr(void){
     ps21_buf_wr = (ps21_buf_wr + 1) % PS2_BUF_SIZE;
     //Check for overflows
     if(ps21_buf_wr == ps21_buf_rd)
-        krnl_write_msgf(__FILE__, "device 1 buffer overflow");
+        krnl_write_msgf(__FILE__, __LINE__, "device 1 buffer overflow");
 }
 
 /*
@@ -120,7 +120,7 @@ void ps22_intr(void){
     ps22_buf_wr = (ps22_buf_wr + 1) % PS2_BUF_SIZE;
     //Check for overflows
     if(ps22_buf_wr == ps22_buf_rd)
-        krnl_write_msgf(__FILE__, "device 2 buffer overflow");
+        krnl_write_msgf(__FILE__, __LINE__, "device 2 buffer overflow");
 }
 
 /*

@@ -3,12 +3,16 @@
 
 #include "nlib.h"
 
+//The first allocation block
+alloc_block_t* first_block = NULL;
+alloc_block_t* last_block = NULL;
+
 /*
  * Issues a system call
  */
 uint64_t _syscall(uint32_t func, uint32_t subfunc,
                          uint64_t p0, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4){
-    //Calculate RDI number
+    //Calculate RDI value
     uint64_t rdi = ((uint64_t)func << 32) | subfunc;
     //Complicated stuff: loads registers with function numbers
     //  and syscall arguments, executes syscall, while telling
@@ -34,7 +38,6 @@ uint64_t _syscall(uint32_t func, uint32_t subfunc,
         "m"(p4)
         :
         "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "rdi", "rsi");
-    //Return the return value
     return ret;
 }
 
@@ -312,8 +315,8 @@ int memcmp(const void* lhs, const void* rhs, size_t cnt){
  */
 int strcmp(const char* str1, const char* str2){
     //Calculate the length of both strings
-    int len1 = strlen(str1);
-    int len2 = strlen(str2);
+    int len1 = strlen(str1) + 1;
+    int len2 = strlen(str2) + 1;
     //Strings are not equal if they have different lengths (duh)
     if(len1 != len2)
         return (str1[0] > str2[0]) ? 1 : -1;
@@ -863,17 +866,92 @@ void srand(unsigned int seed){
 void* malloc(uint64_t num){
     if(num == 0)
         return NULL;
-    //Round to the page size
-    num += 4096 - (num % 4096);
-    //Allocate pages
-    return _task_palloc(num / 4096);
+    //Allocate an initial block if not done yet
+    if(first_block == NULL){
+        first_block = (alloc_block_t*)_task_palloc(ALLOC_STEP / 4096);
+        first_block->used = 0;
+        first_block->size = ALLOC_STEP;
+        first_block->next = first_block->prev = NULL;
+        last_block = first_block;
+    }
+    //Find a free block that is large enough
+    alloc_block_t* block = first_block;
+    do {
+        if(block->size >= num && !block->used){
+            //Move and resize it
+            alloc_block_t* new = block;
+            if(block->size < num){
+                block->size -= num;
+                block->prev->next = (alloc_block_t*)((uint64_t)block + num);
+                *block->prev->next = *block;
+                block = block->prev->next;
+            }
+            //Create a new block and mark it as used
+            new->used = 1;
+            if(new->size < num){
+                new->prev       = block->prev;
+                new->prev->next = new;
+                new->next       = block;
+                new->size       = num;
+            }
+            //Return the address
+            return (void*)((uint64_t)new + sizeof(alloc_block_t));
+        }
+    } while((block = block->next));
+    //If there are no blocks with this size, we need to ask the kernel to allocate one
+    uint64_t alloc_sz = num + sizeof(alloc_block_t);
+    if(alloc_sz < ALLOC_STEP)
+        alloc_sz = ALLOC_STEP;
+    if(alloc_sz % ALLOC_ALIGN != 0)
+        alloc_sz += ALLOC_ALIGN - (alloc_sz % ALLOC_ALIGN);
+    alloc_block_t* new_block = _task_palloc(alloc_sz / 4096);
+    new_block->used       = 0;
+    new_block->prev       = last_block;
+    new_block->prev->next = new_block;
+    new_block->next       = NULL;
+    new_block->size       = alloc_sz;
+    last_block = new_block;
+    //Since we surely have a free block of an appropriate size, this will never infinite-loop
+    return malloc(num);
 }
 
 /*
  * Frees a chunk of memory
  */
 void free(void* ptr){
-    _task_pfree(ptr);
+    if(ptr == NULL)
+        return;
+    //Move the pointer to the left, so that it points to the block control structure
+    ptr = (uint8_t*)ptr - sizeof(alloc_block_t);
+    //Find a used block that is pointed to by the pointer
+    alloc_block_t* block = first_block;
+    do {
+        if(block->used && block == ptr){
+            //Mark it as unused
+            block->used = 0;
+            //Merge it with the previous block if possible
+            if(block->prev != NULL && !block->prev->used){
+                block->prev->size += block->size;
+                block->prev->next = block->next;
+                block = block->prev;
+            }
+            //Merge it with the next block if possible
+            if(block->next != NULL && !block->next->used){
+                block->size += block->next->size;
+                block->next = block->next->next;
+            }
+            break;
+        }
+    } while((block = block->next));
+}
+
+/*
+ * Reallocates a chunk of memory
+ */
+void* realloc(void* ptr, uint64_t num){
+    //Yes, a very efficient and sane way :^)
+    free(ptr);
+    return malloc(num);
 }
 
 /*
@@ -927,6 +1005,8 @@ ll_t* ll_create(void){
  * Destroys the linked lists
  */
 void ll_destroy(ll_t* list){
+    while(list->size != 0)
+        ll_remove(list, 0);
     free(list);
 }
 
@@ -992,6 +1072,8 @@ void ll_remove(ll_t* list, uint64_t idx){
         node->next->prev = node->prev;
     //Free the memory used by the node
     free(node);
+    //Decrease the list size
+    list->size--;
 }
 
 /*
@@ -1043,4 +1125,58 @@ void* ll_iter(ll_t* list, uint8_t dir){
     list->cur_iter = node;
     //Return the item pointer
     return item;
+}
+
+/*
+ * Finds a node with the specified key
+ */
+dict_node_t* _dict_get_node(dict_t* dict, char* key){
+    dict_node_t* node = NULL;
+    //Scan through the dictionary
+    while((node = (dict_node_t*)ll_iter(dict, LL_ITER_DIR_UP)))
+        if(strcmp(node->key, key) == 0)
+            break;
+    dict->cur_iter = NULL;
+    return node;
+}
+
+/*
+ * Creates a dictionary
+ */
+dict_t* dict_create(void){
+    return ll_create();
+}
+
+/*
+ * Destroys a dictionary
+ */
+void dict_destroy(dict_t* dict){
+    ll_destroy(dict);
+}
+
+/*
+ * Sets a value in the dictionary
+ */
+void dict_set(dict_t* dict, char* key, void* val){
+    //Simply set the value if the key already exists
+    dict_node_t* node = _dict_get_node(dict, key);
+    if(node != NULL){
+        node->val = val;
+        return;
+    }
+    //Create a new node else
+    node = (dict_node_t*)malloc(sizeof(dict_node_t));
+    strcpy(node->key, key);
+    node->val = val;
+    ll_append(dict, node);
+}
+
+/*
+ * Gets a value from the dictionary
+ */
+void* dict_get(dict_t* dict, char* key){
+    dict_node_t* node = _dict_get_node(dict, key);
+    if(node == NULL)
+        return NULL;
+    return node->val;
 }

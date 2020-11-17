@@ -4,7 +4,7 @@
 #include "./elf.h"
 #include "../../krnl.h"
 #include "../../stdlib.h"
-#include "../../drivers/diskio.h"
+#include "../../drivers/disk/diskio.h"
 #include "../../drivers/gfx.h"
 #include "../../vmem/vmem.h"
 #include "../../mtask/mtask.h"

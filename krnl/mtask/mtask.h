@@ -2,14 +2,14 @@
 #define MTASK_H
 
 #include "../stdlib.h"
-#include "../drivers/diskio.h"
+#include "../drivers/disk/diskio.h"
 #include "../vmem/vmem.h"
 
 //Settings
 
 #define MTASK_TASK_COUNT                    128
 #define MTASK_MAX_OPEN_FILES                256
-#define MTASK_MAX_ALLOCATIONS               256
+#define MTASK_MAX_ALLOCATIONS               1024
 
 //Structure definitions
 

@@ -40,7 +40,7 @@ void timr_measure_cpu_fq(void){
         sum += tsc_diff * 394;
     }
     cpu_fq_hz = sum / 50;
-    krnl_write_msgf(__FILE__, "CPU frequency detected: %i MHz", cpu_fq_hz / 1000 / 1000);
+    krnl_write_msgf(__FILE__, __LINE__, "CPU frequency detected: %i MHz", cpu_fq_hz / 1000 / 1000);
 
     krnl_writec_f("Measured the CPU frequency (%i MHz)\r\n", cpu_fq_hz / 1000 / 1000);
 }
@@ -63,11 +63,11 @@ void timr_init(void){
     //Get the counter value
     uint32_t cnt_val = lapic_reg_rd(LAPIC_REG_TIMR_CURCNT);
     uint32_t ticks_in_cycles = 0xFFFFFFFF - cnt_val;
-    krnl_write_msgf(__FILE__, "LAPIC timer ticks in 1 ms (%i CPU cycles): %i", cpu_fq_hz / 1000, ticks_in_cycles);
+    krnl_write_msgf(__FILE__, __LINE__, "LAPIC timer ticks in 1 ms (%i CPU cycles): %i", cpu_fq_hz / 1000, ticks_in_cycles);
     lapic_reg_wr(LAPIC_REG_TIMR_DIVCONF, 0); //Set the divider to 2
     lapic_reg_wr(LAPIC_REG_TIMR_INITCNT, ticks_in_cycles); //Set the initial counter value
     lapic_reg_wr(LAPIC_REG_LVT_TIM, 0x20000 | 32); //Enable the timer with interrupt vector #32
-    krnl_write_msgf(__FILE__, "LAPIC timer initialized");
+    krnl_write_msgf(__FILE__, __LINE__, "LAPIC timer initialized");
 }
 
 /*

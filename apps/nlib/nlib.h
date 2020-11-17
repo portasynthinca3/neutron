@@ -5,12 +5,16 @@
 
 #include <stdarg.h>
 
+//Settings
+#define ALLOC_STEP  (1024 * 1024)
+#define ALLOC_ALIGN 4096
+
 //Definitions
 #define NLIB_VERSION "1.0.0"
 
-#define NULL  ((void*)0)
-#define true  1
-#define false 0
+#define NULL        ((void*)0)
+#define true        1
+#define false       0
 
 #define CHAR_BIT    8
 #define SCHAR_MIN   -128
@@ -61,6 +65,14 @@ typedef void FILE;
 
 //Structures
 
+//An allocable or allocated block of memory
+typedef struct _alloc_block_s {
+    uint8_t                used;
+    struct _alloc_block_s* prev;
+    struct _alloc_block_s* next;
+    size_t                 size;
+} alloc_block_t;
+
 //Linked list node
 typedef struct _ll_node_s {
     void*              item;
@@ -78,6 +90,15 @@ typedef struct {
     ll_node_t* cur_iter;
     uint8_t    iter_dir;
 } ll_t;
+
+//Dictionary key-value pair
+typedef struct {
+    char  key[128];
+    void* val;
+} dict_node_t;
+
+//Dictionary
+typedef ll_t dict_t;
 
 //Function prototypes
 
@@ -168,7 +189,7 @@ double fmod  (double x, double y);
 int    rand  (void);
 void   srand (unsigned int seed);
 //Memory control
-void* malloc (uint64_t num);
+void* malloc (size_t sz);
 void  free   (void* ptr);
 //Raw CPU instructions
 uint64_t rdtsc    (void);
@@ -184,3 +205,8 @@ void     ll_swap    (ll_t* list, int64_t idx1, int64_t idx2);
 uint64_t ll_size    (ll_t* list);
 void*    ll_get     (ll_t* list, uint64_t idx);
 void*    ll_iter    (ll_t* list, uint8_t dir);
+//Dictionary operations
+dict_t* dict_create  (void);
+void    dict_destroy (dict_t* dict);
+void    dict_set     (dict_t* dict, char* key, void* val);
+void*   dict_get     (dict_t* dict, char* key);
