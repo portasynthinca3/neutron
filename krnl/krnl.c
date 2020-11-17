@@ -83,7 +83,7 @@ uint64_t krnl_efi_map_key;
 void krnl_print_msg(krnl_msg_t* m){
     char buf[MAX_KRNL_MSG_SZ + 256];
     memset(buf, 0, sizeof(buf));
-    sprintf(buf, "[%i ms] %s:%i: %s", 1000 * (m->tsc - first_msg->tsc) / timr_get_cpu_fq(), m->file, m->line, m->msg);
+    sprintf(buf, "[%i ms] %s:%i: %s", 1000 * (m->tsc - first_msg->tsc) / timr_get_cpu_fq(), m->file, (uint64_t)m->line, m->msg);
     gfx_verbose_println(buf);
 }
 

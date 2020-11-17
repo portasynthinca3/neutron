@@ -27,12 +27,12 @@
 #define CMP_ALIGN_RIGHT                 (3 << 2)
 
 //Macros for converting to property values
-#define PROP_POINT(v) (&(prop_val_t){.type = CMP_PV_TYPE_POINT, .linked = 0, .point = v})
-#define PROP_STRING(v) (&(prop_val_t){.type = CMP_PV_TYPE_STRING, .linked = 0, .string = v})
-#define PROP_INTEGER(v) (&(prop_val_t){.type = CMP_PV_TYPE_INTEGER, .linked = 0, .integer = v})
-#define PROP_DOUBLE(v) (&(prop_val_t){.type = CMP_PV_TYPE_DOUBLE, .linked = 0, .dbl = v})
-#define PROP_POINT_F(v) (&(prop_val_t){.type = CMP_PV_TYPE_POINT_F, .linked = 0, .point_f = v})
-#define PROP_COLOR(v) (&(prop_val_t){.type = CMP_PV_TYPE_COLOR, .linked = 0, .color = v})
+#define PROP_POINT(v)   prop_copy(&(prop_val_t){.type = CMP_PV_TYPE_POINT,   .linked = 0, .point = v})
+#define PROP_STRING(v)  prop_copy(&(prop_val_t){.type = CMP_PV_TYPE_STRING,  .linked = 0, .string = v})
+#define PROP_INTEGER(v) prop_copy(&(prop_val_t){.type = CMP_PV_TYPE_INTEGER, .linked = 0, .integer = v})
+#define PROP_DOUBLE(v)  prop_copy(&(prop_val_t){.type = CMP_PV_TYPE_DOUBLE,  .linked = 0, .dbl = v})
+#define PROP_POINT_F(v) prop_copy(&(prop_val_t){.type = CMP_PV_TYPE_POINT_F, .linked = 0, .point_f = v})
+#define PROP_COLOR(v)   prop_copy(&(prop_val_t){.type = CMP_PV_TYPE_COLOR,   .linked = 0, .color = v})
 
 //Structures
 
@@ -68,6 +68,7 @@ typedef struct _comp_s{
 
 //Function prototypes
 
+prop_val_t*  prop_copy      (prop_val_t* orig);
 void         comps_init     (void);
 void         create_screens (void);
 component_t* get_comp_by_id (uint64_t id);

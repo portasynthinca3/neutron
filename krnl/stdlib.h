@@ -8,7 +8,7 @@
 #endif
 
 //Converts an allocation block address to its upper-half variant
-#define UPPER_AB(B) (alloc_block_t*)(((uint64_t)B - (uint64_t)ram_regions[(B)->region].virt_start_orig) + ram_regions[(B)->region].virt_start)
+#define UPPER_AB(B) (alloc_block_t*)(((uint64_t)B - (uint64_t)ram_regions[(B)->region].virt_start_orig) + (uint64_t)ram_regions[(B)->region].virt_start)
 
 //Don't forget to comment this on a release version :)
 #define STDLIB_CRASH_ON_ALLOC_ERR

@@ -16,7 +16,6 @@
 #define DISKIO_STATUS_READ_PROTECTED                2
 #define DISKIO_STATUS_WRITE_PROTECTED               3
 #define DISKIO_STATUS_NOT_ALLOWED                   4
-#define DISKIO_STATUS_INVL_SIGNATURE                5
 #define DISKIO_STATUS_EOF                           6
 #define DISKIO_STATUS_ALREADY_OPENED                7
 #define DISKIO_STATUS_SEEKING_ERR                   8
@@ -43,17 +42,16 @@
 #define DEV_FILE_PS22                               1
 #define DEV_FILE_FB                                 2
 
-//Other stuff
-#define DISKIO_HANDLE_SIGNATURE                     0xFFFF0000AAAA5555
-
 //Settings
 #define DISKIO_MAX_MAPPINGS                         64
 #define DISKIO_BRIDGE_BUF_SZ                        4096
+#define DISKIO_MAX_PATH_LEN                         256
+#define DISKIO_MAX_FILES_IN_DIR                     256
 
 //Structures
 
 typedef struct _bridge_s{
-    uint8_t is_bridge;
+    uint8_t  is_bridge;
     uint64_t to_pid;
 
     uint8_t* send_buf;
@@ -66,7 +64,7 @@ typedef struct _bridge_s{
 } bridge_t;
 
 typedef struct {
-    uint16_t bus_type;
+    uint64_t bus_type;
     uint64_t device_no;
     void*    file;
 
@@ -75,25 +73,34 @@ typedef struct {
 } diskio_dev_t;
 
 typedef struct {
-    uint8_t used;
+    uint8_t      used;
     diskio_dev_t device;
-    char mapped_at[256];
+    char         mapped_at[DISKIO_MAX_PATH_LEN];
 } diskio_map_t;
 
 typedef struct {
-    char name[256];
-    uint64_t size;
-    uint64_t medium_start;
     diskio_dev_t device;
+    char         name[DISKIO_MAX_PATH_LEN];
+    uint64_t     size;
+    uint64_t     medium_start;
 } file_info_t;
 
 typedef struct {
-    uint64_t signature;
-    uint64_t pid;
     file_info_t info;
-    uint8_t mode;
-    uint64_t position;
+    uint64_t    pid;
+    uint8_t     mode;
+    uint64_t    position;
 } file_handle_t;
+
+typedef struct {
+    diskio_dev_t device;
+    char         path[DISKIO_MAX_PATH_LEN];
+    file_info_t  files[DISKIO_MAX_FILES_IN_DIR];
+} dir_info_t;
+
+typedef struct {
+    dir_info_t info;
+} dir_handle_t;
 
 //Function prototypes
 

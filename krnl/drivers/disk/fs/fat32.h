@@ -24,6 +24,11 @@ typedef struct {
 
 //Function prototypes
 
+void _fat32_seek (fat32_handle_t* handle, uint64_t clust);
+void _fat32_read (fat32_handle_t* handle, uint64_t clust, void* buf);
+
 void fat32_init (uint32_t no);
+
+void fat32_get_dir (char* path, dir_handle_t* handle);
 
 #endif

@@ -106,7 +106,7 @@ void gfx_init(void){
     }
     //Choose the best video mode
     gfx_choose_best();
-    krnl_write_msgf(__FILE__, __LINE__, "found best display mode: %ix%i", gfx_res_x(), gfx_res_y());
+    krnl_write_msgf(__FILE__, __LINE__, "found best display mode: %ix%i", (uint64_t)gfx_res_x(), (uint64_t)gfx_res_y());
     //Allocate the second buffer based on the screen size
     sec_buffer = (color32_t*)malloc(res_x * res_y * sizeof(color32_t));
 }
@@ -181,7 +181,7 @@ void gfx_choose_best(void){
         mon_best_res_x = 1280;
         mon_best_res_y = 720;
     }
-    krnl_write_msgf(__FILE__, __LINE__, "display resolution: %ix%i", mon_best_res_x, mon_best_res_x);
+    krnl_write_msgf(__FILE__, __LINE__, "display resolution: %ix%i", (uint64_t)mon_best_res_x, (uint64_t)mon_best_res_x);
 
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* mode_info;
     uint64_t mode_info_size;

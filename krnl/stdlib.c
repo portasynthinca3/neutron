@@ -234,12 +234,14 @@ void* amalloc(size_t size, size_t gran){
  * Free a memory block allocated by malloc(), calloc() and others
  */
 void free(void* ptr){
+    if(ptr == NULL)
+        return;
     //Move the pointer to the left, so that it points to the block control structure
     ptr = (uint8_t*)ptr - sizeof(alloc_block_t);
     //Find a used block that is pointed to by the pointer
     alloc_block_t* block = first_alloc_block;
     do {
-        if(block->used && block == ptr){
+        if(block == ptr && block->used){
             //Mark it as unused
             block->used = 0;
             //Merge it with the previous block if possible

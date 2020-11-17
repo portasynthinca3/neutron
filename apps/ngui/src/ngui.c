@@ -283,6 +283,29 @@ void get_cpu_fq(void){
 }
 
 /*
+ * Creates the main window
+ */
+void create_prompt_window(void){
+    component_t* window = comp_create(CMP_TYPE_WINDOW, 0);
+    prop_set(window, "title",      PROP_STRING("Hello, World!"));
+    prop_set(window, "fullscreen", PROP_INTEGER(0));
+    prop_set(window, "size",       PROP_POINT(P2D(200, 100)));
+    prop_set(window, "pos",        PROP_POINT(P2D(100, 100)));
+    component_t* label = comp_create(CMP_TYPE_LABEL, window->id);
+    prop_set(label, "text",     PROP_STRING("Testing nGUI"));
+    prop_set(label, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(label, "pos",      PROP_POINT(P2D(0, 0)));
+    component_t* btn = comp_create(CMP_TYPE_BUTTON, window->id);
+    prop_set(btn, "text",     PROP_STRING("Load /initrd/gui_test.elf"));
+    prop_set(btn, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
+    prop_set(btn, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
+    prop_set(btn, "pos",      PROP_POINT(P2D(0, 15)));
+    prop_set(btn, "size",     PROP_POINT(P2D(150, 30)));
+    prop_set(btn, "click",    PROP_INTEGER(reg_handler()));
+}
+
+/*
  * Entry point
  */
 void main(void* args){
@@ -296,45 +319,13 @@ void main(void* args){
     get_cpu_fq();
     comps_init();
     //Load the GUI config file
-    load_theme("ngui.cfg");
+    load_theme("/initrd/ngui.cfg");
     cur_cur = &theme.cur.normal;
 
     theme.panel.state = 0;
     theme.panel.last_state_ch = rdtsc();
 
-    component_t* window = comp_create(CMP_TYPE_WINDOW, 0);
-    prop_set(window, "title",       PROP_STRING("Hello, World!"));
-    prop_set(window, "fullscreen",  PROP_INTEGER(0));
-    prop_set(window, "size",        PROP_POINT(P2D(200, 100)));
-    prop_set(window, "pos",         PROP_POINT(P2D(100, 100)));
-    component_t* label = comp_create(CMP_TYPE_LABEL, window->id);
-    prop_set(label, "text",     PROP_STRING("Hello indeed"));
-    prop_set(label, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
-    prop_set(label, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
-    prop_set(label, "pos",      PROP_POINT(P2D(0, 0)));
-    component_t* btn = comp_create(CMP_TYPE_BUTTON, window->id);
-    prop_set(btn, "text",     PROP_STRING("Click me"));
-    prop_set(btn, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
-    prop_set(btn, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
-    prop_set(btn, "pos",      PROP_POINT(P2D(0, 15)));
-    prop_set(btn, "size",     PROP_POINT(P2D(100, 30)));
-
-    component_t* window2 = comp_create(CMP_TYPE_WINDOW, 0);
-    prop_set(window2, "title",       PROP_STRING("Hello, World! 2"));
-    prop_set(window2, "fullscreen",  PROP_INTEGER(0));
-    prop_set(window2, "size",        PROP_POINT(P2D(200, 100)));
-    prop_set(window2, "pos",         PROP_POINT(P2D(200, 200)));
-    component_t* label2 = comp_create(CMP_TYPE_LABEL, window2->id);
-    prop_set(label2, "text",     PROP_STRING("Hello indeed 2"));
-    prop_set(label2, "pivot",    PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
-    prop_set(label2, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
-    prop_set(label2, "pos",      PROP_POINT(P2D(0, 0)));
-    component_t* btn2 = comp_create(CMP_TYPE_BUTTON, window2->id);
-    prop_set(btn2, "text",     PROP_STRING("Click me 2"));
-    prop_set(btn2, "pivot",    PROP_INTEGER(CMP_ALIGN_TOP | CMP_ALIGN_CENTER));
-    prop_set(btn2, "relative", PROP_INTEGER(CMP_ALIGN_MIDDLE | CMP_ALIGN_CENTER));
-    prop_set(btn2, "pos",      PROP_POINT(P2D(0, 15)));
-    prop_set(btn2, "size",     PROP_POINT(P2D(100, 30)));
+    create_prompt_window();
 
     while(1){
         //Update the PS/2 state

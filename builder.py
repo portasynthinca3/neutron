@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 
 import sys, os, time
 from os import listdir

@@ -15,6 +15,15 @@ ll_t* screens = NULL;
 uint64_t next_id = 0;
 
 /*
+ * Copies a property structure to dram
+ */
+prop_val_t* prop_copy(prop_val_t* orig){
+    prop_val_t* new = malloc(sizeof(prop_val_t));
+    memcpy(new, orig, sizeof(prop_val_t));
+    return new;
+}
+
+/*
  * Initialize stuff
  */
 void comps_init(void){
@@ -385,10 +394,9 @@ uint8_t comp_render(component_t* c, uint8_t process){
             uint8_t w_clk = gui_mouse_flags() & MOUSE_BTN_LEFT;
             if((pp && w_hov) || child->state){
                 proc = 0;
-                //If in additing the left mouse button is pressed, make this component the top-most one
-                if(w_clk){
+                //If in addition the left mouse button is pressed, make this component the top-most one
+                if(w_clk)
                     ll_swap(c->children, 0, i);
-                }
             }
         }
     }

@@ -100,7 +100,7 @@ void parts_load_gpt(file_handle_t* disk){
             guid_t*  type_guid = (guid_t*)&desc[0];
             uint64_t lba_start = *(uint64_t*)&desc[32];
             uint64_t lba_end   = *(uint64_t*)&desc[40];
-            uint64_t attr      = *(uint64_t*)&desc[48];
+            //uint64_t attr      = *(uint64_t*)&desc[48];
 
             //Determine the partition type
             if(memcmp(type_guid, PART_GUID_NONE, sizeof(guid_t)) == 0)
@@ -143,5 +143,7 @@ void part_load(uint32_t no){
         case PART_TYPE_FAT32:
             fat32_init(no);
             break;
+        case PART_TYPE_UNKNOWN:
+            return;
     }
 }

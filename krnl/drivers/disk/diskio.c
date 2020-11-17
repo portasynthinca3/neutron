@@ -62,7 +62,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             if(mode & DISKIO_FILE_ACCESS_WRITE)
                 return DISKIO_STATUS_WRITE_PROTECTED;
             //Setup the handle
-            handle->signature = DISKIO_HANDLE_SIGNATURE;
             handle->pid = mtask_get_pid();
             handle->mode = mode;
             strcpy(handle->info.name, path);
@@ -82,7 +81,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             bridge_t* bridge = &task->open_files[i]->info.device.bridge;
             if(bridge->is_bridge && bridge->to_pid == cur_task->pid){
                 //Setup the handle
-                handle->signature = DISKIO_HANDLE_SIGNATURE;
                 handle->pid = cur_task->pid;
                 handle->mode = mode;
                 strcpy(handle->info.name, path);
@@ -104,7 +102,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             }
         }
         //If not, create a new one
-        handle->signature = DISKIO_HANDLE_SIGNATURE;
         handle->pid = cur_task->pid;
         handle->mode = mode;
         strcpy(handle->info.name, path);
@@ -129,7 +126,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             return DISKIO_STATUS_NOT_ALLOWED;
         char* name = path + 5;
         //Setup the handle
-        handle->signature = DISKIO_HANDLE_SIGNATURE;
         handle->pid = cur_task->pid;
         handle->mode = mode;
         handle->position = 0;
@@ -174,7 +170,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
             return DISKIO_STATUS_NOT_ALLOWED;
         char* name = path + 5;
         //Setup the handle
-        handle->signature = DISKIO_HANDLE_SIGNATURE;
         handle->pid = cur_task->pid;
         handle->mode = mode;
         handle->position = 0;
@@ -202,7 +197,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
     //Check if it's a SATA drive
     if(memcmp(path, "/disk/sata", 10) == 0){
         //Setup the handle
-        handle->signature = DISKIO_HANDLE_SIGNATURE;
         handle->pid = cur_task->pid;
         handle->mode = mode;
         handle->position = 0;
@@ -219,7 +213,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
     //Check if it's a partition
     if(memcmp(path, "/part/", 6) == 0){
         //Setup the handle
-        handle->signature = DISKIO_HANDLE_SIGNATURE;
         handle->pid = cur_task->pid;
         handle->mode = mode;
         handle->position = 0;
@@ -237,7 +230,10 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
     //Go through mappings
     for(uint32_t i = 0; i < DISKIO_MAX_MAPPINGS; i++){
         //Find a mapping that the path is relative to
-        if(strcmp(path, mappings[i].mapped_at) == 0 && mappings[i].used){
+        //Only compare the first characters of the path that contain tha mount directory
+        if(strlen(path) < strlen(mappings[i].mapped_at))
+            continue;
+        if(memcmp(path, mappings[i].mapped_at, strlen(mappings[i].mapped_at)) == 0 && mappings[i].used){
             //Get the filename
             char* name = path + strlen(mappings[i].mapped_at);
             //Different device types require different access schemes
@@ -252,7 +248,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
                     if(mode != DISKIO_FILE_ACCESS_READ)
                         return DISKIO_STATUS_WRITE_PROTECTED;
                     //Setup the handle
-                    handle->signature = DISKIO_HANDLE_SIGNATURE;
                     handle->pid = mtask_get_pid();
                     handle->mode = mode;
                     handle->position = 0;
@@ -278,9 +273,6 @@ uint8_t diskio_open(char* path, file_handle_t* handle, uint8_t mode){
  * Reads file contents into buffer
  */
 uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
-    //Check the signature
-    if(handle->signature != DISKIO_HANDLE_SIGNATURE)
-        return DISKIO_STATUS_INVL_SIGNATURE;
     //Check the PID of the owner
     if(handle->pid != mtask_get_pid())
         return DISKIO_STATUS_NOT_ALLOWED;
@@ -439,17 +431,15 @@ uint64_t diskio_read(file_handle_t* handle, void* buf, uint64_t len){
             diskio_seek(drive, (part->lba_start + (handle->position / 512)) * 512);
             return diskio_read(drive, buf, len);
         } break;
+        default: return 0;
     }
-    return DISKIO_STATUS_INVL_SIGNATURE;
+    return 0;
 }
 
 /*
  * Write buffer contents to file
  */
 uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
-    //Check the signature
-    if(handle->signature != DISKIO_HANDLE_SIGNATURE)
-        return DISKIO_STATUS_INVL_SIGNATURE;
     //Check the PID of the owner
     if(handle->pid != mtask_get_pid())
         return DISKIO_STATUS_NOT_ALLOWED;
@@ -506,23 +496,21 @@ uint64_t diskio_write(file_handle_t* handle, void* buf, uint64_t len){
         case DISKIO_BUS_SATA:
             ahci_write(handle->info.device.device_no, buf, len / 512, handle->position / 512);
             break;
-        case DISKIO_BUS_PART:{
+        case DISKIO_BUS_PART: {
             part_t* part = part_get(handle->info.device.device_no);
             file_handle_t* drive = part->drive_file;
             diskio_seek(drive, (part->lba_start + (handle->position / 512)) * 512);
             return diskio_write(drive, buf, len);
         } break;
+        default: return 0;
     }
-    return DISKIO_STATUS_INVL_SIGNATURE;
+    return 0;
 }
 
 /*
  * Seek to the specified position in file
  */
 uint64_t diskio_seek(file_handle_t* handle, uint64_t pos){
-    //Check the signature
-    if(handle->signature != DISKIO_HANDLE_SIGNATURE)
-        return DISKIO_STATUS_INVL_SIGNATURE;
     //Check the PID of the owner
     if(handle->pid != mtask_get_pid())
         return DISKIO_STATUS_NOT_ALLOWED;
@@ -549,5 +537,4 @@ uint64_t diskio_seek(file_handle_t* handle, uint64_t pos){
  */
 void diskio_close(file_handle_t* handle){
     mtask_remove_open_file(handle);
-    free(handle);
 }

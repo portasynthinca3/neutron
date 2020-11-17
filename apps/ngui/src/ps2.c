@@ -42,6 +42,7 @@ void ps2_init(void){
     fputc(0xF3, mouse);
     fputc(200, mouse);
     //Flush any data
+    mouse_byte = 0;
     while(fgetc(kbd) != -1);
     while(fgetc(mouse) != -1);
 }

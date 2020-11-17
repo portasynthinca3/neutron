@@ -16,6 +16,14 @@ void _fat32_seek(fat32_handle_t* handle, uint64_t clust){
 }
 
 /*
+ * Reads a cluster into the buffer
+ */
+void _fat32_read(fat32_handle_t* handle, uint64_t clust, void* buf){
+    _fat32_seek(handle, clust);
+    diskio_read(handle->part, buf, handle->sect_per_clust * 512);
+}
+
+/*
  * Initializes the FAT32 filesystem on a partition
  */
 void fat32_init(uint32_t no){
@@ -58,22 +66,21 @@ void fat32_init(uint32_t no){
     }
     handle->free_cluster_cnt   = *(uint32_t*)&fsinfo[488];
     handle->first_free_cluster = *(uint32_t*)&fsinfo[492];
+    krnl_write_msgf(__FILE__, __LINE__, "sectors per cluster: %i (cluster size %i)", handle->sect_per_clust, handle->sect_per_clust * 512);
     krnl_write_msgf(__FILE__, __LINE__, "free cluster count: 0x%x", handle->free_cluster_cnt);
     krnl_write_msgf(__FILE__, __LINE__, "first free cluster: 0x%x", handle->first_free_cluster);
+}
 
-
-
-
-    uint8_t dir[512];
-    _fat32_seek(handle, handle->root_dir_clust);
-    diskio_read(part, dir, 512);
-    for(int i = 0; i < 512 / 32; i++){
-        uint8_t* dir_ent = &dir[i * 32];
-        char name[12];
-        memcpy(name, dir_ent, 11);
-        name[11] = 0;
-        uint8_t attr = dir_ent[11];
-        if(dir_ent[0] != 0xE5 && dir_ent[0] != 0 && !(attr & 2))
-            krnl_write_msgf(__FILE__, __LINE__, "file %s attrib. %x", name, attr);
-    }
+/*
+ * Gets the directory in a FAT32 filesystem
+ */
+void fat32_get_dir(char* path, dir_handle_t* handle){
+    //<ake a local copy of the path string, we're going to modify it
+    char path2[DISKIO_MAX_PATH_LEN];
+    strcpy(path2, path);
+    path = path2;
+    //Remove the trailing slash
+    if(path[0] == '/')
+        path++;
+    //
 }

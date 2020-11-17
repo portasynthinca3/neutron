@@ -104,7 +104,6 @@ uint64_t syscall_handle(void){
                     //Parse status
                     switch(status & 0xFF){
                         case DISKIO_STATUS_NOT_ALLOWED:
-                        case DISKIO_STATUS_INVL_SIGNATURE:
                             return 4ULL << 32;
                         case DISKIO_STATUS_EOF:
                             return (6ULL << 32) | (status >> 32);
@@ -121,7 +120,6 @@ uint64_t syscall_handle(void){
                     //Parse status
                     switch(status & 0xFF){
                         case DISKIO_STATUS_NOT_ALLOWED:
-                        case DISKIO_STATUS_INVL_SIGNATURE:
                             return 4ULL << 32;
                         case DISKIO_STATUS_EOF:
                             return (6ULL << 32) | (status >> 32);

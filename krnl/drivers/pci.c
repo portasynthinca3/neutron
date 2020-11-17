@@ -27,7 +27,6 @@ void pci_init(void){
     cfg_descs = mcfg->descs;
     //Enumerate PCI devices
     pci_enumerate();
-    while(1);
 }
 
 /*
@@ -49,7 +48,7 @@ void pci_enumerate(void){
             uint16_t vid   = vid_pid & 0xFFFF;
             uint16_t pid   = vid_pid >> 16;
             uint16_t c_sub = cfg_space[2] >> 16;
-            krnl_write_msgf(__FILE__, __LINE__, "found dev VID=0x%x PID=0x%x C_SUB=0x%x", vid, pid, c_sub);
+            krnl_write_msgf(__FILE__, __LINE__, "found dev VID=0x%x PID=0x%x C_SUB=0x%x", (uint64_t)vid, (uint64_t)pid, (uint64_t)c_sub);
 
             //Initialize devices based on their type
             switch(c_sub){

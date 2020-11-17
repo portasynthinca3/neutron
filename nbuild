@@ -56,6 +56,6 @@ krnl/app_drv/syscall/syscall_wrap.s
 -device ide-hd,drive=disk,bus=ahci.0 \
 -sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny \
 -msg timestamp=on \
--bios /usr/share/ovmf/x64/OVMF_CODE.fd \
+-bios /usr/share/ovmf/OVMF.fd \
 -monitor stdio \
 -s
