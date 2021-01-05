@@ -1,0 +1,6 @@
+.git/
+.vscode/
+build/
+.gdbinit
+.tmp/
+hdd.img
